@@ -1,8 +1,4 @@
 {
-    "for_loop5": "<h4>Context: repeat_greeting()</h4><p><strong>Docstring:</strong> Repeats the greeting three times.</p><p><strong>Variables in scope:</strong> None</p>",
-    "call_greet7": "<h4>Context: repeat_greeting()</h4><p><strong>Docstring:</strong> Repeats the greeting three times.</p><p><strong>Variables in scope:</strong> None</p>",
-    "if_cond9": "<h4>Context: greet()</h4><p><strong>Docstring:</strong> Prints a greeting message.</p><p><strong>Variables in scope:</strong> name</p>",
-    "expr11": "<h4>Context: greet()</h4><p><strong>Docstring:</strong> Prints a greeting message.</p><p><strong>Variables in scope:</strong> name</p>",
-    "expr12": "<h4>Context: greet()</h4><p><strong>Docstring:</strong> Prints a greeting message.</p><p><strong>Variables in scope:</strong> name</p>",
-    "next_iter13": "<h4>Context: repeat_greeting()</h4><p><strong>Docstring:</strong> Repeats the greeting three times.</p><p><strong>Variables in scope:</strong> None</p>"
+    "assign5": "<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>",
+    "return6": "<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>"
 }

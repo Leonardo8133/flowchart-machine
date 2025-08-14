@@ -21,6 +21,8 @@ class FlowchartGenerator:
         self.function_defs = {}
         self.context_data = {} # For docstrings and variables
         self.tooltip_data = {} # Data to be exported as JSON
+        self.node_scopes = {}  # Track which scope each node belongs to
+        self.scope_children = {}  # Map parent scope to called function scopes
 
     def _generate_id(self, prefix="node"):
         self.node_counter += 1
@@ -31,6 +33,7 @@ class FlowchartGenerator:
                              .replace('"', '#quot;') \
                              .replace('!', '!')
         self.nodes[node_id] = f'{node_id}{shape[0]}{sanitized_text}{shape[1]}'
+        self.node_scopes[node_id] = scope
         
         # If we are in a function's scope, add its context to the tooltip
         if scope and scope in self.context_data:
@@ -44,6 +47,23 @@ class FlowchartGenerator:
                 f"<p><strong>Variables in scope:</strong> {variables_html or 'None'}</p>"
             )
 
+    def _build_subgraphs(self):
+        """Create nested Mermaid subgraph sections based on call hierarchy."""
+        lines = []
+
+        def build(scope, indent):
+            lines.append("    " * indent + f"subgraph {scope}")
+            for nid, sc in self.node_scopes.items():
+                if sc == scope:
+                    lines.append("    " * (indent + 1) + nid)
+            for child in sorted(self.scope_children.get(scope, [])):
+                build(child, indent + 1)
+            lines.append("    " * indent + "end")
+
+        for root_scope in sorted(self.scope_children.get(None, [])):
+            build(root_scope, 1)
+
+        return lines
 
     def _add_connection(self, from_id, to_id, label=""):
         if from_id is None or to_id is None:
@@ -141,6 +161,17 @@ class FlowchartGenerator:
         for node_id in bypass_nodes:
             if node_id in self.nodes: del self.nodes[node_id]
 
+    def clean_mermaid_diagram(self, mermaid_string):
+        """Clean and fix Mermaid diagram syntax to prevent parsing errors."""
+        cleaned = mermaid_string
+        
+        # Remove HTML entities and problematic characters
+        cleaned = cleaned.replace('&lt;', '<')
+        cleaned = cleaned.replace('&gt;', '>')
+        cleaned = cleaned.replace('&amp;', '&')
+        
+        return cleaned
+
     def generate(self, python_code):
         try:
             tree = ast.parse(python_code)
@@ -166,10 +197,14 @@ class FlowchartGenerator:
 
             mermaid_string = "graph TD\n"
             mermaid_string += "    " + "\n    ".join(self.nodes.values()) + "\n"
+            mermaid_string += "\n".join(self._build_subgraphs()) + "\n"
             mermaid_string += "\n".join(self.connections) + "\n"
             mermaid_string += "\n".join(self.click_handlers) + "\n"
             
-            return mermaid_string, self.tooltip_data
+            # Clean the Mermaid diagram before returning
+            cleaned_mermaid = self.clean_mermaid_diagram(mermaid_string)
+            
+            return cleaned_mermaid, self.tooltip_data
 
         except Exception as e:
             # Error handling remains the same
@@ -226,10 +261,7 @@ class FlowchartGenerator:
                     self.connections[i] = conn.replace("-->", "-->|Each item|")
                     break
         if body_end_id:
-            next_iter_id = self._generate_id("next_iter")
-            self._add_node(next_iter_id, "Next", shape=('((', '))'), scope=scope)
-            self._add_connection(body_end_id, next_iter_id)
-            self._add_connection(next_iter_id, loop_cond_id)
+            self._add_connection(body_end_id, loop_cond_id, label="Next Iteration")
         self.loop_stack.pop()
         self._add_connection(loop_cond_id, loop_exit_id, label="Done")
         return loop_exit_id
@@ -239,6 +271,8 @@ class FlowchartGenerator:
             call = node.value
             func_name = getattr(call.func, 'id', None)
             if func_name and func_name in self.function_defs:
+                # Track nesting relationship between scopes
+                self.scope_children.setdefault(scope, set()).add(func_name)
                 function_node = self.function_defs[func_name]
                 call_id = self._generate_id(f"call_{func_name}")
                 self._add_node(call_id, f"Call: {self._get_node_text(node)}", shape=('[["', '"]]'), scope=scope)
@@ -271,7 +305,7 @@ class FlowchartGenerator:
         if body_end_id:
             self.connections[-1] = self.connections[-1].replace('-->', '-->|True|')
             next_iter_id = self._generate_id("next_iter")
-            self._add_node(next_iter_id, "Next", shape=('((', '))'), scope=scope)
+            self._add_node(next_iter_id, "*", shape=('[', ']'), scope=scope)
             self._add_connection(body_end_id, next_iter_id)
             self._add_connection(next_iter_id, loop_cond_id)
         self.loop_stack.pop()

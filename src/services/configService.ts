@@ -1,0 +1,346 @@
+import * as vscode from 'vscode';
+import { FlowchartConfig, ConfigurationKey, ConfigurationChangeEvent } from '../types/config';
+import { DEFAULT_CONFIG } from '../config/defaults';
+
+/**
+ * Service for managing extension configuration
+ */
+export class ConfigService {
+  private static instance: ConfigService;
+  private config: FlowchartConfig;
+  private changeListeners: Array<(event: ConfigurationChangeEvent) => void> = [];
+
+  private constructor() {
+    this.config = this.loadConfiguration();
+    this.setupConfigurationWatcher();
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): ConfigService {
+    if (!ConfigService.instance) {
+      ConfigService.instance = new ConfigService();
+    }
+    return ConfigService.instance;
+  }
+
+  /**
+   * Get the current configuration
+   */
+  getConfig(): FlowchartConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Get a specific configuration value using dot notation
+   */
+  get<T>(key: ConfigurationKey): T {
+    const keys = key.split('.');
+    let value: any = this.config;
+    
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        return this.getDefaultValue(key);
+      }
+    }
+    
+    return value;
+  }
+
+  /**
+   * Set a configuration value
+   */
+  set<T>(key: ConfigurationKey, value: T): void {
+    const keys = key.split('.');
+    const oldValue = this.get(key);
+    
+    // Update the configuration
+    let current: any = this.config;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!(keys[i] in current)) {
+        current[keys[i]] = {};
+      }
+      current = current[keys[i]];
+    }
+    
+    current[keys[keys.length - 1]] = value;
+    
+    // Update VS Code configuration
+    this.updateVSCodeConfig(key, value);
+    
+    // Notify listeners
+    this.notifyChangeListeners(key, oldValue, value);
+  }
+
+  /**
+   * Reset configuration to defaults
+   */
+  resetToDefaults(): void {
+    this.config = { ...DEFAULT_CONFIG };
+    this.saveConfiguration();
+    vscode.window.showInformationMessage('Configuration reset to defaults');
+  }
+
+  /**
+   * Export configuration to file
+   */
+  async exportConfig(): Promise<void> {
+    try {
+      const uri = await vscode.window.showSaveDialog({
+        filters: { 'JSON': ['json'] },
+        defaultUri: vscode.Uri.file('flowchart-machine-config.json'),
+      });
+      
+      if (uri) {
+        const content = JSON.stringify(this.config, null, 2);
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
+        vscode.window.showInformationMessage('Configuration exported successfully');
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to export configuration: ${error}`);
+    }
+  }
+
+  /**
+   * Import configuration from file
+   */
+  async importConfig(): Promise<void> {
+    try {
+      const uris = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: { 'JSON': ['json'] },
+      });
+      
+      if (uris && uris.length > 0) {
+        const content = await vscode.workspace.fs.readFile(uris[0]);
+        const importedConfig = JSON.parse(content.toString());
+        
+        // Validate imported configuration
+        if (this.validateConfig(importedConfig)) {
+          this.config = { ...DEFAULT_CONFIG, ...importedConfig };
+          this.saveConfiguration();
+          vscode.window.showInformationMessage('Configuration imported successfully');
+        } else {
+          vscode.window.showErrorMessage('Invalid configuration file format');
+        }
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to import configuration: ${error}`);
+    }
+  }
+
+  /**
+   * Add a configuration change listener
+   */
+  addChangeListener(listener: (event: ConfigurationChangeEvent) => void): vscode.Disposable {
+    this.changeListeners.push(listener);
+    
+    return {
+      dispose: () => {
+        const index = this.changeListeners.indexOf(listener);
+        if (index > -1) {
+          this.changeListeners.splice(index, 1);
+        }
+      }
+    };
+  }
+
+  /**
+   * Check if a specific node type should be processed
+   */
+  shouldProcessNodeType(nodeType: keyof FlowchartConfig['nodes']['processTypes']): boolean {
+    return this.get<boolean>(`nodes.processTypes.${nodeType}`);
+  }
+
+  /**
+   * Get maximum allowed nodes for current configuration
+   */
+  getMaxNodes(): number {
+    return this.get<number>('performance.maxNodes');
+  }
+
+  /**
+   * Get maximum allowed file size in KB
+   */
+  getMaxFileSize(): number {
+    return this.get<number>('performance.maxFileSize');
+  }
+
+  /**
+   * Check if auto-save is enabled
+   */
+  isAutoSaveEnabled(): boolean {
+    return this.get<boolean>('general.autoSave');
+  }
+
+  /**
+   * Check if progress should be shown
+   */
+  shouldShowProgress(): boolean {
+    return this.get<boolean>('general.showProgress');
+  }
+
+  /**
+   * Check if webview should open automatically
+   */
+  shouldAutoOpenWebview(): boolean {
+    return this.get<boolean>('general.autoOpenWebview');
+  }
+
+  /**
+   * Load configuration from VS Code settings
+   */
+  private loadConfiguration(): FlowchartConfig {
+    const config = vscode.workspace.getConfiguration('flowchartMachine');
+    
+    return {
+      general: {
+        autoSave: config.get('general.autoSave', DEFAULT_CONFIG.general.autoSave),
+        defaultFormat: config.get('general.defaultFormat', DEFAULT_CONFIG.general.defaultFormat),
+        showProgress: config.get('general.showProgress', DEFAULT_CONFIG.general.showProgress),
+        autoOpenWebview: config.get('general.autoOpenWebview', DEFAULT_CONFIG.general.autoOpenWebview),
+      },
+      nodes: {
+        processTypes: {
+          functions: config.get('nodes.processTypes.functions', DEFAULT_CONFIG.nodes.processTypes.functions),
+          functionCalls: config.get('nodes.processTypes.functionCalls', DEFAULT_CONFIG.nodes.processTypes.functionCalls),
+          assignments: config.get('nodes.processTypes.assignments', DEFAULT_CONFIG.nodes.processTypes.assignments),
+          prints: config.get('nodes.processTypes.prints', DEFAULT_CONFIG.nodes.processTypes.prints),
+          loops: config.get('nodes.processTypes.loops', DEFAULT_CONFIG.nodes.processTypes.loops),
+          conditionals: config.get('nodes.processTypes.conditionals', DEFAULT_CONFIG.nodes.processTypes.conditionals),
+          returns: config.get('nodes.processTypes.returns', DEFAULT_CONFIG.nodes.processTypes.returns),
+          imports: config.get('nodes.processTypes.imports', DEFAULT_CONFIG.nodes.processTypes.imports),
+          classes: config.get('nodes.processTypes.classes', DEFAULT_CONFIG.nodes.processTypes.classes),
+          exceptions: config.get('nodes.processTypes.exceptions', DEFAULT_CONFIG.nodes.processTypes.exceptions),
+        },
+        maxDepth: config.get('nodes.maxDepth', DEFAULT_CONFIG.nodes.maxDepth),
+        includeComments: config.get('nodes.includeComments', DEFAULT_CONFIG.nodes.includeComments),
+        showLineNumbers: config.get('nodes.showLineNumbers', DEFAULT_CONFIG.nodes.showLineNumbers),
+        customLabels: config.get('nodes.customLabels', DEFAULT_CONFIG.nodes.customLabels),
+      },
+      storage: {
+        saveFlowcharts: config.get('storage.saveFlowcharts', DEFAULT_CONFIG.storage.saveFlowcharts),
+        maxSavedFlowcharts: config.get('storage.maxSavedFlowcharts', DEFAULT_CONFIG.storage.maxSavedFlowcharts),
+        storageLocation: config.get('storage.storageLocation', DEFAULT_CONFIG.storage.storageLocation),
+        includeSourceCode: config.get('storage.includeSourceCode', DEFAULT_CONFIG.storage.includeSourceCode),
+        includeTooltipData: config.get('storage.includeTooltipData', DEFAULT_CONFIG.storage.includeTooltipData),
+        autoCleanupDays: config.get('storage.autoCleanupDays', DEFAULT_CONFIG.storage.autoCleanupDays),
+      },
+      appearance: {
+        theme: config.get('appearance.theme', DEFAULT_CONFIG.appearance.theme),
+        customCSS: config.get('appearance.customCSS', DEFAULT_CONFIG.appearance.customCSS),
+        nodeColors: config.get('appearance.nodeColors', DEFAULT_CONFIG.appearance.nodeColors),
+        fontFamily: config.get('appearance.fontFamily', DEFAULT_CONFIG.appearance.fontFamily),
+        fontSize: config.get('appearance.fontSize', DEFAULT_CONFIG.appearance.fontSize),
+        roundedCorners: config.get('appearance.roundedCorners', DEFAULT_CONFIG.appearance.roundedCorners),
+        layout: config.get('appearance.layout', DEFAULT_CONFIG.appearance.layout),
+      },
+      performance: {
+        maxNodes: config.get('performance.maxNodes', DEFAULT_CONFIG.performance.maxNodes),
+        maxFileSize: config.get('performance.maxFileSize', DEFAULT_CONFIG.performance.maxFileSize),
+        parallelProcessing: config.get('performance.parallelProcessing', DEFAULT_CONFIG.performance.parallelProcessing),
+        scriptTimeout: config.get('performance.scriptTimeout', DEFAULT_CONFIG.performance.scriptTimeout),
+        enableCaching: config.get('performance.enableCaching', DEFAULT_CONFIG.performance.enableCaching),
+        cacheExpirationHours: config.get('performance.cacheExpirationHours', DEFAULT_CONFIG.performance.cacheExpirationHours),
+      },
+    };
+  }
+
+  /**
+   * Save configuration to VS Code settings
+   */
+  private saveConfiguration(): void {
+    const config = vscode.workspace.getConfiguration('flowchartMachine');
+    
+    // Update each section
+    Object.entries(this.config).forEach(([section, sectionConfig]) => {
+      Object.entries(sectionConfig).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null) {
+          Object.entries(value).forEach(([subKey, subValue]) => {
+            config.update(`${section}.${key}.${subKey}`, subValue, vscode.ConfigurationTarget.Workspace);
+          });
+        } else {
+          config.update(`${section}.${key}`, value, vscode.ConfigurationTarget.Workspace);
+        }
+      });
+    });
+  }
+
+  /**
+   * Update VS Code configuration
+   */
+  private updateVSCodeConfig(key: ConfigurationKey, value: any): void {
+    const config = vscode.workspace.getConfiguration('flowchartMachine');
+    config.update(key.replace('flowchartMachine.', ''), value, vscode.ConfigurationTarget.Workspace);
+  }
+
+  /**
+   * Setup configuration change watcher
+   */
+  private setupConfigurationWatcher(): void {
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('flowchartMachine')) {
+        this.config = this.loadConfiguration();
+        vscode.window.showInformationMessage('Flowchart Machine configuration updated');
+      }
+    });
+  }
+
+  /**
+   * Get default value for a configuration key
+   */
+  private getDefaultValue<T>(key: ConfigurationKey): T {
+    const keys = key.split('.');
+    let value: any = DEFAULT_CONFIG;
+    
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        throw new Error(`Invalid configuration key: ${key}`);
+      }
+    }
+    
+    return value;
+  }
+
+  /**
+   * Validate imported configuration
+   */
+  private validateConfig(config: any): boolean {
+    try {
+      // Basic structure validation
+      const requiredSections = ['general', 'nodes', 'storage', 'appearance', 'performance'];
+      return requiredSections.every(section => 
+        config[section] && typeof config[section] === 'object'
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Notify all change listeners
+   */
+  private notifyChangeListeners(key: ConfigurationKey, oldValue: any, newValue: any): void {
+    const event: ConfigurationChangeEvent = {
+      section: key.split('.')[0] as keyof FlowchartConfig,
+      key,
+      oldValue,
+      newValue,
+    };
+    
+    this.changeListeners.forEach(listener => {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error('Error in configuration change listener:', error);
+      }
+    });
+  }
+}

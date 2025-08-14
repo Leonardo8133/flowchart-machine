@@ -4,20 +4,303 @@
   "description": "An extension that helps you to build your code flowchart",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.101.0"
+    "vscode": "^1.99.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:extension.generateFlowchart",
+    "onLanguage:python"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "extension.generateFlowchart",
-        "title": "Generate Python Flowchart"
+        "title": "Generate Python Flowchart",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.openSettings",
+        "title": "Open Flowchart Machine Settings",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.resetToDefaults",
+        "title": "Reset Flowchart Machine Configuration to Defaults",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.export",
+        "title": "Export Flowchart Machine Configuration",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.import",
+        "title": "Import Flowchart Machine Configuration",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.showCurrent",
+        "title": "Show Current Configuration",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.storage.showSaved",
+        "title": "Show Saved Flowcharts",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.storage.exportAll",
+        "title": "Export All Saved Flowcharts",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.storage.import",
+        "title": "Import Flowcharts",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.storage.showStats",
+        "title": "Show Storage Statistics",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.storage.cleanup",
+        "title": "Clean Up Old Flowcharts",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.toggleAutoSave",
+        "title": "Toggle Auto-Save",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.toggleProgress",
+        "title": "Toggle Progress Notifications",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.setMaxNodes",
+        "title": "Set Maximum Nodes",
+        "category": "Flowchart"
+      },
+      {
+        "command": "flowchartMachine.config.setMaxFileSize",
+        "title": "Set Maximum File Size",
+        "category": "Flowchart"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "extension.generateFlowchart",
+          "when": "editorLangId == python"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "extension.generateFlowchart",
+          "when": "editorLangId == python",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Flowchart Machine",
+      "properties": {
+        "flowchartMachine.general.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save flowcharts after generation"
+        },
+        "flowchartMachine.general.defaultFormat": {
+          "type": "string",
+          "enum": ["mermaid", "svg", "png"],
+          "default": "mermaid",
+          "description": "Default output format for flowcharts"
+        },
+        "flowchartMachine.general.showProgress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show progress notifications during generation"
+        },
+        "flowchartMachine.general.autoOpenWebview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open webview after generation"
+        },
+        "flowchartMachine.nodes.processTypes.functions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process function definitions"
+        },
+        "flowchartMachine.nodes.processTypes.functionCalls": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process function calls"
+        },
+        "flowchartMachine.nodes.processTypes.assignments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process variable assignments"
+        },
+        "flowchartMachine.nodes.processTypes.prints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process print statements"
+        },
+        "flowchartMachine.nodes.processTypes.loops": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process loops (for, while)"
+        },
+        "flowchartMachine.nodes.processTypes.conditionals": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process conditional statements"
+        },
+        "flowchartMachine.nodes.processTypes.returns": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process return statements"
+        },
+        "flowchartMachine.nodes.processTypes.imports": {
+          "type": "boolean",
+          "default": false,
+          "description": "Process import statements"
+        },
+        "flowchartMachine.nodes.processTypes.classes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process class definitions"
+        },
+        "flowchartMachine.nodes.processTypes.exceptions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process exception handling"
+        },
+        "flowchartMachine.nodes.maxDepth": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5,
+          "description": "Maximum depth for nested structures"
+        },
+        "flowchartMachine.nodes.includeComments": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include comments in node labels"
+        },
+        "flowchartMachine.nodes.showLineNumbers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show line numbers in nodes"
+        },
+        "flowchartMachine.storage.saveFlowcharts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save flowcharts for later use"
+        },
+        "flowchartMachine.storage.maxSavedFlowcharts": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 50,
+          "description": "Maximum number of saved flowcharts to keep"
+        },
+        "flowchartMachine.storage.storageLocation": {
+          "type": "string",
+          "enum": ["workspace", "global"],
+          "default": "workspace",
+          "description": "Storage location for saved flowcharts"
+        },
+        "flowchartMachine.storage.includeSourceCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include source code with saved flowcharts"
+        },
+        "flowchartMachine.storage.includeTooltipData": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include tooltip data with saved flowcharts"
+        },
+        "flowchartMachine.storage.autoCleanupDays": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 30,
+          "description": "Auto-cleanup old flowcharts after days"
+        },
+        "flowchartMachine.appearance.theme": {
+          "type": "string",
+          "enum": ["default", "dark", "light", "custom"],
+          "default": "default",
+          "description": "Default theme for flowcharts"
+        },
+        "flowchartMachine.appearance.customCSS": {
+          "type": "string",
+          "default": "",
+          "description": "Custom CSS for flowchart styling"
+        },
+        "flowchartMachine.appearance.fontFamily": {
+          "type": "string",
+          "default": "var(--vscode-font-family)",
+          "description": "Font family for flowchart text"
+        },
+        "flowchartMachine.appearance.fontSize": {
+          "type": "number",
+          "minimum": 8,
+          "maximum": 32,
+          "default": "14",
+          "description": "Font size for flowchart text"
+        },
+        "flowchartMachine.appearance.roundedCorners": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use rounded corners for nodes"
+        },
+        "flowchartMachine.performance.maxNodes": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 1000,
+          "default": "100",
+          "description": "Maximum number of nodes per flowchart"
+        },
+        "flowchartMachine.performance.maxFileSize": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 10000,
+          "default": 1024,
+          "description": "Maximum file size to process (in KB)"
+        },
+        "flowchartMachine.performance.parallelProcessing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use parallel processing for large files"
+        },
+        "flowchartMachine.performance.scriptTimeout": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 30,
+          "description": "Timeout for Python script execution (in seconds)"
+        },
+        "flowchartMachine.performance.enableCaching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache parsed results for better performance"
+        },
+        "flowchartMachine.performance.cacheExpirationHours": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24,
+          "description": "Cache expiration time (in hours)"
+        }
+      }
+    }
   },
   
   "scripts": {
@@ -26,10 +309,15 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "test:unit": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index",
+    "test:watch": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index --watch",
+    "test:coverage": "npm run compile && npm run test:unit",
+    "test:clean": "rimraf test-workspace*",
+    "test:all": "npm run pretest && npm run test:unit"
   },
   "devDependencies": {
-    "@types/vscode": "^1.101.0",
+    "@types/vscode": "^1.99.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
@@ -37,6 +325,7 @@
     "eslint": "^9.25.1",
     "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "rimraf": "^5.0.5"
   }
 }

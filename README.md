@@ -1,71 +1,116 @@
-# flowchart-machine README
+# Flowchart Machine
 
-This is the README for your extension "flowchart-machine". After writing up a brief description, we recommend including the following sections.
+A VS Code extension that generates flowcharts from Python code using Mermaid diagrams.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Generate flowcharts from Python files
+- Interactive Mermaid diagrams with tooltips
+- Context menu integration for Python files
+- Progress tracking during generation
+- Error handling and user feedback
 
-For example if there is an image subfolder under your extension project workspace:
+## Installation
 
-\!\[feature X\]\(images/feature-x.png\)
+### From VSIX (Recommended)
+1. Download the `.vsix` file from the releases
+2. In VS Code, go to Extensions (Ctrl+Shift+X)
+3. Click the "..." menu and select "Install from VSIX..."
+4. Select the downloaded `.vsix` file
+5. Reload VS Code
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### From Source
+1. Clone this repository
+2. Run `npm install` to install dependencies
+3. Run `npm run compile` to compile TypeScript
+4. Press F5 in VS Code to run the extension in a new Extension Development Host window
+
+## Usage
+
+1. Open a Python file in VS Code
+2. Use one of these methods to generate a flowchart:
+   - **Command Palette**: Press `Ctrl+Shift+P` and type "Generate Python Flowchart"
+   - **Context Menu**: Right-click in the editor and select "Generate Python Flowchart"
+   - **Keyboard Shortcut**: The command will appear in the command palette
+
+3. The extension will:
+   - Check if Python is available on your system
+   - Look for `main.py` in the same directory as your Python file
+   - Execute the Python script to generate flowchart data
+   - Display the flowchart in a new webview panel
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **Python**: Must be installed and available in your system PATH
+- **main.py**: A Python script that generates flowchart data (must be in the same directory as your Python file)
+- **VS Code**: Version 1.101.0 or higher
 
-## Extension Settings
+## File Structure
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+```
+flowchart-machine/
+├── src/
+│   └── extension.ts          # Main extension code
+├── webview.html              # Webview template
+├── out/
+│   └── extension.js          # Compiled extension
+├── flowchart/                # Example Python files
+│   ├── main.py              # Python flowchart generator
+│   ├── example.py           # Sample Python file
+│   └── flowchart.mmd        # Generated Mermaid diagram
+└── package.json              # Extension manifest
+```
 
-For example:
+## Troubleshooting
 
-This extension contributes the following settings:
+### Extension Not Working
+1. **Check Python Installation**: Ensure Python is installed and accessible via `python --version` or `python3 --version`
+2. **Check main.py**: Ensure `main.py` exists in the same directory as your Python file
+3. **Check Console**: Open VS Code's Developer Console (Help > Toggle Developer Tools) for error messages
+4. **Reload Extension**: Try reloading VS Code (Ctrl+Shift+P > "Developer: Reload Window")
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### Common Issues
+- **"Python is not available"**: Install Python and ensure it's in your system PATH
+- **"main.py not found"**: Place `main.py` in the same directory as your Python file
+- **"Flowchart file not generated"**: Check that `main.py` runs successfully and generates `flowchart.mmd`
 
-## Known Issues
+### PowerShell Execution Policy
+If you encounter PowerShell execution policy errors when running npm commands:
+1. Open PowerShell as Administrator
+2. Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+3. Or use the `.cmd` versions of commands: `node_modules\.bin\tsc.cmd`
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+## Development
 
-## Release Notes
+### Building
+```bash
+# Install dependencies
+npm install
 
-Users appreciate release notes as you update your extension.
+# Compile TypeScript
+npm run compile
 
-### 1.0.0
+# Watch for changes
+npm run watch
+```
 
-Initial release of ...
+### Testing
+```bash
+# Run tests
+npm test
 
-### 1.0.1
+# Lint code
+npm run lint
+```
 
-Fixed issue #.
+## Contributing
 
-### 1.1.0
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
 
-Added features X, Y, and Z.
+## License
 
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+This project is licensed under the MIT License - see the LICENSE file for details.
