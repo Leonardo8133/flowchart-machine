@@ -1,16 +1,67 @@
 graph TD
     start1[Start]
     end2[End]
-    call_sum3[["Call: sum(1, 2)"]]
-    assign5["a = a + 1"]
-    return6["return a + b"]
-    subgraph sum
-        assign5
-        return6
+    call_example_function3[["Call: example_function()"]]
+    expr5[["print(#quot;Starting the example function...#quot;)"]]
+    for_loop6{{"For Loop: i in range(2)"}}
+    expr8[["print(f#quot;Loop iteration {i + 2}#quot;)"]]
+    if_cond9{"If: i % 1 == 0"}
+    expr11[["print(f#quot;{i} is even, calling helper_function...#quot;)"]]
+    assign12["result = helper_function(i)"]
+    expr13[["print(f#quot;Result from helper_function: {result}#quot;)"]]
+    expr14[["print(f#quot;{i} is odd, skipping helper_function.#quot;)"]]
+    assign15["count = 0"]
+    while_loop16{"While count < 3"}
+    expr18[["print(f#quot;While loop iteration {count + 1}#quot;)"]]
+    unsupported19[/"Unsupported Node: AugAssign\"\]
+    next_iter20[*]
+    expr21[["print(#quot;Example function completed.#quot;)"]]
+    subgraph example_function
+        expr5
+        for_loop6
+        expr8
+        if_cond9
+        expr11
+        assign12
+        expr13
+        expr14
+        assign15
+        while_loop16
+        expr18
+        unsupported19
+        next_iter20
+        expr21
     end
-    start1 --> call_sum3
-    call_sum3 --> assign5
-    assign5 --> return6
-    return6 --> end2
-click assign5 setClickedNode
-click return6 setClickedNode
+    start1 --> call_example_function3
+    call_example_function3 --> expr5
+    expr5 --> for_loop6
+    for_loop6 -->|Each item| expr8
+    expr8 --> if_cond9
+    if_cond9 -->|True| expr11
+    expr11 --> assign12
+    assign12 --> expr13
+    expr13 --> for_loop6
+    if_cond9 -->|False| expr14
+    expr14 --> for_loop6
+    for_loop6 -->|Done| assign15
+    assign15 --> while_loop16
+    while_loop16 --> expr18
+    expr18 -->|True| unsupported19
+    unsupported19 --> next_iter20
+    next_iter20 --> while_loop16
+    while_loop16 -->|False| expr21
+    expr21 --> end2
+click expr5 setClickedNode
+click for_loop6 setClickedNode
+click expr8 setClickedNode
+click if_cond9 setClickedNode
+click expr11 setClickedNode
+click assign12 setClickedNode
+click expr13 setClickedNode
+click expr14 setClickedNode
+click assign15 setClickedNode
+click while_loop16 setClickedNode
+click expr18 setClickedNode
+click unsupported19 setClickedNode
+click next_iter20 setClickedNode
+click expr21 setClickedNode

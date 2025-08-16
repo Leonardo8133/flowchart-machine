@@ -14,9 +14,11 @@ export function activate(context: vscode.ExtensionContext) {
     const flowchartDisposable = GenerateFlowchartCommand.register(context);
     context.subscriptions.push(flowchartDisposable);
     
-    // Register configuration commands
-    const configDisposables = ConfigCommands.register(context);
-    context.subscriptions.push(...configDisposables);
+    // Register only the essential configuration command (open settings)
+    const openSettingsDisposable = vscode.commands.registerCommand('flowchartMachine.config.openSettings', () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'flowchartMachine');
+    });
+    context.subscriptions.push(openSettingsDisposable);
     
     console.log('Commands registered successfully:', EXTENSION_ID);
 

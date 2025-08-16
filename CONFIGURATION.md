@@ -13,15 +13,16 @@ The Flowchart Machine extension now includes a comprehensive configuration syste
 
 ## 🚀 Quick Start
 
-### 1. **Open Settings**
+### 1. **Open Settings (Recommended)**
 - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
 - Type "Open Flowchart Machine Settings"
 - Select the command to open VS Code settings
+- **This is the main way to configure the extension**
 
-### 2. **Quick Commands**
-- **Toggle Auto-Save**: `Ctrl+Shift+P` → "Toggle Auto-Save"
-- **Show Current Config**: `Ctrl+Shift+P` → "Show Current Configuration"
-- **View Saved Flowcharts**: `Ctrl+Shift+P` → "Show Saved Flowcharts"
+### 2. **Alternative: Direct Settings Access**
+- Press `Ctrl+,` (or `Cmd+,` on Mac) to open VS Code settings
+- Search for "flowchartMachine" to see all available options
+- All settings are organized in logical categories
 
 ## 🎯 Configuration Categories
 
@@ -139,31 +140,25 @@ Optimize extension performance:
 
 ## 🎮 Commands Reference
 
-### **Configuration Management**
+### **Available Commands**
 | Command | Description |
 |---------|-------------|
+| `extension.generateFlowchart` | Generate Python flowchart (main feature) |
 | `flowchartMachine.config.openSettings` | Open VS Code settings for the extension |
-| `flowchartMachine.config.resetToDefaults` | Reset all configuration to defaults |
-| `flowchartMachine.config.export` | Export configuration to JSON file |
-| `flowchartMachine.config.import` | Import configuration from JSON file |
-| `flowchartMachine.config.showCurrent` | Display current configuration in webview |
 
-### **Storage Management**
-| Command | Description |
-|---------|-------------|
-| `flowchartMachine.storage.showSaved` | Show all saved flowcharts |
-| `flowchartMachine.storage.exportAll` | Export all saved flowcharts |
-| `flowchartMachine.storage.import` | Import flowcharts from file |
-| `flowchartMachine.storage.showStats` | Display storage statistics |
-| `flowchartMachine.storage.cleanup` | Clean up old flowcharts |
+### **Configuration Access**
+All configuration options are available through the VS Code settings UI:
+- **Press `Ctrl+Shift+P`** → "Open Flowchart Machine Settings"
+- **Or press `Ctrl+,`** and search for "flowchartMachine"
 
-### **Quick Configuration**
-| Command | Description |
-|---------|-------------|
-| `flowchartMachine.config.toggleAutoSave` | Toggle auto-save on/off |
-| `flowchartMachine.config.toggleProgress` | Toggle progress notifications |
-| `flowchartMachine.config.setMaxNodes` | Set maximum nodes per flowchart |
-| `flowchartMachine.config.setMaxFileSize` | Set maximum file size to process |
+### **Internal Functionality**
+The extension still provides all the advanced features internally:
+- **Automatic flowchart saving** (when enabled)
+- **Storage management** with auto-cleanup
+- **Performance optimization** based on your settings
+- **Custom appearance** and node processing options
+
+*Note: Advanced features are configured through settings rather than individual commands to keep the command palette clean.*
 
 ## 💾 Storage Management
 

@@ -25,71 +25,6 @@
         "command": "flowchartMachine.config.openSettings",
         "title": "Open Flowchart Machine Settings",
         "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.resetToDefaults",
-        "title": "Reset Flowchart Machine Configuration to Defaults",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.export",
-        "title": "Export Flowchart Machine Configuration",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.import",
-        "title": "Import Flowchart Machine Configuration",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.showCurrent",
-        "title": "Show Current Configuration",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.storage.showSaved",
-        "title": "Show Saved Flowcharts",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.storage.exportAll",
-        "title": "Export All Saved Flowcharts",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.storage.import",
-        "title": "Import Flowcharts",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.storage.showStats",
-        "title": "Show Storage Statistics",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.storage.cleanup",
-        "title": "Clean Up Old Flowcharts",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.toggleAutoSave",
-        "title": "Toggle Auto-Save",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.toggleProgress",
-        "title": "Toggle Progress Notifications",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.setMaxNodes",
-        "title": "Set Maximum Nodes",
-        "category": "Flowchart"
-      },
-      {
-        "command": "flowchartMachine.config.setMaxFileSize",
-        "title": "Set Maximum File Size",
-        "category": "Flowchart"
       }
     ],
     "menus": {
@@ -117,7 +52,11 @@
         },
         "flowchartMachine.general.defaultFormat": {
           "type": "string",
-          "enum": ["mermaid", "svg", "png"],
+          "enum": [
+            "mermaid",
+            "svg",
+            "png"
+          ],
           "default": "mermaid",
           "description": "Default output format for flowcharts"
         },
@@ -212,7 +151,10 @@
         },
         "flowchartMachine.storage.storageLocation": {
           "type": "string",
-          "enum": ["workspace", "global"],
+          "enum": [
+            "workspace",
+            "global"
+          ],
           "default": "workspace",
           "description": "Storage location for saved flowcharts"
         },
@@ -235,7 +177,12 @@
         },
         "flowchartMachine.appearance.theme": {
           "type": "string",
-          "enum": ["default", "dark", "light", "custom"],
+          "enum": [
+            "default",
+            "dark",
+            "light",
+            "custom"
+          ],
           "default": "default",
           "description": "Default theme for flowcharts"
         },
@@ -302,7 +249,6 @@
       }
     }
   },
-  
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -317,15 +263,15 @@
     "test:all": "npm run pretest && npm run test:unit"
   },
   "devDependencies": {
-    "@types/vscode": "^1.99.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "^1.99.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
-    "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2",
-    "rimraf": "^5.0.5"
+    "eslint": "^9.25.1",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.8.3"
   }
 }

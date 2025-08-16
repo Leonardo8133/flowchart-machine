@@ -24,7 +24,7 @@
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
       ],
-      "preLaunchTask": "npm: pretest"
+      "preLaunchTask": "npm test"
     },
     {
       "name": "Debug Extension",

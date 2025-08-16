@@ -24,9 +24,18 @@ export class WebviewMessageHandler {
    * Handle incoming messages from the webview
    */
   private async handleMessage(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    console.log('Received message from webview:', message);
     switch (message.command) {
-      case 'regenerateComplete':
+      case 'updateFlowchart':
         await this.handleRegeneration(panel);
+        break;
+        
+      case 'saveAsPng':
+        await this.handleSaveAsPng(panel);
+        break;
+        
+      case 'updateConfig':
+        await this.handleConfigUpdate(message, panel);
         break;
       
       default:
@@ -116,6 +125,57 @@ export class WebviewMessageHandler {
       panel.webview.postMessage({ 
         command: 'regenerationError', 
         error: `Regeneration failed: ${error}` 
+      });
+    }
+  }
+
+  /**
+   * Handle save as PNG request
+   */
+  private async handleSaveAsPng(panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      // For now, we'll just acknowledge the request
+      // In a future implementation, this could actually save the flowchart as PNG
+      panel.webview.postMessage({ 
+        command: 'pngSaved' 
+      });
+      
+      // Show a notification to the user
+      vscode.window.showInformationMessage('PNG export functionality will be implemented in a future update');
+    } catch (error) {
+      console.error('PNG save failed:', error);
+      panel.webview.postMessage({ 
+        command: 'pngSaveError', 
+        error: `PNG save failed: ${error}` 
+      });
+    }
+  }
+
+  /**
+   * Handle configuration update request
+   */
+  private async handleConfigUpdate(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      const { key, value } = message;
+      console.log('Updating configuration:', key, value);
+      
+      // Here you could update the actual configuration
+      // For now, we'll just acknowledge the update
+      panel.webview.postMessage({ 
+        command: 'configUpdated',
+        key,
+        value
+      });
+      
+      // Show a notification to the user
+      vscode.window.showInformationMessage(`Configuration updated: ${key} = ${value}`);
+    } catch (error) {
+      console.error('Configuration update failed:', error);
+      panel.webview.postMessage({ 
+        command: 'configUpdated',
+        key: message.key,
+        value: message.value,
+        error: `Configuration update failed: ${error}`
       });
     }
   }

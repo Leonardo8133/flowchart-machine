@@ -6,6 +6,7 @@ import { WebviewMessageHandler } from './messageHandler';
 export class WebviewManager {
   private context: vscode.ExtensionContext;
   private messageHandler: WebviewMessageHandler;
+  private originalFilePath: string | undefined;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -22,7 +23,7 @@ export class WebviewManager {
     originalFilePath?: string
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
-    const originalFilePathToStore = originalFilePath || 
+    this.originalFilePath = originalFilePath || 
       vscode.window.activeTextEditor?.document.fileName;
     
     // Create the panel
@@ -40,7 +41,7 @@ export class WebviewManager {
     );
 
     // Get the webview HTML content
-    const htmlUri = vscode.Uri.joinPath(this.context.extensionUri, 'webview.html');
+    const htmlUri = vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'index.html');
     let htmlContent = '';
 
     try {
@@ -51,26 +52,29 @@ export class WebviewManager {
       throw e;
     }
 
-    // Clean the diagram before injecting
+    // Clean the diagram for postMessage
     const cleanDiagram = this.cleanMermaidCode(mermaidCode);
 
-    // Inject the diagram directly into the HTML
-    htmlContent = htmlContent.replace(
-      '<!-- DIAGRAM_PLACEHOLDER (diagram arrives via postMessage) -->',
-      cleanDiagram
-    );
-
-    // Convert local resource URIs to webview URIs
-    htmlContent = this.convertResourceUris(htmlContent, panel.webview, htmlUri);
+    // Replace resource placeholders with actual URIs
+    htmlContent = this.replaceResourcePlaceholders(htmlContent, panel.webview, cleanDiagram);
 
     // Set the webview HTML
     panel.webview.html = htmlContent;
 
     // Set up message handling
-    this.messageHandler.setupMessageHandling(panel, originalFilePathToStore);
+    this.messageHandler.setupMessageHandling(panel, this.originalFilePath);
+
+    // Send initial state for checkboxes
+    setTimeout(() => {
+      panel.webview.postMessage({
+        command: 'updateInitialState',
+        showPrints: true, // Default value, could come from config
+        detailFunctions: true // Default value, could come from config
+      });
+    }, 200);
 
     // Generate debug HTML
-    this.generateDebugHtml(htmlContent, cleanDiagram, tooltipData, htmlUri);
+    // this.generateDebugHtml(htmlContent, cleanDiagram, tooltipData, htmlUri);
 
     return panel;
   }
@@ -86,25 +90,44 @@ export class WebviewManager {
   }
 
   /**
-   * Convert local resource URIs to webview URIs
+   * Replace resource placeholders with actual webview URIs
    */
-  private convertResourceUris(
-    htmlContent: string, 
-    webview: vscode.Webview, 
-    htmlUri: vscode.Uri
-  ): string {
-    return htmlContent.replace(
-      /(src|href)=(["'])(.*?)\2/gi,
-      (match, attr, quote, url) => {
-        if (url.startsWith('http') || url.startsWith('data:')) {
-          return match; // Keep external URLs unchanged
-        }
-        // Convert local paths to webview URIs
-        const localUri = vscode.Uri.joinPath(this.context.extensionUri, url);
-        const webviewLocalUri = webview.asWebviewUri(localUri);
-        return `${attr}=${quote}${webviewLocalUri}${quote}`;
-      }
-    );
+  private replaceResourcePlaceholders(htmlContent: string, webview: vscode.Webview, cleanDiagram: string): string {
+    // Format the file path to show parent/filename.py
+    const filePath = this.originalFilePath || '';
+    const formattedFilePath = filePath ? this.formatFilePath(filePath) : '';
+    
+    const replacements: Record<string, string> = {
+      '<!-- DIAGRAM_PLACEHOLDER -->': cleanDiagram,
+      '{{filePath}}': formattedFilePath,
+      '{{stylesUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'styles.css')).toString(),
+      '{{mermaidInitUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'mermaid-init.js')).toString(),
+      '{{zoomPanUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'zoom-pan.js')).toString(),
+      '{{controlsUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'controls.js')).toString(),
+      '{{tooltipUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'tooltip.js')).toString(),
+      '{{messageHandlerUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'message-handler.js')).toString(),
+      '{{mainUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'main.js')).toString(),
+    };
+    
+    let result = htmlContent;
+    for (const [placeholder, uri] of Object.entries(replacements)) {
+      result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), uri);
+    }
+    
+    return result;
+  }
+
+  /**
+   * Format file path to show parent/filename.py format
+   */
+  private formatFilePath(filePath: string): string {
+    const pathParts = filePath.split(path.sep);
+    if (pathParts.length >= 2) {
+      const parent = pathParts[pathParts.length - 2];
+      const filename = pathParts[pathParts.length - 1];
+      return `${parent}/${filename}`;
+    }
+    return path.basename(filePath);
   }
 
   /**
@@ -139,4 +162,5 @@ export class WebviewManager {
     }
     return template + initScript;
   }
-}
+
+  }

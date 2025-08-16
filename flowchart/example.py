@@ -13,10 +13,10 @@ def example_function():
 
     print("Starting the example function...")
     
-    for i in range(5):
-        print(f"Loop iteration {i + 1}")
+    for i in range(2):
+        print(f"Loop iteration {i + 2}")
         
-        if i % 2 == 0:
+        if i % 1 == 0:
             print(f"{i} is even, calling helper_function...")
             result = helper_function(i)
             print(f"Result from helper_function: {result}")

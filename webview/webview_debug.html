@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowchart Machine</title>
+    <link rel="stylesheet" href="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/styles.css">
+</head>
+<body>
+    <div id="content">
+        <div class="controls-row">
+            <div class="button-group">
+                <button id="regenerateBtn" class="control-button">
+                    🔄 Regenerate Flowchart
+                </button>
+                <button id="savePngBtn" class="control-button">
+                    💾 Save Flowchart (PNG)
+                </button>
+            </div>
+            
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showPrintsCheckbox" checked>
+                    <label for="showPrintsCheckbox">Show prints</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="detailFunctionsCheckbox" checked>
+                    <label for="detailFunctionsCheckbox">Detail Functions</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mermaid" id="mermaidContainer">graph TD
+    start1[Start]
+    end2[End]
+    call_sum3[["Call: sum(1, 2)"]]
+    return5["return a + b"]
+    subgraph sum
+        return5
+    end
+    start1 --> call_sum3
+    call_sum3 --> return5
+    return5 --> end2
+click return5 setClickedNode</div>
+        
+        <!-- Zoom and Pan Controls -->
+        <!-- <div class="zoom-controls">
+            <button class="zoom-button" id="zoomInBtn" title="Zoom In">➕</button>
+            <button class="zoom-button" id="zoomOutBtn" title="Zoom Out">➖</button>
+            <button class="zoom-button" id="resetZoomBtn" title="Reset Zoom">🔄</button>
+            <div class="zoom-level" id="zoomLevel">100%</div>
+        </div> -->
+        
+        <div id="tooltip" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/mermaid-init.js"></script>
+    <!-- <script src="{{zoomPanUri}}"></script> -->
+    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/controls.js"></script>
+    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/tooltip.js"></script>
+    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/message-handler.js"></script>
+    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/main.js"></script>
+
+<script>
+window.addEventListener('DOMContentLoaded', function(){
+  try {
+    window.postMessage({"type":"init","diagram":"graph TD\n    start1[Start]\n    end2[End]\n    call_sum3[[\"Call: sum(1, 2)\"]]\n    return5[\"return a + b\"]\n    subgraph sum\n        return5\n    end\n    start1 --> call_sum3\n    call_sum3 --> return5\n    return5 --> end2\nclick return5 setClickedNode","tooltipData":{"return5":"<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>"}}, '*');
+  } catch(e) { console.error('Failed to inject init data', e); }
+});
+</script>
+</body>
+</html>
