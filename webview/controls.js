@@ -10,6 +10,8 @@ let showCodeBtn;
 let vscode;
 if (typeof acquireVsCodeApi === "function") {
     vscode = acquireVsCodeApi();
+    // Make it globally available for other scripts
+    window.vscode = vscode;
 }
 
 function initializeControls() {
@@ -69,14 +71,17 @@ function handleRegenerateClick() {
 function handleSavePngClick() {
     console.log('Save PNG button clicked');
     
-    if (vscode) {
-        // Disable button during save
-        savePngBtn.disabled = true;
-        savePngBtn.textContent = "⏳ Saving...";
-        
-        vscode.postMessage({
-            command: 'saveAsPng'
-        });
+    // Disable button during save
+    savePngBtn.disabled = true;
+    savePngBtn.textContent = "⏳ Converting...";
+    
+    try {
+        convertSvgToPng();
+    } catch (error) {
+        console.error('PNG conversion failed:', error);
+        // Re-enable button on error
+        savePngBtn.disabled = false;
+        savePngBtn.textContent = "💾 Save Flowchart (PNG)";
     }
 }
 
@@ -123,12 +128,6 @@ function updateControlStates(message) {
             break;
             
         case 'pngSaved':
-            if (savePngBtn) {
-                savePngBtn.disabled = false;
-                savePngBtn.textContent = "💾 Save Flowchart (PNG)";
-            }
-            break;
-            
         case 'pngSaveError':
             if (savePngBtn) {
                 savePngBtn.disabled = false;

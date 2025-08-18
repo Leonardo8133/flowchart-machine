@@ -73,6 +73,15 @@ export interface StorageConfig {
   includeTooltipData: boolean;
   /** Auto-cleanup old flowcharts after days */
   autoCleanupDays: number;
+  /** Export settings for PNG files */
+  export: {
+    /** Default download directory for PNG exports */
+    defaultPngLocation: string;
+    /** Whether to use custom download location instead of Downloads folder */
+    useCustomPngLocation: boolean;
+    /** Whether to auto-increment version numbers for PNG files */
+    autoIncrementPngVersions: boolean;
+  };
 }
 
 export interface AppearanceConfig {
@@ -193,6 +202,9 @@ export type ConfigurationKey =
   | 'storage.includeSourceCode'
   | 'storage.includeTooltipData'
   | 'storage.autoCleanupDays'
+  | 'storage.export.defaultPngLocation'
+  | 'storage.export.useCustomPngLocation'
+  | 'storage.export.autoIncrementPngVersions'
   | 'appearance.theme'
   | 'appearance.customCSS'
   | 'appearance.fontFamily'

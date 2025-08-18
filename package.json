@@ -45,206 +45,36 @@
     "configuration": {
       "title": "Flowchart Machine",
       "properties": {
-        "flowchartMachine.general.autoSave": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically save flowcharts after generation"
+        "flowchartMachine.nodes.processTypes": {
+          "type": "object",
+          "default": {
+            "functions": true,
+            "functionCalls": true,
+            "assignments": true,
+            "prints": true,
+            "loops": true,
+            "conditionals": true,
+            "returns": true,
+            "imports": true,
+            "classes": true,
+            "exceptions": true
+          },
+          "description": "Configure which node types to process"
         },
-        "flowchartMachine.general.defaultFormat": {
-          "type": "string",
-          "enum": [
-            "mermaid",
-            "svg",
-            "png"
-          ],
-          "default": "mermaid",
-          "description": "Default output format for flowcharts"
-        },
-        "flowchartMachine.general.showProgress": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show progress notifications during generation"
-        },
-        "flowchartMachine.general.autoOpenWebview": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically open webview after generation"
-        },
-        "flowchartMachine.nodes.processTypes.functions": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process function definitions"
-        },
-        "flowchartMachine.nodes.processTypes.functionCalls": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process function calls"
-        },
-        "flowchartMachine.nodes.processTypes.assignments": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process variable assignments"
-        },
-        "flowchartMachine.nodes.processTypes.prints": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process print statements"
-        },
-        "flowchartMachine.nodes.processTypes.loops": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process loops (for, while)"
-        },
-        "flowchartMachine.nodes.processTypes.conditionals": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process conditional statements"
-        },
-        "flowchartMachine.nodes.processTypes.returns": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process return statements"
-        },
-        "flowchartMachine.nodes.processTypes.imports": {
+        "flowchartMachine.storage.export.useCustomPngLocation": {
           "type": "boolean",
           "default": false,
-          "description": "Process import statements"
+          "description": "Use custom PNG download location instead of Downloads folder"
         },
-        "flowchartMachine.nodes.processTypes.classes": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process class definitions"
-        },
-        "flowchartMachine.nodes.processTypes.exceptions": {
-          "type": "boolean",
-          "default": true,
-          "description": "Process exception handling"
-        },
-        "flowchartMachine.nodes.maxDepth": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 20,
-          "default": 5,
-          "description": "Maximum depth for nested structures"
-        },
-        "flowchartMachine.nodes.includeComments": {
-          "type": "boolean",
-          "default": false,
-          "description": "Include comments in node labels"
-        },
-        "flowchartMachine.nodes.showLineNumbers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show line numbers in nodes"
-        },
-        "flowchartMachine.storage.saveFlowcharts": {
-          "type": "boolean",
-          "default": true,
-          "description": "Save flowcharts for later use"
-        },
-        "flowchartMachine.storage.maxSavedFlowcharts": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 1000,
-          "default": 50,
-          "description": "Maximum number of saved flowcharts to keep"
-        },
-        "flowchartMachine.storage.storageLocation": {
-          "type": "string",
-          "enum": [
-            "workspace",
-            "global"
-          ],
-          "default": "workspace",
-          "description": "Storage location for saved flowcharts"
-        },
-        "flowchartMachine.storage.includeSourceCode": {
-          "type": "boolean",
-          "default": true,
-          "description": "Include source code with saved flowcharts"
-        },
-        "flowchartMachine.storage.includeTooltipData": {
-          "type": "boolean",
-          "default": true,
-          "description": "Include tooltip data with saved flowcharts"
-        },
-        "flowchartMachine.storage.autoCleanupDays": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 365,
-          "default": 30,
-          "description": "Auto-cleanup old flowcharts after days"
-        },
-        "flowchartMachine.appearance.theme": {
-          "type": "string",
-          "enum": [
-            "default",
-            "dark",
-            "light",
-            "custom"
-          ],
-          "default": "default",
-          "description": "Default theme for flowcharts"
-        },
-        "flowchartMachine.appearance.customCSS": {
+        "flowchartMachine.storage.export.defaultPngLocation": {
           "type": "string",
           "default": "",
-          "description": "Custom CSS for flowchart styling"
+          "description": "Default directory for PNG exports (leave empty for Downloads folder)"
         },
-        "flowchartMachine.appearance.fontFamily": {
-          "type": "string",
-          "default": "var(--vscode-font-family)",
-          "description": "Font family for flowchart text"
-        },
-        "flowchartMachine.appearance.fontSize": {
-          "type": "number",
-          "minimum": 8,
-          "maximum": 32,
-          "default": "14",
-          "description": "Font size for flowchart text"
-        },
-        "flowchartMachine.appearance.roundedCorners": {
+        "flowchartMachine.storage.export.autoIncrementPngVersions": {
           "type": "boolean",
           "default": true,
-          "description": "Use rounded corners for nodes"
-        },
-        "flowchartMachine.performance.maxNodes": {
-          "type": "number",
-          "minimum": 10,
-          "maximum": 1000,
-          "default": "100",
-          "description": "Maximum number of nodes per flowchart"
-        },
-        "flowchartMachine.performance.maxFileSize": {
-          "type": "number",
-          "minimum": 100,
-          "maximum": 10000,
-          "default": 1024,
-          "description": "Maximum file size to process (in KB)"
-        },
-        "flowchartMachine.performance.parallelProcessing": {
-          "type": "boolean",
-          "default": false,
-          "description": "Use parallel processing for large files"
-        },
-        "flowchartMachine.performance.scriptTimeout": {
-          "type": "number",
-          "minimum": 5,
-          "maximum": 300,
-          "default": 30,
-          "description": "Timeout for Python script execution (in seconds)"
-        },
-        "flowchartMachine.performance.enableCaching": {
-          "type": "boolean",
-          "default": true,
-          "description": "Cache parsed results for better performance"
-        },
-        "flowchartMachine.performance.cacheExpirationHours": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 168,
-          "default": 24,
-          "description": "Cache expiration time (in hours)"
+          "description": "Automatically increment version numbers for PNG files"
         }
       }
     }

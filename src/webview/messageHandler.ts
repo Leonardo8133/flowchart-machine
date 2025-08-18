@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { PythonService } from '../services/pythonService';
 import { FileService } from '../services/fileService';
+import { ConfigService } from '../services/configService';
 
 export class WebviewMessageHandler {
   private originalFilePath?: string;
@@ -30,8 +32,8 @@ export class WebviewMessageHandler {
         await this.handleRegeneration(panel);
         break;
         
-      case 'saveAsPng':
-        await this.handleSaveAsPng(panel);
+      case 'createPng':
+        await this.handleCreatePng(message, panel);
         break;
         
       case 'updateConfig':
@@ -130,25 +132,148 @@ export class WebviewMessageHandler {
   }
 
   /**
-   * Handle save as PNG request
+   * Handle PNG creation request from webview
    */
-  private async handleSaveAsPng(panel: vscode.WebviewPanel): Promise<void> {
+  private async handleCreatePng(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
-      // For now, we'll just acknowledge the request
-      // In a future implementation, this could actually save the flowchart as PNG
+      if (message.error) {
+        // PNG conversion failed in webview
+        panel.webview.postMessage({ 
+          command: 'pngResult', 
+          success: false, 
+          error: message.error 
+        });
+        return;
+      }
+
+      const { pngData } = message;
+
+      if (!this.originalFilePath) {
+        throw new Error('Original file path not found');
+      }
+
+      // Compute target directory (Downloads by default, fallback to original dir)
+      const targetDir = await this.getDefaultDownloadDirectory(path.dirname(this.originalFilePath));
+      // Compute versioned filename based on original python file name
+      const pythonBase = path.basename(this.originalFilePath, path.extname(this.originalFilePath));
+      const filename = await this.getNextVersionedPngFilename(targetDir, pythonBase);
+
+      // Ensure directory exists and save the PNG data to a file
+      const fullPath = path.join(targetDir, filename);
+      await this.savePngToFile(pngData, fullPath);
+      
+      // Send success response
       panel.webview.postMessage({ 
-        command: 'pngSaved' 
+        command: 'pngResult', 
+        success: true, 
+        filename: filename,
+        directory: targetDir
       });
       
-      // Show a notification to the user
-      vscode.window.showInformationMessage('PNG export functionality will be implemented in a future update');
+      vscode.window.showInformationMessage(
+        `Flowchart saved as PNG: ${filename} in ${targetDir}`,
+        'Open File',
+        'Open Folder'
+      ).then(selection => {
+        if (selection === 'Open File') {
+          vscode.commands.executeCommand('vscode.open', vscode.Uri.file(path.join(targetDir, filename)));
+        } else if (selection === 'Open Folder') {
+          vscode.commands.executeCommand('vscode.open', vscode.Uri.file(targetDir));
+        }
+      });
+      
     } catch (error) {
       console.error('PNG save failed:', error);
       panel.webview.postMessage({ 
-        command: 'pngSaveError', 
+        command: 'pngResult', 
+        success: false, 
         error: `PNG save failed: ${error}` 
       });
     }
+  }
+
+
+
+  /**
+   * Save PNG data to file
+   */
+  private async savePngToFile(pngData: string, fullPath: string): Promise<void> {
+    try {
+      // Remove data URL prefix
+      const base64Data = pngData.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Ensure target directory exists
+      await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
+
+      // Write the PNG file
+      await fs.promises.writeFile(fullPath, buffer);
+      
+      console.log(`PNG saved to: ${fullPath}`);
+    } catch (error) {
+      console.error('Error saving PNG file:', error);
+      throw new Error(`Failed to save PNG file: ${error}`);
+    }
+  }
+
+  /**
+   * Determine default download directory. Prefer user's Downloads folder; fallback to given fallbackDir.
+   */
+  private async getDefaultDownloadDirectory(fallbackDir: string): Promise<string> {
+    const configService = ConfigService.getInstance();
+    const useCustomLocation = configService.get<boolean>('storage.export.useCustomPngLocation');
+    const customLocation = configService.get<string>('storage.export.defaultPngLocation');
+    
+    if (useCustomLocation && customLocation && customLocation.trim()) {
+      try {
+        const stat = await fs.promises.stat(customLocation);
+        if (stat.isDirectory()) {
+          return customLocation;
+        }
+      } catch {
+        // Custom location doesn't exist or isn't accessible, fallback to Downloads
+      }
+    }
+    
+    try {
+      const downloadsDir = path.join(os.homedir(), 'Downloads');
+      const stat = await fs.promises.stat(downloadsDir).catch(() => undefined);
+      if (stat && stat.isDirectory()) {
+        return downloadsDir;
+      }
+    } catch {
+      // ignore and fallback
+    }
+    return fallbackDir;
+  }
+
+  /**
+   * Compute the next available filename like {base}_{n}.png inside targetDir.
+   */
+  private async getNextVersionedPngFilename(targetDir: string, baseName: string): Promise<string> {
+    const configService = ConfigService.getInstance();
+    const autoIncrement = configService.get<boolean>('storage.export.autoIncrementPngVersions');
+    
+    if (!autoIncrement) {
+      // If auto-increment is disabled, just use the base name
+      return `${baseName}.png`;
+    }
+    
+    const files = await fs.promises.readdir(targetDir).catch(() => [] as string[]);
+    const escaped = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^${escaped}_(\\d+)\\.png$`, 'i');
+    let maxVersion = 0;
+    for (const file of files) {
+      const match = file.match(regex);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!Number.isNaN(n) && n > maxVersion) {
+          maxVersion = n;
+        }
+      }
+    }
+    const next = maxVersion + 1;
+    return `${baseName}_${next}.png`;
   }
 
   /**

@@ -1,16 +1,3 @@
 {
-    "expr5": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "for_loop6": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "expr8": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "if_cond9": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "expr11": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "assign12": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "expr13": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "expr14": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "assign15": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "while_loop16": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "expr18": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "unsupported19": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "next_iter20": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>",
-    "expr21": "<h4>Context: example_function()</h4><p><strong>Docstring:</strong> An example function that demonstrates loops, prints, and calls other functions.</p><p><strong>Variables in scope:</strong> count, result</p>"
+    "return5": "<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>"
 }

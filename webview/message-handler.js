@@ -48,14 +48,14 @@ function handleExtensionMessage(event) {
             }
             break;
             
-        case 'pngSaved':
-            console.log('PNG saved successfully');
-            updateControlStates(message);
-            break;
-            
-        case 'pngSaveError':
-            console.error('PNG save error:', message.error);
-            updateControlStates(message);
+        case 'pngResult':
+            if (message.success) {
+                console.log('PNG saved successfully:', message.filename);
+                updateControlStates({ command: 'pngSaved' });
+            } else {
+                console.error('PNG failed:', message.error);
+                updateControlStates({ command: 'pngSaveError' });
+            }
             break;
             
         case 'configUpdated':

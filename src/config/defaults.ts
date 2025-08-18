@@ -39,6 +39,11 @@ export const DEFAULT_CONFIG: FlowchartConfig = {
     includeSourceCode: true,
     includeTooltipData: true,
     autoCleanupDays: 30,
+    export: {
+      useCustomPngLocation: false,
+      defaultPngLocation: '',
+      autoIncrementPngVersions: true,
+    },
   },
   appearance: {
     theme: 'default',
@@ -200,6 +205,21 @@ export const CONFIG_SCHEMA = {
     maximum: 365,
     default: DEFAULT_CONFIG.storage.autoCleanupDays,
     description: 'Auto-cleanup old flowcharts after days',
+  },
+  'flowchartMachine.storage.export.defaultPngLocation': {
+    type: 'string',
+    default: DEFAULT_CONFIG.storage.export.defaultPngLocation,
+    description: 'Default directory for PNG exports (leave empty for Downloads folder)',
+  },
+  'flowchartMachine.storage.export.useCustomPngLocation': {
+    type: 'boolean',
+    default: DEFAULT_CONFIG.storage.export.useCustomPngLocation,
+    description: 'Use custom PNG download location instead of Downloads folder',
+  },
+  'flowchartMachine.storage.export.autoIncrementPngVersions': {
+    type: 'boolean',
+    default: DEFAULT_CONFIG.storage.export.autoIncrementPngVersions,
+    description: 'Automatically increment version numbers for PNG files',
   },
   'flowchartMachine.appearance.theme': {
     type: 'string',

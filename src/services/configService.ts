@@ -230,6 +230,11 @@ export class ConfigService {
         includeSourceCode: config.get('storage.includeSourceCode', DEFAULT_CONFIG.storage.includeSourceCode),
         includeTooltipData: config.get('storage.includeTooltipData', DEFAULT_CONFIG.storage.includeTooltipData),
         autoCleanupDays: config.get('storage.autoCleanupDays', DEFAULT_CONFIG.storage.autoCleanupDays),
+        export: {
+          defaultPngLocation: config.get('storage.export.defaultPngLocation', DEFAULT_CONFIG.storage.export.defaultPngLocation),
+          useCustomPngLocation: config.get('storage.export.useCustomPngLocation', DEFAULT_CONFIG.storage.export.useCustomPngLocation),
+          autoIncrementPngVersions: config.get('storage.export.autoIncrementPngVersions', DEFAULT_CONFIG.storage.export.autoIncrementPngVersions),
+        },
       },
       appearance: {
         theme: config.get('appearance.theme', DEFAULT_CONFIG.appearance.theme),
