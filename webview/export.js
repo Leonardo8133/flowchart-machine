@@ -51,29 +51,29 @@ async function convertSvgToPng() {
  */
 function calculateDimensions(svgElement) {
     const svgRect = svgElement.getBoundingClientRect();
-    const svgWidth = svgElement.viewBox?.baseVal?.width || svgRect.width || 800;
-    const svgHeight = svgElement.viewBox?.baseVal?.height || svgRect.height || 600;
+    const vb = svgElement.viewBox?.baseVal;
+    const hasViewBox = vb && vb.width && vb.height;
+    const svgWidth = hasViewBox ? vb.width : (svgRect.width || 800);
+    const svgHeight = hasViewBox ? vb.height : (svgRect.height || 600);
     
-    const padding = 40;
     const minWidth = 800;
     const minHeight = 600;
     const maxWidth = 4000;
     const maxHeight = 3000;
     
-    let width = Math.max(minWidth, Math.min(maxWidth, svgWidth + padding));
-    let height = Math.max(minHeight, Math.min(maxHeight, svgHeight + padding));
+    // Start from intrinsic aspect ratio and content size
+    const aspectRatio = svgWidth / Math.max(1, svgHeight);
+    let width = Math.max(minWidth, Math.min(maxWidth, svgWidth));
+    let height = Math.max(minHeight, Math.min(maxHeight, width / aspectRatio));
     
-    // Maintain aspect ratio
-    const aspectRatio = svgWidth / svgHeight;
-    if (aspectRatio > 1) {
-        height = Math.max(minHeight, Math.min(maxHeight, width / aspectRatio));
-    } else {
-        width = Math.max(minWidth, Math.min(maxWidth, height * aspectRatio));
+    // Add headroom for small charts to avoid cramped height
+    if (width <= 1000 && height <= 800) {
+        height = Math.min(maxHeight, height + 120);
     }
     
-    return { 
-        width: Math.round(width / 2) * 2, 
-        height: Math.round(height / 2) * 2 
+    return {
+        width: Math.round(width / 2) * 2,
+        height: Math.round(height / 2) * 2
     };
 }
 
@@ -140,30 +140,23 @@ function fixSvgForConversion(svgString, width, height) {
         svg = svg.replace('<svg', '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
     }
     
-    // Ensure SVG has dimensions and viewBox
+    // Ensure SVG has dimensions; don't override existing viewBox to preserve aspect
     const svgMatch = svg.match(/<svg[^>]*>/);
     if (svgMatch) {
         let svgTag = svgMatch[0];
-        
         if (!svgTag.includes('width=')) {
             svgTag = svgTag.replace('>', ` width="${width}">`);
         }
         if (!svgTag.includes('height=')) {
             svgTag = svgTag.replace('>', ` height="${height}">`);
         }
-        if (!svgTag.includes('viewBox=')) {
-            svgTag = svgTag.replace('>', ` viewBox="0 0 ${width} ${height}">`);
-        }
-        
-        // Add VS Code background color to SVG
+        // Add background color to root
         const vscodeBackground = getComputedStyle(document.body).getPropertyValue('--vscode-editor-background') || '#1e1e1e';
         if (!svgTag.includes('style=')) {
             svgTag = svgTag.replace('>', ` style="background-color: ${vscodeBackground}">`);
         } else {
-            // If style already exists, add background-color to it
             svgTag = svgTag.replace(/style="([^"]*)"/, `style="$1; background-color: ${vscodeBackground}"`);
         }
-        
         svg = svg.replace(svgMatch[0], svgTag);
     }
     

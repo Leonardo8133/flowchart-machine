@@ -42,11 +42,11 @@ export class PythonService {
   /**
    * Execute a Python script with arguments
    */
-  static async executeScript(scriptPath: string, args: string[]): Promise<PythonExecutionResult> {
+  static async executeScript(scriptPath: string, args: string[], env?: NodeJS.ProcessEnv): Promise<PythonExecutionResult> {
     return new Promise((resolve) => {
       const command = `python "${scriptPath}" ${args.map(arg => `"${arg}"`).join(' ')}`;
       
-      exec(command, (error, stdout, stderr) => {
+      exec(command, { env }, (error, stdout, stderr) => {
         if (error) {
           resolve({
             success: false,

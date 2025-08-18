@@ -3,8 +3,16 @@ let regenerateBtn;
 let savePngBtn;
 let showPrintsCheckbox;
 let detailFunctionsCheckbox;
+let showForLoopsCheckbox;
+let showWhileLoopsCheckbox;
+let showVariablesCheckbox;
+let showIfsCheckbox;
+let showImportsCheckbox;
+let showExceptionsCheckbox;
 let mermaidCodeText;
 let showCodeBtn;
+let dropdownToggle;
+let dropdownContent;
 
 // Acquire VS Code API once
 let vscode;
@@ -20,8 +28,16 @@ function initializeControls() {
     savePngBtn = document.getElementById('savePngBtn');
     showPrintsCheckbox = document.getElementById('showPrintsCheckbox');
     detailFunctionsCheckbox = document.getElementById('detailFunctionsCheckbox');
+    showForLoopsCheckbox = document.getElementById('showForLoopsCheckbox');
+    showWhileLoopsCheckbox = document.getElementById('showWhileLoopsCheckbox');
+    showVariablesCheckbox = document.getElementById('showVariablesCheckbox');
+    showIfsCheckbox = document.getElementById('showIfsCheckbox');
+    showImportsCheckbox = document.getElementById('showImportsCheckbox');
+    showExceptionsCheckbox = document.getElementById('showExceptionsCheckbox');
     mermaidCodeText = document.getElementById('mermaidCodeText');
     showCodeBtn = document.getElementById('showCodeBtn');
+    dropdownToggle = document.getElementById('dropdownToggle');
+    dropdownContent = document.getElementById('dropdownContent');
 
     // Add event listeners
     if (regenerateBtn) {
@@ -40,14 +56,58 @@ function initializeControls() {
         detailFunctionsCheckbox.addEventListener('change', handleDetailFunctionsChange);
     }
     
+    if (showForLoopsCheckbox) {
+        showForLoopsCheckbox.addEventListener('change', handleShowForLoopsChange);
+    }
+    
+    if (showWhileLoopsCheckbox) {
+        showWhileLoopsCheckbox.addEventListener('change', handleShowWhileLoopsChange);
+    }
+    
+    if (showVariablesCheckbox) {
+        showVariablesCheckbox.addEventListener('change', handleShowVariablesChange);
+    }
+    
+    if (showIfsCheckbox) {
+        showIfsCheckbox.addEventListener('change', handleShowIfsChange);
+    }
+    
+    if (showImportsCheckbox) {
+        showImportsCheckbox.addEventListener('change', handleShowImportsChange);
+    }
+    
+    if (showExceptionsCheckbox) {
+        showExceptionsCheckbox.addEventListener('change', handleShowExceptionsChange);
+    }
+    
     if (showCodeBtn) {
         showCodeBtn.addEventListener('click', handleShowCodeClick);
     }
+
+    if (dropdownToggle) {
+        dropdownToggle.addEventListener('click', handleDropdownToggle);
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', handleOutsideClick);
 }
 
 function handleShowCodeClick() {
     mermaidCodeText.classList.toggle('hidden');
     showCodeBtn.textContent = mermaidCodeText.classList.contains('hidden') ?  '⬇️ Show MermaidCode': '⬆️ Hide MermaidCode';
+}
+
+function handleDropdownToggle(event) {
+    event.stopPropagation();
+    dropdownContent.classList.toggle('show');
+    dropdownToggle.classList.toggle('active');
+}
+
+function handleOutsideClick(event) {
+    if (!dropdownToggle.contains(event.target) && !dropdownContent.contains(event.target)) {
+        dropdownContent.classList.remove('show');
+        dropdownToggle.classList.remove('active');
+    }
 }
 
 function handleRegenerateClick() {
@@ -98,15 +158,72 @@ function handleShowPrintsChange(event) {
     }
 }
 
-function handleDetailFunctionsChange(event) {
-    const value = event.target.checked;
-    console.log('Detail functions changed:', value);
-    
+function handleDetailFunctionsChange() {
     if (vscode) {
         vscode.postMessage({
             command: 'updateConfig',
             key: 'detailFunctions',
-            value: value
+            value: detailFunctionsCheckbox.checked
+        });
+    }
+}
+
+function handleShowForLoopsChange() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'updateConfig',
+            key: 'forLoops',
+            value: showForLoopsCheckbox.checked
+        });
+    }
+}
+
+function handleShowWhileLoopsChange() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'updateConfig',
+            key: 'whileLoops',
+            value: showWhileLoopsCheckbox.checked
+        });
+    }
+}
+
+function handleShowVariablesChange() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'updateConfig',
+            key: 'variables',
+            value: showVariablesCheckbox.checked
+        });
+    }
+}
+
+function handleShowIfsChange() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'updateConfig',
+            key: 'ifs',
+            value: showIfsCheckbox.checked
+        });
+    }
+}
+
+function handleShowImportsChange() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'updateConfig',
+            key: 'imports',
+            value: showImportsCheckbox.checked
+        });
+    }
+}
+
+function handleShowExceptionsChange() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'updateConfig',
+            key: 'exceptions',
+            value: showExceptionsCheckbox.checked
         });
     }
 }

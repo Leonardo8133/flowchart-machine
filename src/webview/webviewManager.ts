@@ -64,18 +64,6 @@ export class WebviewManager {
     // Set up message handling
     this.messageHandler.setupMessageHandling(panel, this.originalFilePath);
 
-    // Send initial state for checkboxes
-    setTimeout(() => {
-      panel.webview.postMessage({
-        command: 'updateInitialState',
-        showPrints: true, // Default value, could come from config
-        detailFunctions: true // Default value, could come from config
-      });
-    }, 200);
-
-    // Generate debug HTML
-    // this.generateDebugHtml(htmlContent, cleanDiagram, tooltipData, htmlUri);
-
     return panel;
   }
 

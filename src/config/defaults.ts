@@ -6,30 +6,18 @@ import { FlowchartConfig } from '../types/config';
 export const DEFAULT_CONFIG: FlowchartConfig = {
   general: {
     autoSave: true,
-    defaultFormat: 'mermaid',
-    showProgress: true,
-    autoOpenWebview: true,
+    showNotifications: true,
   },
   nodes: {
     processTypes: {
-      functions: true,
-      functionCalls: true,
-      assignments: true,
       prints: true,
-      loops: true,
-      conditionals: true,
-      returns: true,
-      imports: false, // Usually not needed for flowcharts
-      classes: true,
+      functions: true,
+      forLoops: true,
+      whileLoops: true,
+      variables: true,
+      ifs: true,
+      imports: true,
       exceptions: true,
-    },
-    maxDepth: 5,
-    includeComments: false,
-    showLineNumbers: true,
-    customLabels: {
-      'print': 'Output',
-      'return': 'Return Value',
-      'import': 'Import Module',
     },
   },
   storage: {
@@ -40,42 +28,19 @@ export const DEFAULT_CONFIG: FlowchartConfig = {
     includeTooltipData: true,
     autoCleanupDays: 30,
     export: {
-      useCustomPngLocation: false,
       defaultPngLocation: '',
+      useCustomPngLocation: false,
       autoIncrementPngVersions: true,
     },
   },
   appearance: {
-    theme: 'default',
-    customCSS: '',
-    nodeColors: {
-      functions: '#4CAF50',
-      calls: '#2196F3',
-      assignments: '#FF9800',
-      prints: '#9C27B0',
-      loops: '#F44336',
-      conditionals: '#E91E63',
-      returns: '#00BCD4',
-      imports: '#607D8B',
-      classes: '#795548',
-      exceptions: '#FF5722',
-    },
-    fontFamily: 'var(--vscode-font-family)',
-    fontSize: 14,
-    roundedCorners: true,
-    layout: {
-      nodeSpacing: 50,
-      rankSpacing: 100,
-      direction: 'TB',
-    },
+    theme: 'auto',
+    fontSize: 12,
+    lineHeight: 1.2,
   },
   performance: {
-    maxNodes: 100,
-    maxFileSize: 1024, // 1MB
-    parallelProcessing: false,
-    scriptTimeout: 30,
-    enableCaching: true,
-    cacheExpirationHours: 24,
+    maxNodes: 1000,
+    timeout: 30000,
   },
 };
 
@@ -86,90 +51,52 @@ export const CONFIG_SCHEMA = {
   'flowchartMachine.general.autoSave': {
     type: 'boolean',
     default: DEFAULT_CONFIG.general.autoSave,
-    description: 'Automatically save flowcharts after generation',
+    description: 'Automatically save flowcharts',
   },
-  'flowchartMachine.general.defaultFormat': {
-    type: 'string',
-    enum: ['mermaid', 'svg', 'png'],
-    default: DEFAULT_CONFIG.general.defaultFormat,
-    description: 'Default output format for flowcharts',
-  },
-  'flowchartMachine.general.showProgress': {
+  'flowchartMachine.general.showNotifications': {
     type: 'boolean',
-    default: DEFAULT_CONFIG.general.showProgress,
-    description: 'Show progress notifications during generation',
-  },
-  'flowchartMachine.general.autoOpenWebview': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.general.autoOpenWebview,
-    description: 'Automatically open webview after generation',
-  },
-  'flowchartMachine.nodes.processTypes.functions': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.functions,
-    description: 'Process function definitions',
-  },
-  'flowchartMachine.nodes.processTypes.functionCalls': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.functionCalls,
-    description: 'Process function calls',
-  },
-  'flowchartMachine.nodes.processTypes.assignments': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.assignments,
-    description: 'Process variable assignments',
+    default: DEFAULT_CONFIG.general.showNotifications,
+    description: 'Show notifications for operations',
   },
   'flowchartMachine.nodes.processTypes.prints': {
     type: 'boolean',
     default: DEFAULT_CONFIG.nodes.processTypes.prints,
-    description: 'Process print statements',
+    description: 'Show print statements in the flowchart',
   },
-  'flowchartMachine.nodes.processTypes.loops': {
+  'flowchartMachine.nodes.processTypes.functions': {
     type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.loops,
-    description: 'Process loops (for, while)',
+    default: DEFAULT_CONFIG.nodes.processTypes.functions,
+    description: 'Show function definitions in the flowchart',
   },
-  'flowchartMachine.nodes.processTypes.conditionals': {
+  'flowchartMachine.nodes.processTypes.forLoops': {
     type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.conditionals,
-    description: 'Process conditional statements',
+    default: DEFAULT_CONFIG.nodes.processTypes.forLoops,
+    description: 'Show for loops in the flowchart',
   },
-  'flowchartMachine.nodes.processTypes.returns': {
+  'flowchartMachine.nodes.processTypes.whileLoops': {
     type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.returns,
-    description: 'Process return statements',
+    default: DEFAULT_CONFIG.nodes.processTypes.whileLoops,
+    description: 'Show while loops in the flowchart',
+  },
+  'flowchartMachine.nodes.processTypes.variables': {
+    type: 'boolean',
+    default: DEFAULT_CONFIG.nodes.processTypes.variables,
+    description: 'Show variable assignments in the flowchart',
+  },
+  'flowchartMachine.nodes.processTypes.ifs': {
+    type: 'boolean',
+    default: DEFAULT_CONFIG.nodes.processTypes.ifs,
+    description: 'Show if statements in the flowchart',
   },
   'flowchartMachine.nodes.processTypes.imports': {
     type: 'boolean',
     default: DEFAULT_CONFIG.nodes.processTypes.imports,
-    description: 'Process import statements',
-  },
-  'flowchartMachine.nodes.processTypes.classes': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.processTypes.classes,
-    description: 'Process class definitions',
+    description: 'Show import statements in the flowchart',
   },
   'flowchartMachine.nodes.processTypes.exceptions': {
     type: 'boolean',
     default: DEFAULT_CONFIG.nodes.processTypes.exceptions,
-    description: 'Process exception handling',
-  },
-  'flowchartMachine.nodes.maxDepth': {
-    type: 'number',
-    minimum: 1,
-    maximum: 20,
-    default: DEFAULT_CONFIG.nodes.maxDepth,
-    description: 'Maximum depth for nested structures',
-  },
-  'flowchartMachine.nodes.includeComments': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.includeComments,
-    description: 'Include comments in node labels',
-  },
-  'flowchartMachine.nodes.showLineNumbers': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.nodes.showLineNumbers,
-    description: 'Show line numbers in nodes',
+    description: 'Show exception handling in the flowchart',
   },
   'flowchartMachine.storage.saveFlowcharts': {
     type: 'boolean',
@@ -209,12 +136,12 @@ export const CONFIG_SCHEMA = {
   'flowchartMachine.storage.export.defaultPngLocation': {
     type: 'string',
     default: DEFAULT_CONFIG.storage.export.defaultPngLocation,
-    description: 'Default directory for PNG exports (leave empty for Downloads folder)',
+    description: 'Default location for PNG exports',
   },
   'flowchartMachine.storage.export.useCustomPngLocation': {
     type: 'boolean',
     default: DEFAULT_CONFIG.storage.export.useCustomPngLocation,
-    description: 'Use custom PNG download location instead of Downloads folder',
+    description: 'Use custom location for PNG exports',
   },
   'flowchartMachine.storage.export.autoIncrementPngVersions': {
     type: 'boolean',
@@ -223,68 +150,36 @@ export const CONFIG_SCHEMA = {
   },
   'flowchartMachine.appearance.theme': {
     type: 'string',
-    enum: ['default', 'dark', 'light', 'custom'],
+    enum: ['light', 'dark', 'auto'],
     default: DEFAULT_CONFIG.appearance.theme,
-    description: 'Default theme for flowcharts',
-  },
-  'flowchartMachine.appearance.customCSS': {
-    type: 'string',
-    default: DEFAULT_CONFIG.appearance.customCSS,
-    description: 'Custom CSS for flowchart styling',
-  },
-  'flowchartMachine.appearance.fontFamily': {
-    type: 'string',
-    default: DEFAULT_CONFIG.appearance.fontFamily,
-    description: 'Font family for flowchart text',
+    description: 'Theme for the flowchart display',
   },
   'flowchartMachine.appearance.fontSize': {
     type: 'number',
     minimum: 8,
-    maximum: 32,
+    maximum: 24,
     default: DEFAULT_CONFIG.appearance.fontSize,
     description: 'Font size for flowchart text',
   },
-  'flowchartMachine.appearance.roundedCorners': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.appearance.roundedCorners,
-    description: 'Use rounded corners for nodes',
+  'flowchartMachine.appearance.lineHeight': {
+    type: 'number',
+    minimum: 1.0,
+    maximum: 2.0,
+    default: DEFAULT_CONFIG.appearance.lineHeight,
+    description: 'Line height for flowchart text',
   },
   'flowchartMachine.performance.maxNodes': {
     type: 'number',
     minimum: 10,
-    maximum: 1000,
-    default: DEFAULT_CONFIG.performance.maxNodes,
-    description: 'Maximum number of nodes per flowchart',
-  },
-  'flowchartMachine.performance.maxFileSize': {
-    type: 'number',
-    minimum: 100,
     maximum: 10000,
-    default: DEFAULT_CONFIG.performance.maxFileSize,
-    description: 'Maximum file size to process (in KB)',
+    default: DEFAULT_CONFIG.performance.maxNodes,
+    description: 'Maximum number of nodes allowed in a flowchart',
   },
-  'flowchartMachine.performance.parallelProcessing': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.performance.parallelProcessing,
-    description: 'Use parallel processing for large files',
-  },
-  'flowchartMachine.performance.scriptTimeout': {
+  'flowchartMachine.performance.timeout': {
     type: 'number',
-    minimum: 5,
-    maximum: 300,
-    default: DEFAULT_CONFIG.performance.scriptTimeout,
-    description: 'Timeout for Python script execution (in seconds)',
-  },
-  'flowchartMachine.performance.enableCaching': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.performance.enableCaching,
-    description: 'Cache parsed results for better performance',
-  },
-  'flowchartMachine.performance.cacheExpirationHours': {
-    type: 'number',
-    minimum: 1,
-    maximum: 168,
-    default: DEFAULT_CONFIG.performance.cacheExpirationHours,
-    description: 'Cache expiration time (in hours)',
+    minimum: 1000,
+    maximum: 60000,
+    default: DEFAULT_CONFIG.performance.timeout,
+    description: 'Timeout for flowchart generation in milliseconds',
   },
 };

@@ -1,6 +1,8 @@
 # give me an function example. 
 # make the funxtion have some loops, prints, whiles and call other functions
-
+import math
+import random
+from datetime import datetime
 
 def helper_function(x):
     """A simple helper function that returns the square of x."""

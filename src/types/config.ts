@@ -16,48 +16,21 @@ export interface FlowchartConfig {
 }
 
 export interface GeneralConfig {
-  /** Whether to automatically save flowcharts after generation */
   autoSave: boolean;
-  /** Default output format for flowcharts */
-  defaultFormat: 'mermaid' | 'svg' | 'png';
-  /** Whether to show progress notifications */
-  showProgress: boolean;
-  /** Whether to open webview automatically after generation */
-  autoOpenWebview: boolean;
+  showNotifications: boolean;
 }
 
 export interface NodeConfig {
-  /** Types of nodes to process */
   processTypes: {
-    /** Process function definitions */
-    functions: boolean;
-    /** Process function calls */
-    functionCalls: boolean;
-    /** Process variable assignments */
-    assignments: boolean;
-    /** Process print statements */
     prints: boolean;
-    /** Process loops (for, while) */
-    loops: boolean;
-    /** Process conditional statements (if, elif, else) */
-    conditionals: boolean;
-    /** Process return statements */
-    returns: boolean;
-    /** Process import statements */
+    functions: boolean;
+    forLoops: boolean;
+    whileLoops: boolean;
+    variables: boolean;
+    ifs: boolean;
     imports: boolean;
-    /** Process class definitions */
-    classes: boolean;
-    /** Process exception handling (try, except, finally) */
     exceptions: boolean;
   };
-  /** Maximum depth for nested structures */
-  maxDepth: number;
-  /** Whether to include comments in node labels */
-  includeComments: boolean;
-  /** Whether to show line numbers in nodes */
-  showLineNumbers: boolean;
-  /** Custom node labels for specific patterns */
-  customLabels: Record<string, string>;
 }
 
 export interface StorageConfig {
@@ -85,50 +58,14 @@ export interface StorageConfig {
 }
 
 export interface AppearanceConfig {
-  /** Default theme for flowcharts */
-  theme: 'default' | 'dark' | 'light' | 'custom';
-  /** Custom CSS for flowchart styling */
-  customCSS: string;
-  /** Node colors for different types */
-  nodeColors: {
-    functions: string;
-    calls: string;
-    assignments: string;
-    prints: string;
-    loops: string;
-    conditionals: string;
-    returns: string;
-    imports: string;
-    classes: string;
-    exceptions: string;
-  };
-  /** Font family for flowchart text */
-  fontFamily: string;
-  /** Font size for flowchart text */
+  theme: 'light' | 'dark' | 'auto';
   fontSize: number;
-  /** Whether to use rounded corners for nodes */
-  roundedCorners: boolean;
-  /** Node spacing and layout */
-  layout: {
-    nodeSpacing: number;
-    rankSpacing: number;
-    direction: 'TB' | 'BT' | 'LR' | 'RL';
-  };
+  lineHeight: number;
 }
 
 export interface PerformanceConfig {
-  /** Maximum number of nodes per flowchart */
   maxNodes: number;
-  /** Maximum file size to process (in KB) */
-  maxFileSize: number;
-  /** Whether to use parallel processing for large files */
-  parallelProcessing: boolean;
-  /** Timeout for Python script execution (in seconds) */
-  scriptTimeout: number;
-  /** Whether to cache parsed results */
-  enableCaching: boolean;
-  /** Cache expiration time (in hours) */
-  cacheExpirationHours: number;
+  timeout: number;
 }
 
 export interface SavedFlowchart {
@@ -180,22 +117,7 @@ export interface ConfigurationChangeEvent {
 
 export type ConfigurationKey = 
   | 'general.autoSave'
-  | 'general.defaultFormat'
-  | 'general.showProgress'
-  | 'general.autoOpenWebview'
-  | 'nodes.processTypes.functions'
-  | 'nodes.processTypes.functionCalls'
-  | 'nodes.processTypes.assignments'
-  | 'nodes.processTypes.prints'
-  | 'nodes.processTypes.loops'
-  | 'nodes.processTypes.conditionals'
-  | 'nodes.processTypes.returns'
-  | 'nodes.processTypes.imports'
-  | 'nodes.processTypes.classes'
-  | 'nodes.processTypes.exceptions'
-  | 'nodes.maxDepth'
-  | 'nodes.includeComments'
-  | 'nodes.showLineNumbers'
+  | 'general.showNotifications'
   | 'storage.saveFlowcharts'
   | 'storage.maxSavedFlowcharts'
   | 'storage.storageLocation'
@@ -206,13 +128,15 @@ export type ConfigurationKey =
   | 'storage.export.useCustomPngLocation'
   | 'storage.export.autoIncrementPngVersions'
   | 'appearance.theme'
-  | 'appearance.customCSS'
-  | 'appearance.fontFamily'
   | 'appearance.fontSize'
-  | 'appearance.roundedCorners'
+  | 'appearance.lineHeight'
+  | 'nodes.processTypes.prints'
+  | 'nodes.processTypes.functions'
+  | 'nodes.processTypes.forLoops'
+  | 'nodes.processTypes.whileLoops'
+  | 'nodes.processTypes.variables'
+  | 'nodes.processTypes.ifs'
+  | 'nodes.processTypes.imports'
+  | 'nodes.processTypes.exceptions'
   | 'performance.maxNodes'
-  | 'performance.maxFileSize'
-  | 'performance.parallelProcessing'
-  | 'performance.scriptTimeout'
-  | 'performance.enableCaching'
-  | 'performance.cacheExpirationHours';
+  | 'performance.timeout';

@@ -13,15 +13,45 @@
                 <h3 class="file-path">{{filePath}}</h3>
             </div>
             
-            <div class="checkbox-group">
+            <div class="checkbox-dropdown">
+              <button type="button" class="dropdown-toggle" id="dropdownToggle">
+                Node Processing Types
+                <span class="dropdown-icon">▼</span>
+              </button>
+              <div class="dropdown-content" id="dropdownContent">
                 <div class="checkbox-item">
-                    <input type="checkbox" id="showPrintsCheckbox" checked>
-                    <label for="showPrintsCheckbox">Show prints</label>
+                  <input type="checkbox" id="showPrintsCheckbox" checked>
+                  <label for="showPrintsCheckbox">Show Prints</label>
                 </div>
                 <div class="checkbox-item">
-                    <input type="checkbox" id="detailFunctionsCheckbox" checked>
-                    <label for="detailFunctionsCheckbox">Detail Functions</label>
+                  <input type="checkbox" id="detailFunctionsCheckbox" checked>
+                  <label for="detailFunctionsCheckbox">Show Functions</label>
                 </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="showForLoopsCheckbox" checked>
+                  <label for="showForLoopsCheckbox">Show For Loops</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="showWhileLoopsCheckbox" checked>
+                  <label for="showWhileLoopsCheckbox">Show While Loops</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="showVariablesCheckbox" checked>
+                  <label for="showVariablesCheckbox">Show Variables</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="showIfsCheckbox" checked>
+                  <label for="showIfsCheckbox">Show Ifs</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="showImportsCheckbox" checked>
+                  <label for="showImportsCheckbox">Show Imports</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="showExceptionsCheckbox" checked>
+                  <label for="showExceptionsCheckbox">Show Exceptions</label>
+                </div>
+              </div>
             </div>
         </div>
         

@@ -86,6 +86,7 @@ function updateFlowchart(diagram) {
             
             // Preserve zoom and pan state
             setTimeout(() => {
+                // Fit diagram to container on each render
                 updateTransform();
                 updateZoomLevel();
             }, 100);

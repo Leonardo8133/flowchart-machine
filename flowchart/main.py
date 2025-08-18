@@ -23,6 +23,18 @@ class FlowchartGenerator:
         self.tooltip_data = {} # Data to be exported as JSON
         self.node_scopes = {}  # Track which scope each node belongs to
         self.scope_children = {}  # Map parent scope to called function scopes
+        
+        # Read configuration from environment variables
+        self.show_prints = os.environ.get('SHOW_PRINTS', '1') == '1'
+        self.detail_functions = os.environ.get('DETAIL_FUNCTIONS', '1') == '1'
+        self.show_for_loops = os.environ.get('SHOW_FOR_LOOPS', '1') == '1'
+        self.show_while_loops = os.environ.get('SHOW_WHILE_LOOPS', '1') == '1'
+        self.show_variables = os.environ.get('SHOW_VARIABLES', '1') == '1'
+        self.show_ifs = os.environ.get('SHOW_IFS', '1') == '1'
+        self.show_imports = os.environ.get('SHOW_IMPORTS', '1') == '1'
+        self.show_exceptions = os.environ.get('SHOW_EXCEPTIONS', '1') == '1'
+        # Track whether we've already rendered an import node
+        self._first_import_rendered = False
 
     def _generate_id(self, prefix="node"):
         self.node_counter += 1
@@ -102,6 +114,9 @@ class FlowchartGenerator:
                             for target in node.targets:
                                 if isinstance(target, ast.Name):
                                     variables.add(target.id)
+                        elif isinstance(node, ast.AugAssign):
+                            if isinstance(node.target, ast.Name):
+                                variables.add(node.target.id)
 
                 self.context_data[function_node.name] = {
                     "docstring": docstring,
@@ -123,6 +138,20 @@ class FlowchartGenerator:
             )
             if is_docstring:
                 continue # Do not process this node, effectively making it invisible
+
+            # Apply filters based on configuration
+            if not self._filter_for_loops(node):
+                continue
+            if not self._filter_while_loops(node):
+                continue
+            if not self._filter_variables(node):
+                continue
+            if not self._filter_ifs(node):
+                continue
+            if not self._filter_imports(node):
+                continue
+            if not self._filter_exceptions(node):
+                continue
 
             handler_name = f"_handle_{type(node).__name__.lower()}"
             handler = getattr(self, handler_name, self._handle_unsupported)
@@ -174,6 +203,7 @@ class FlowchartGenerator:
 
     def generate(self, python_code):
         try:
+            print("=== Starting flowchart generation ===")
             tree = ast.parse(python_code)
             self.__init__()
             self._extract_context(tree)
@@ -204,6 +234,7 @@ class FlowchartGenerator:
             # Clean the Mermaid diagram before returning
             cleaned_mermaid = self.clean_mermaid_diagram(mermaid_string)
             
+            print("=== Flowchart generation completed successfully ===")
             return cleaned_mermaid, self.tooltip_data
 
         except Exception as e:
@@ -266,10 +297,66 @@ class FlowchartGenerator:
         self._add_connection(loop_cond_id, loop_exit_id, label="Done")
         return loop_exit_id
 
+    def _filter_prints(self, name):
+        # If show_prints is False and this is a print function, filter it out
+        if not self.show_prints and name == 'print':
+            return False
+        
+        return True
+
+    def _filter_for_loops(self, node):
+        # If show_for_loops is False, filter out for loops
+        if not self.show_for_loops and isinstance(node, ast.For):
+            return False
+        return True
+
+    def _filter_while_loops(self, node):
+        # If show_while_loops is False, filter out while loops
+        if not self.show_while_loops and isinstance(node, ast.While):
+            return False
+        return True
+
+    def _filter_variables(self, node):
+        # If show_variables is False, filter out variable assignments and augmented assignments
+        if not self.show_variables and (isinstance(node, ast.Assign) or isinstance(node, ast.AugAssign)):
+            return False
+        return True
+
+    def _filter_ifs(self, node):
+        # If show_ifs is False, filter out if statements
+        if not self.show_ifs and isinstance(node, ast.If):
+            return False
+        return True
+
+    def _filter_imports(self, node):
+        # If show_imports is False, filter out import statements
+        if not self.show_imports and isinstance(node, (ast.Import, ast.ImportFrom)):
+            return False
+        return True
+
+    def _filter_exceptions(self, node):
+        # If show_exceptions is False, filter out try/except blocks
+        if not self.show_exceptions and isinstance(node, ast.Try):
+            return False
+        return True
+    
+    def _filter_functions(self, name):
+        # If detail_functions is False, filter out function calls
+        if not self.detail_functions and name in self.function_defs:
+            return False
+        return True
+
     def _handle_expr(self, node, prev_id, scope):
         if isinstance(node.value, ast.Call):
             call = node.value
             func_name = getattr(call.func, 'id', None)
+
+            if not self._filter_prints(func_name):
+                return prev_id
+            
+            if not self._filter_functions(func_name):
+                return prev_id
+            
             if func_name and func_name in self.function_defs:
                 # Track nesting relationship between scopes
                 self.scope_children.setdefault(scope, set()).add(func_name)
@@ -322,10 +409,99 @@ class FlowchartGenerator:
         return None
 
     def _handle_assign(self, node, prev_id, scope):
+        # Check if the right-hand side is a function call
+        if len(node.targets) == 1 and isinstance(node.value, ast.Call):
+            call = node.value
+            func_name = getattr(call.func, 'id', None)
+            
+            if func_name and func_name in self.function_defs:
+                # This is a function call assignment, expand it
+                assign_id = self._generate_id("assign")
+                self._add_node(assign_id, self._get_node_text(node), scope=scope)
+                self._add_connection(prev_id, assign_id)
+                
+                # Track nesting relationship between scopes
+                self.scope_children.setdefault(scope, set()).add(func_name)
+                function_node = self.function_defs[func_name]
+                call_id = self._generate_id(f"call_{func_name}")
+                self._add_node(call_id, f"Call: {self._get_node_text(node.value)}", shape=('[["', '"]]'), scope=scope)
+                self._add_connection(assign_id, call_id)
+                end_call_id = self._generate_id("end_call")
+                self._add_node(end_call_id, " ", shape=('{{', '}}'))
+                self.call_stack.append(end_call_id)
+                # When we enter a function, the scope changes to that function's name
+                body_end_id = self._process_node_list(function_node.body, call_id, scope=func_name)
+                self.call_stack.pop()
+                if body_end_id: 
+                    self._add_connection(body_end_id, end_call_id)
+                return end_call_id
+        
+        # Regular assignment
         assign_id = self._generate_id("assign")
         self._add_node(assign_id, self._get_node_text(node), scope=scope)
         self._add_connection(prev_id, assign_id)
         return assign_id
+
+    def _handle_augassign(self, node, prev_id, scope):
+        """Handle augmented assignments like count += 1, x *= 2, etc."""
+        augassign_id = self._generate_id("augassign")
+        # Get the operator symbol
+        op_symbol = self._get_operator_symbol(node.op)
+        # Format: "count += 1" or "x *= 2"
+        text = f"{self._get_node_text(node.target)} {op_symbol} {self._get_node_text(node.value)}"
+        self._add_node(augassign_id, text, scope=scope)
+        self._add_connection(prev_id, augassign_id)
+        return augassign_id
+
+    def _get_operator_symbol(self, op):
+        """Convert AST operator to string symbol"""
+        op_map = {
+            ast.Add: '+',
+            ast.Sub: '-',
+            ast.Mult: '*',
+            ast.Div: '/',
+            ast.Mod: '%',
+            ast.Pow: '**',
+            ast.LShift: '<<',
+            ast.RShift: '>>',
+            ast.BitOr: '|',
+            ast.BitXor: '^',
+            ast.BitAnd: '&',
+            ast.FloorDiv: '//'
+        }
+        return op_map.get(type(op), str(op))
+
+    def _handle_import(self, node, prev_id, scope):
+        """Handle import statements like 'import os'"""
+        # If we've already added an import, skip further imports
+        if self._first_import_rendered:
+            # Add "..." to the previous node to indicate more imports
+            if prev_id in self.nodes:
+                current_text = self.nodes[prev_id]
+                if '...' not in current_text:
+                    self.nodes[prev_id] = current_text.replace('"\]', '\n..."\]')
+            return prev_id
+        names = [alias.name for alias in node.names]
+        text = f"import {', '.join(names)}"
+        import_id = self._generate_id("import")
+        self._add_node(import_id, text, shape=('[/"', r'"\]'), scope=scope)
+        self._add_connection(prev_id, import_id)
+        self._first_import_rendered = True
+        return import_id
+
+    def _handle_importfrom(self, node, prev_id, scope):
+        """Handle from imports like 'from os import path'"""
+        # If we've already added an import, skip further imports
+        if self._first_import_rendered:
+            return prev_id
+        module = node.module or ""
+        names = [alias.name for alias in node.names]
+        text = f"from {module} import {', '.join(names)}"
+        importfrom_id = self._generate_id("importfrom")
+        self._add_node(importfrom_id, text, shape=('[/"', r'\"\]'), scope=scope)
+        self._add_connection(prev_id, importfrom_id)
+        self._first_import_rendered = True
+        return importfrom_id
 
     def _handle_unsupported(self, node, prev_id, scope):
         unsupported_id = self._generate_id("unsupported")

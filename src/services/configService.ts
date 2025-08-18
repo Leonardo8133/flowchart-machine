@@ -151,27 +151,6 @@ export class ConfigService {
   }
 
   /**
-   * Check if a specific node type should be processed
-   */
-  shouldProcessNodeType(nodeType: keyof FlowchartConfig['nodes']['processTypes']): boolean {
-    return this.get<boolean>(`nodes.processTypes.${nodeType}`);
-  }
-
-  /**
-   * Get maximum allowed nodes for current configuration
-   */
-  getMaxNodes(): number {
-    return this.get<number>('performance.maxNodes');
-  }
-
-  /**
-   * Get maximum allowed file size in KB
-   */
-  getMaxFileSize(): number {
-    return this.get<number>('performance.maxFileSize');
-  }
-
-  /**
    * Check if auto-save is enabled
    */
   isAutoSaveEnabled(): boolean {
@@ -179,52 +158,29 @@ export class ConfigService {
   }
 
   /**
-   * Check if progress should be shown
-   */
-  shouldShowProgress(): boolean {
-    return this.get<boolean>('general.showProgress');
-  }
-
-  /**
-   * Check if webview should open automatically
-   */
-  shouldAutoOpenWebview(): boolean {
-    return this.get<boolean>('general.autoOpenWebview');
-  }
-
-  /**
    * Load configuration from VS Code settings
    */
   private loadConfiguration(): FlowchartConfig {
     const config = vscode.workspace.getConfiguration('flowchartMachine');
-    
-    return {
+    const loadedConfig: FlowchartConfig = {
       general: {
         autoSave: config.get('general.autoSave', DEFAULT_CONFIG.general.autoSave),
-        defaultFormat: config.get('general.defaultFormat', DEFAULT_CONFIG.general.defaultFormat),
-        showProgress: config.get('general.showProgress', DEFAULT_CONFIG.general.showProgress),
-        autoOpenWebview: config.get('general.autoOpenWebview', DEFAULT_CONFIG.general.autoOpenWebview),
+        showNotifications: config.get('general.showNotifications', DEFAULT_CONFIG.general.showNotifications),
       },
       nodes: {
         processTypes: {
-          functions: config.get('nodes.processTypes.functions', DEFAULT_CONFIG.nodes.processTypes.functions),
-          functionCalls: config.get('nodes.processTypes.functionCalls', DEFAULT_CONFIG.nodes.processTypes.functionCalls),
-          assignments: config.get('nodes.processTypes.assignments', DEFAULT_CONFIG.nodes.processTypes.assignments),
           prints: config.get('nodes.processTypes.prints', DEFAULT_CONFIG.nodes.processTypes.prints),
-          loops: config.get('nodes.processTypes.loops', DEFAULT_CONFIG.nodes.processTypes.loops),
-          conditionals: config.get('nodes.processTypes.conditionals', DEFAULT_CONFIG.nodes.processTypes.conditionals),
-          returns: config.get('nodes.processTypes.returns', DEFAULT_CONFIG.nodes.processTypes.returns),
+          functions: config.get('nodes.processTypes.functions', DEFAULT_CONFIG.nodes.processTypes.functions),
+          forLoops: config.get('nodes.processTypes.forLoops', DEFAULT_CONFIG.nodes.processTypes.forLoops),
+          whileLoops: config.get('nodes.processTypes.whileLoops', DEFAULT_CONFIG.nodes.processTypes.whileLoops),
+          variables: config.get('nodes.processTypes.variables', DEFAULT_CONFIG.nodes.processTypes.variables),
+          ifs: config.get('nodes.processTypes.ifs', DEFAULT_CONFIG.nodes.processTypes.ifs),
           imports: config.get('nodes.processTypes.imports', DEFAULT_CONFIG.nodes.processTypes.imports),
-          classes: config.get('nodes.processTypes.classes', DEFAULT_CONFIG.nodes.processTypes.classes),
           exceptions: config.get('nodes.processTypes.exceptions', DEFAULT_CONFIG.nodes.processTypes.exceptions),
         },
-        maxDepth: config.get('nodes.maxDepth', DEFAULT_CONFIG.nodes.maxDepth),
-        includeComments: config.get('nodes.includeComments', DEFAULT_CONFIG.nodes.includeComments),
-        showLineNumbers: config.get('nodes.showLineNumbers', DEFAULT_CONFIG.nodes.showLineNumbers),
-        customLabels: config.get('nodes.customLabels', DEFAULT_CONFIG.nodes.customLabels),
       },
       storage: {
-        saveFlowcharts: config.get('storage.saveFlowcharts', DEFAULT_CONFIG.storage.saveFlowcharts),
+        saveFlowcharts: true, // Default value, not configurable
         maxSavedFlowcharts: config.get('storage.maxSavedFlowcharts', DEFAULT_CONFIG.storage.maxSavedFlowcharts),
         storageLocation: config.get('storage.storageLocation', DEFAULT_CONFIG.storage.storageLocation),
         includeSourceCode: config.get('storage.includeSourceCode', DEFAULT_CONFIG.storage.includeSourceCode),
@@ -236,24 +192,23 @@ export class ConfigService {
           autoIncrementPngVersions: config.get('storage.export.autoIncrementPngVersions', DEFAULT_CONFIG.storage.export.autoIncrementPngVersions),
         },
       },
-      appearance: {
-        theme: config.get('appearance.theme', DEFAULT_CONFIG.appearance.theme),
-        customCSS: config.get('appearance.customCSS', DEFAULT_CONFIG.appearance.customCSS),
-        nodeColors: config.get('appearance.nodeColors', DEFAULT_CONFIG.appearance.nodeColors),
-        fontFamily: config.get('appearance.fontFamily', DEFAULT_CONFIG.appearance.fontFamily),
-        fontSize: config.get('appearance.fontSize', DEFAULT_CONFIG.appearance.fontSize),
-        roundedCorners: config.get('appearance.roundedCorners', DEFAULT_CONFIG.appearance.roundedCorners),
-        layout: config.get('appearance.layout', DEFAULT_CONFIG.appearance.layout),
-      },
-      performance: {
-        maxNodes: config.get('performance.maxNodes', DEFAULT_CONFIG.performance.maxNodes),
-        maxFileSize: config.get('performance.maxFileSize', DEFAULT_CONFIG.performance.maxFileSize),
-        parallelProcessing: config.get('performance.parallelProcessing', DEFAULT_CONFIG.performance.parallelProcessing),
-        scriptTimeout: config.get('performance.scriptTimeout', DEFAULT_CONFIG.performance.scriptTimeout),
-        enableCaching: config.get('performance.enableCaching', DEFAULT_CONFIG.performance.enableCaching),
-        cacheExpirationHours: config.get('performance.cacheExpirationHours', DEFAULT_CONFIG.performance.cacheExpirationHours),
-      },
+      appearance: DEFAULT_CONFIG.appearance, // Use defaults, not configurable
+      performance: DEFAULT_CONFIG.performance, // Use defaults, not configurable
     };
+    
+    // Load node processing types
+    loadedConfig.nodes.processTypes = {
+      prints: config.get('nodes.processTypes.prints', DEFAULT_CONFIG.nodes.processTypes.prints),
+      functions: config.get('nodes.processTypes.functions', DEFAULT_CONFIG.nodes.processTypes.functions),
+      forLoops: config.get('nodes.processTypes.forLoops', DEFAULT_CONFIG.nodes.processTypes.forLoops),
+      whileLoops: config.get('nodes.processTypes.whileLoops', DEFAULT_CONFIG.nodes.processTypes.whileLoops),
+      variables: config.get('nodes.processTypes.variables', DEFAULT_CONFIG.nodes.processTypes.variables),
+      ifs: config.get('nodes.processTypes.ifs', DEFAULT_CONFIG.nodes.processTypes.ifs),
+      imports: config.get('nodes.processTypes.imports', DEFAULT_CONFIG.nodes.processTypes.imports),
+      exceptions: config.get('nodes.processTypes.exceptions', DEFAULT_CONFIG.nodes.processTypes.exceptions),
+    };
+    
+    return loadedConfig;
   }
 
   /**

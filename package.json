@@ -45,21 +45,90 @@
     "configuration": {
       "title": "Flowchart Machine",
       "properties": {
-        "flowchartMachine.nodes.processTypes": {
-          "type": "object",
-          "default": {
-            "functions": true,
-            "functionCalls": true,
-            "assignments": true,
-            "prints": true,
-            "loops": true,
-            "conditionals": true,
-            "returns": true,
-            "imports": true,
-            "classes": true,
-            "exceptions": true
-          },
-          "description": "Configure which node types to process"
+        "flowchartMachine.general.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save flowcharts after generation"
+        },
+        "flowchartMachine.nodes.processTypes.functions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process function definitions"
+        },
+        "flowchartMachine.nodes.processTypes.functionCalls": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process function calls"
+        },
+        "flowchartMachine.nodes.processTypes.assignments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process variable assignments"
+        },
+        "flowchartMachine.nodes.processTypes.prints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process print statements"
+        },
+        "flowchartMachine.nodes.processTypes.loops": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process loops (for, while)"
+        },
+        "flowchartMachine.nodes.processTypes.conditionals": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process conditional statements"
+        },
+        "flowchartMachine.nodes.processTypes.returns": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process return statements"
+        },
+        "flowchartMachine.nodes.processTypes.imports": {
+          "type": "boolean",
+          "default": false,
+          "description": "Process import statements"
+        },
+        "flowchartMachine.nodes.processTypes.classes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process class definitions"
+        },
+        "flowchartMachine.nodes.processTypes.exceptions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Process exception handling"
+        },
+        "flowchartMachine.storage.maxSavedFlowcharts": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 50,
+          "description": "Maximum number of saved flowcharts to keep"
+        },
+        "flowchartMachine.storage.storageLocation": {
+          "type": "string",
+          "enum": ["workspace", "global"],
+          "default": "workspace",
+          "description": "Storage location for saved flowcharts"
+        },
+        "flowchartMachine.storage.includeSourceCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include source code with saved flowcharts"
+        },
+        "flowchartMachine.storage.includeTooltipData": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include tooltip data with saved flowcharts"
+        },
+        "flowchartMachine.storage.autoCleanupDays": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 30,
+          "description": "Auto-cleanup old flowcharts after days"
         },
         "flowchartMachine.storage.export.useCustomPngLocation": {
           "type": "boolean",
@@ -75,6 +144,50 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically increment version numbers for PNG files"
+        },
+        "nodes": {
+          "processTypes": {
+            "prints": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show print statements in the flowchart"
+            },
+            "functions": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show function definitions in the flowchart"
+            },
+            "forLoops": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show for loops in the flowchart"
+            },
+            "whileLoops": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show while loops in the flowchart"
+            },
+            "variables": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show variable assignments in the flowchart"
+            },
+            "ifs": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show if statements in the flowchart"
+            },
+            "imports": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show import statements in the flowchart"
+            },
+            "exceptions": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show exception handling in the flowchart"
+            }
+          }
         }
       }
     }

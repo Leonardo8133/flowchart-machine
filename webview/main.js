@@ -15,12 +15,15 @@ document.addEventListener("DOMContentLoaded", function () {
             // Set up message handling
             window.addEventListener('message', handleExtensionMessage);
             
-            // Check if we're running in VS Code or browser
+            // Request initial config from extension using existing VS Code API instance
+            if (window.vscode) {
+                window.vscode.postMessage({ command: 'requestInitialState' });
+            }
+            
+            // Initialize Mermaid
             if (typeof acquireVsCodeApi === "function") {
-                // In VS Code, initialize Mermaid
                 initializeAndRender();
             } else {
-                // In browser, show demo message
                 const container = document.getElementById('mermaidContainer');
                 if (container) {
                     container.innerHTML = 'This webview is designed to run in VS Code. Open a Python file and use the "Generate Python Flowchart" command.';

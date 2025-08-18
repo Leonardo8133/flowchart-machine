@@ -40,9 +40,102 @@ export class WebviewMessageHandler {
         await this.handleConfigUpdate(message, panel);
         break;
       
+      case 'requestInitialState': {
+        const config = vscode.workspace.getConfiguration('flowchartMachine');
+        const showPrints = config.get('nodes.processTypes.prints', true);
+        const detailFunctions = config.get('nodes.processTypes.functions', true);
+        const forLoops = config.get('nodes.processTypes.forLoops', true);
+        const whileLoops = config.get('nodes.processTypes.whileLoops', true);
+        const variables = config.get('nodes.processTypes.variables', true);
+        const ifs = config.get('nodes.processTypes.ifs', true);
+        const imports = config.get('nodes.processTypes.imports', true);
+        const exceptions = config.get('nodes.processTypes.exceptions', true);
+        panel.webview.postMessage({
+          command: 'updateInitialState',
+          showPrints,
+          detailFunctions,
+          forLoops,
+          whileLoops,
+          variables,
+          ifs,
+          imports,
+          exceptions,
+        });
+        break;
+      }
+      
       default:
         console.log('Unknown message command:', message.command);
         break;
+    }
+  }
+
+  /**
+   * Get current checkbox states from the webview
+   */
+  private async getCurrentCheckboxStates(panel: vscode.WebviewPanel): Promise<{ 
+    showPrints: boolean; 
+    detailFunctions: boolean;
+    forLoops: boolean;
+    whileLoops: boolean;
+    variables: boolean;
+    ifs: boolean;
+    imports: boolean;
+    exceptions: boolean;
+  }> {
+    try {
+      // Request current checkbox states from the webview
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          // Fallback to VS Code config if webview doesn't respond
+          const config = vscode.workspace.getConfiguration('flowchartMachine');
+          resolve({
+            showPrints: config.get('nodes.processTypes.prints', true),
+            detailFunctions: config.get('nodes.processTypes.functions', true),
+            forLoops: config.get('nodes.processTypes.forLoops', true),
+            whileLoops: config.get('nodes.processTypes.whileLoops', true),
+            variables: config.get('nodes.processTypes.variables', true),
+            ifs: config.get('nodes.processTypes.ifs', true),
+            imports: config.get('nodes.processTypes.imports', true),
+            exceptions: config.get('nodes.processTypes.exceptions', true)
+          });
+        }, 1000);
+
+        // Listen for the response
+        const messageListener = panel.webview.onDidReceiveMessage((message) => {
+          if (message.command === 'checkboxStates') {
+            clearTimeout(timeout);
+            messageListener.dispose();
+            resolve({
+              showPrints: message.showPrints ?? true,
+              detailFunctions: message.detailFunctions ?? true,
+              forLoops: message.forLoops ?? true,
+              whileLoops: message.whileLoops ?? true,
+              variables: message.variables ?? true,
+              ifs: message.ifs ?? true,
+              imports: message.imports ?? true,
+              exceptions: message.exceptions ?? true
+            });
+          }
+        });
+
+        // Request the states
+        panel.webview.postMessage({ command: 'getCheckboxStates' });
+      });
+    } catch (error) {
+      console.error('Failed to get checkbox states, using defaults:', error);
+      // Fallback to VS Code config
+      const config = vscode.workspace.getConfiguration('flowchartMachine');
+      return {
+        showPrints: config.get('nodes.processTypes.prints', true),
+        detailFunctions: config.get('nodes.processTypes.functions', true),
+        forLoops: config.get('nodes.processTypes.forLoops', true),
+        whileLoops: config.get('nodes.processTypes.whileLoops', true),
+        variables: config.get('nodes.processTypes.variables', true),
+        ifs: config.get('nodes.processTypes.ifs', true),
+        imports: config.get('nodes.processTypes.imports', true),
+        exceptions: config.get('nodes.processTypes.exceptions', true)
+      };
     }
   }
 
@@ -82,7 +175,49 @@ export class WebviewMessageHandler {
       }
 
       // Execute the Python script again
-      const result = await PythonService.executeScript(scriptPath, [this.originalFilePath]);
+      const checkboxStates = await this.getCurrentCheckboxStates(panel);
+      const env = {
+        ...process.env,
+        SHOW_PRINTS: checkboxStates.showPrints ? '1' : '0',
+        DETAIL_FUNCTIONS: checkboxStates.detailFunctions ? '1' : '0',
+        SHOW_FOR_LOOPS: checkboxStates.forLoops ? '1' : '0',
+        SHOW_WHILE_LOOPS: checkboxStates.whileLoops ? '1' : '0',
+        SHOW_VARIABLES: checkboxStates.variables ? '1' : '0',
+        SHOW_IFS: checkboxStates.ifs ? '1' : '0',
+        SHOW_IMPORTS: checkboxStates.imports ? '1' : '0',
+        SHOW_EXCEPTIONS: checkboxStates.exceptions ? '1' : '0'
+      };
+      
+      const result = await PythonService.executeScript(scriptPath, [this.originalFilePath], env);
+      
+      // Show Python script output in VS Code output panel
+      console.log('Python script has output, creating output panel...');
+      const outputChannel = vscode.window.createOutputChannel('Flowchart Machine - Python Output');
+      outputChannel.show();
+      if (result.stdout || result.stderr) {
+        
+        if (result.stdout) {
+          console.log('Adding stdout to output panel:', result.stdout);
+          outputChannel.appendLine('=== Python Script Output ===');
+          outputChannel.appendLine(result.stdout);
+        }
+        
+        if (result.stderr) {
+          console.log('Adding stderr to output panel:', result.stderr);
+          outputChannel.appendLine('=== Python Script Errors ===');
+          outputChannel.appendLine(result.stderr);
+        }
+        
+        outputChannel.appendLine('=== End Python Output ===\n');
+        console.log('Output panel created and populated');
+        
+        // Show notification to help user find the output
+        vscode.window.showInformationMessage(
+          'Python script output available in "Flowchart Machine - Python Output" panel. View → Output → Flowchart Machine - Python Output'
+        );
+      } else {
+        console.log('No Python output to display');
+      }
       
       if (!result.success) {
         console.error(`Regeneration error: ${result.error}`);
@@ -178,7 +313,7 @@ export class WebviewMessageHandler {
         if (selection === 'Open File') {
           vscode.commands.executeCommand('vscode.open', vscode.Uri.file(path.join(targetDir, filename)));
         } else if (selection === 'Open Folder') {
-          vscode.commands.executeCommand('vscode.open', vscode.Uri.file(targetDir));
+          vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(targetDir, filename)));
         }
       });
       
@@ -191,8 +326,6 @@ export class WebviewMessageHandler {
       });
     }
   }
-
-
 
   /**
    * Save PNG data to file
@@ -284,16 +417,48 @@ export class WebviewMessageHandler {
       const { key, value } = message;
       console.log('Updating configuration:', key, value);
       
-      // Here you could update the actual configuration
-      // For now, we'll just acknowledge the update
+      // Map the checkbox keys to actual VS Code configuration keys
+      let configKey: string;
+      switch (key) {
+        case 'showPrints':
+          configKey = 'flowchartMachine.nodes.processTypes.prints';
+          break;
+        case 'detailFunctions':
+          configKey = 'flowchartMachine.nodes.processTypes.functions';
+          break;
+        case 'forLoops':
+          configKey = 'flowchartMachine.nodes.processTypes.forLoops';
+          break;
+        case 'whileLoops':
+          configKey = 'flowchartMachine.nodes.processTypes.whileLoops';
+          break;
+        case 'variables':
+          configKey = 'flowchartMachine.nodes.processTypes.variables';
+          break;
+        case 'ifs':
+          configKey = 'flowchartMachine.nodes.processTypes.ifs';
+          break;
+        case 'imports':
+          configKey = 'flowchartMachine.nodes.processTypes.imports';
+          break;
+        case 'exceptions':
+          configKey = 'flowchartMachine.nodes.processTypes.exceptions';
+          break;
+        default:
+          configKey = `flowchartMachine.${key}`;
+      }
+      
+      // Update the VS Code configuration
+      await vscode.workspace.getConfiguration().update(configKey, value, vscode.ConfigurationTarget.Global);
+      
+      // Acknowledge the update
       panel.webview.postMessage({ 
         command: 'configUpdated',
         key,
         value
       });
       
-      // Show a notification to the user
-      vscode.window.showInformationMessage(`Configuration updated: ${key} = ${value}`);
+      console.log(`Configuration updated: ${configKey} = ${value}`);
     } catch (error) {
       console.error('Configuration update failed:', error);
       panel.webview.postMessage({ 

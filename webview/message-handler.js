@@ -20,12 +20,29 @@ function handleExtensionMessage(event) {
             break;
             
         case 'updateInitialState':
-            console.log('Updating initial state:', message);
             if (message.showPrints !== undefined && showPrintsCheckbox) {
                 showPrintsCheckbox.checked = message.showPrints;
             }
             if (message.detailFunctions !== undefined && detailFunctionsCheckbox) {
                 detailFunctionsCheckbox.checked = message.detailFunctions;
+            }
+            if (message.forLoops !== undefined && showForLoopsCheckbox) {
+                showForLoopsCheckbox.checked = message.forLoops;
+            }
+            if (message.whileLoops !== undefined && showWhileLoopsCheckbox) {
+                showWhileLoopsCheckbox.checked = message.whileLoops;
+            }
+            if (message.variables !== undefined && showVariablesCheckbox) {
+                showVariablesCheckbox.checked = message.variables;
+            }
+            if (message.ifs !== undefined && showIfsCheckbox) {
+                showIfsCheckbox.checked = message.ifs;
+            }
+            if (message.imports !== undefined && showImportsCheckbox) {
+                showImportsCheckbox.checked = message.imports;
+            }
+            if (message.exceptions !== undefined && showExceptionsCheckbox) {
+                showExceptionsCheckbox.checked = message.exceptions;
             }
             break;
             
@@ -60,6 +77,23 @@ function handleExtensionMessage(event) {
             
         case 'configUpdated':
             console.log('Configuration updated:', message.key, message.value);
+            break;
+            
+        case 'getCheckboxStates':
+            // Return current checkbox states to the extension
+            if (window.vscode) {
+                window.vscode.postMessage({
+                    command: 'checkboxStates',
+                    showPrints: showPrintsCheckbox ? showPrintsCheckbox.checked : true,
+                    detailFunctions: detailFunctionsCheckbox ? detailFunctionsCheckbox.checked : true,
+                    forLoops: showForLoopsCheckbox ? showForLoopsCheckbox.checked : true,
+                    whileLoops: showWhileLoopsCheckbox ? showWhileLoopsCheckbox.checked : true,
+                    variables: showVariablesCheckbox ? showVariablesCheckbox.checked : true,
+                    ifs: showIfsCheckbox ? showIfsCheckbox.checked : true,
+                    imports: showImportsCheckbox ? showImportsCheckbox.checked : true,
+                    exceptions: showExceptionsCheckbox ? showExceptionsCheckbox.checked : true
+                });
+            }
             break;
     }
 }

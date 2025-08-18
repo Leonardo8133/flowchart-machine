@@ -63,8 +63,31 @@ export class GenerateFlowchartCommand {
       progress.report({ increment: 0 });
 
       return new Promise<void>((resolve, reject) => {
-        // Execute the Python script
-        PythonService.executeScript(scriptPath, [filePath]).then(result => {
+        // Read configuration for node processing types
+        const config = vscode.workspace.getConfiguration('flowchartMachine');
+        const showPrints = config.get('nodes.processTypes.prints', true);
+        const detailFunctions = config.get('nodes.processTypes.functions', true);
+        const forLoops = config.get('nodes.processTypes.forLoops', true);
+        const whileLoops = config.get('nodes.processTypes.whileLoops', true);
+        const variables = config.get('nodes.processTypes.variables', true);
+        const ifs = config.get('nodes.processTypes.ifs', true);
+        const imports = config.get('nodes.processTypes.imports', true);
+        const exceptions = config.get('nodes.processTypes.exceptions', true);
+
+        // Set environment variables for Python script
+        const env = {
+          ...process.env,
+          SHOW_PRINTS: showPrints ? '1' : '0',
+          DETAIL_FUNCTIONS: detailFunctions ? '1' : '0',
+          SHOW_FOR_LOOPS: forLoops ? '1' : '0',
+          SHOW_WHILE_LOOPS: whileLoops ? '1' : '0',
+          SHOW_VARIABLES: variables ? '1' : '0',
+          SHOW_IFS: ifs ? '1' : '0',
+          SHOW_IMPORTS: imports ? '1' : '0',
+          SHOW_EXCEPTIONS: exceptions ? '1' : '0'
+        };
+        
+        PythonService.executeScript(scriptPath, [filePath], env).then(result => {
           if (!result.success) {
             vscode.window.showErrorMessage("Error generating flowchart. See console for details.");
             console.error(`Python execution error: ${result.error}`);
@@ -72,8 +95,24 @@ export class GenerateFlowchartCommand {
             reject(new Error(result.error));
             return;
           }
-
-          console.log(`Python script output: ${result.stdout}`);
+          // Show all logging and prints executed by the .py file
+          if (result.stdout || result.stderr) {
+            const outputChannel = vscode.window.createOutputChannel('Flowchart Machine - Python Output');
+            outputChannel.show();
+            
+            if (result.stdout) {
+              outputChannel.appendLine('=== Python Script Output ===');
+              outputChannel.appendLine(result.stdout);
+            }
+            
+            if (result.stderr) {
+              outputChannel.appendLine('=== Python Script Errors ===');
+              outputChannel.appendLine(result.stderr);
+            }
+            
+            outputChannel.appendLine('=== End Python Output ===\n');
+          }
+          
           progress.report({ increment: 50 });
 
           try {

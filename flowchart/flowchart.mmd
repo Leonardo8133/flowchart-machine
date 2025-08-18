@@ -1,12 +1,80 @@
 graph TD
     start1[Start]
     end2[End]
-    call_sum3[["Call: sum(1, 1)"]]
-    return5["return a + b"]
-    subgraph sum
-        return5
+    import3[/"import math
+..."\]
+    call_example_function4[["Call: example_function()"]]
+    expr6[["print(#quot;Starting the example function...#quot;)"]]
+    for_loop7{{"For Loop: i in range(2)"}}
+    expr9[["print(f#quot;Loop iteration {i + 2}#quot;)"]]
+    if_cond10{"If: i % 1 == 0"}
+    expr12[["print(f#quot;{i} is even, calling helper_function...#quot;)"]]
+    assign13["result = helper_function(i)"]
+    call_helper_function14[["Call: helper_function(i)"]]
+    return16["return x * x"]
+    expr17[["print(f#quot;Result from helper_function: {result}#quot;)"]]
+    expr18[["print(f#quot;{i} is odd, skipping helper_function.#quot;)"]]
+    assign19["count = 0"]
+    while_loop20{"While count < 3"}
+    expr22[["print(f#quot;While loop iteration {count + 1}#quot;)"]]
+    augassign23["count + 1"]
+    next_iter24[*]
+    expr25[["print(#quot;Example function completed.#quot;)"]]
+    subgraph example_function
+        expr6
+        for_loop7
+        expr9
+        if_cond10
+        expr12
+        assign13
+        call_helper_function14
+        expr17
+        expr18
+        assign19
+        while_loop20
+        expr22
+        augassign23
+        next_iter24
+        expr25
+        subgraph helper_function
+            return16
+        end
     end
-    start1 --> call_sum3
-    call_sum3 --> return5
-    return5 --> end2
-click return5 setClickedNode
+    start1 --> import3
+    import3 --> call_example_function4
+    call_example_function4 --> expr6
+    expr6 --> for_loop7
+    for_loop7 -->|Each item| expr9
+    expr9 --> if_cond10
+    if_cond10 -->|True| expr12
+    expr12 --> assign13
+    assign13 --> call_helper_function14
+    call_helper_function14 --> return16
+    return16 --> expr17
+    expr17 --> for_loop7
+    if_cond10 -->|False| expr18
+    expr18 --> for_loop7
+    for_loop7 -->|Done| assign19
+    assign19 --> while_loop20
+    while_loop20 --> expr22
+    expr22 -->|True| augassign23
+    augassign23 --> next_iter24
+    next_iter24 --> while_loop20
+    while_loop20 -->|False| expr25
+    expr25 --> end2
+click expr6 setClickedNode
+click for_loop7 setClickedNode
+click expr9 setClickedNode
+click if_cond10 setClickedNode
+click expr12 setClickedNode
+click assign13 setClickedNode
+click call_helper_function14 setClickedNode
+click return16 setClickedNode
+click expr17 setClickedNode
+click expr18 setClickedNode
+click assign19 setClickedNode
+click while_loop20 setClickedNode
+click expr22 setClickedNode
+click augassign23 setClickedNode
+click next_iter24 setClickedNode
+click expr25 setClickedNode
