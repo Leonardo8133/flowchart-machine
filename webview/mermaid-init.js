@@ -32,6 +32,12 @@ async function initializeAndRender() {
             securityLevel: "loose",
             fontFamily: "var(--vscode-font-family)",
             startOnLoad: true,
+            themeCSS: `
+              /* Make subgraph labels opaque to hide edges behind */
+              .flowchart-link {
+                opacity: 0.7;
+              }
+            `
         });
         
         await mermaid.run();
@@ -74,6 +80,24 @@ function updateFlowchart(diagram) {
         mermaid.render(uniqueId, diagram).then(({ svg }) => {
             // Insert the SVG content into our container
             mermaidContainer.innerHTML = svg;
+            
+            // Apply CSS to make subgraph labels opaque
+            const style = document.createElement('style');
+            style.textContent = `
+              .cluster-label {
+                fill: #1e1e1e !important;
+                stroke: #ffffff !important;
+                stroke-width: 3px !important;
+                paint-order: stroke !important;
+              }
+              .cluster-label tspan {
+                fill: #ffffff !important;
+                stroke: #1e1e1e !important;
+                stroke-width: 2px !important;
+                paint-order: stroke !important;
+              }
+            `;
+            document.head.appendChild(style);
             
             // Hide loading and show mermaid container
             if (loadingContainer) {
