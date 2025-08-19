@@ -4,6 +4,8 @@ import * as vscode from 'vscode';
 import { GenerateFlowchartCommand } from './commands/generateFlowchart';
 import { ConfigCommands } from './commands/configCommands';
 import { EXTENSION_ID, COMMAND_TITLE, COMMAND_CATEGORY } from './utils/helpers';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Flowchart Machine extension is now active!');
@@ -19,6 +21,17 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'flowchartMachine');
     });
     context.subscriptions.push(openSettingsDisposable);
+    
+    // Register command to open saved flowcharts folder
+    const openSavedFlowchartsDisposable = vscode.commands.registerCommand('flowchartMachine.openSavedFlowcharts', () => {
+      const storagePath = path.join(context.globalStorageUri.fsPath, 'saved-flowcharts');
+      if (fs.existsSync(storagePath)) {
+        vscode.env.openExternal(vscode.Uri.file(storagePath));
+      } else {
+        vscode.window.showInformationMessage('No saved flowcharts folder found. Save a diagram first.');
+      }
+    });
+    context.subscriptions.push(openSavedFlowchartsDisposable);
     
     console.log('Commands registered successfully:', EXTENSION_ID);
 

@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export interface FlowchartOutput {
   mermaidCode: string;
@@ -8,8 +8,14 @@ export interface FlowchartOutput {
 }
 
 export class FileService {
+  private context: vscode.ExtensionContext;
+
+  constructor(context: vscode.ExtensionContext) {
+    this.context = context;
+  }
+
   /**
-   * Validate that a file is a Python file
+   * Check if a document is a Python file
    */
   static isPythonFile(document: vscode.TextDocument): boolean {
     return document.languageId === 'python';
@@ -44,49 +50,48 @@ export class FileService {
   }
 
   /**
-   * Get the path to the main.py script in the same directory as the Python file
+   * Get the path to the main.py script in the extension's directory
    */
-  static getMainScriptPath(pythonFilePath: string): string {
-    const dirPath = this.getDirectoryPath(pythonFilePath);
-    return path.join(dirPath, 'main.py');
+  getMainScriptPath(): string {
+    return path.join(this.context.extensionPath, 'flowchart', 'main.py');
   }
 
   /**
-   * Get the path to the flowchart output file
+   * Get the path to the flowchart output file in the same directory as the Python file
    */
-  static getFlowchartPath(pythonFilePath: string): string {
-    const dirPath = this.getDirectoryPath(pythonFilePath);
+  getFlowchartPath(pythonFilePath: string): string {
+    const dirPath = FileService.getDirectoryPath(pythonFilePath);
     return path.join(dirPath, 'flowchart.mmd');
   }
 
   /**
-   * Get the path to the tooltip data file
+   * Get the path to the tooltip data file in the same directory as the Python file
    */
-  static getTooltipDataPath(pythonFilePath: string): string {
-    const dirPath = this.getDirectoryPath(pythonFilePath);
+  getTooltipDataPath(pythonFilePath: string): string {
+    const dirPath = FileService.getDirectoryPath(pythonFilePath);
     return path.join(dirPath, 'tooltip_data.json');
   }
 
   /**
    * Read and process flowchart output files
    */
-  static readFlowchartOutput(pythonFilePath: string): FlowchartOutput {
+  readFlowchartOutput(pythonFilePath: string): FlowchartOutput {
     const flowPath = this.getFlowchartPath(pythonFilePath);
     const tooltipDataPath = this.getTooltipDataPath(pythonFilePath);
 
     // Read flowchart content
-    if (!this.fileExists(flowPath)) {
+    if (!FileService.fileExists(flowPath)) {
       throw new Error(`Flowchart file not found at: ${flowPath}`);
     }
 
-    const mermaidCode = this.readFile(flowPath);
+    const mermaidCode = FileService.readFile(flowPath);
     console.log('Mermaid code:', mermaidCode);
 
     // Read tooltip data
     let tooltipData = {};
-    if (this.fileExists(tooltipDataPath)) {
+    if (FileService.fileExists(tooltipDataPath)) {
       try {
-        tooltipData = JSON.parse(this.readFile(tooltipDataPath));
+        tooltipData = JSON.parse(FileService.readFile(tooltipDataPath));
       } catch (e) {
         vscode.window.showWarningMessage("Warning: Error parsing tooltip_data.json.");
         console.error(e);

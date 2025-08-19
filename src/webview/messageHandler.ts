@@ -5,28 +5,60 @@ import * as os from 'os';
 import { PythonService } from '../services/pythonService';
 import { FileService } from '../services/fileService';
 import { ConfigService } from '../services/configService';
+import { StorageService } from '../services/storageService';
 
 export class WebviewMessageHandler {
   private originalFilePath?: string;
+  private storageService: StorageService;
+  private extensionContext: vscode.ExtensionContext;
+  private fileService: FileService;
+
+  constructor() {
+    // Initialize storage service when needed
+    this.storageService = null as any;
+    this.extensionContext = null as any;
+    this.fileService = null as any;
+  }
 
   /**
    * Set up message handling for a webview panel
    */
-  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string): void {
+  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string, extensionContext?: vscode.ExtensionContext): void {
     this.originalFilePath = originalFilePath;
+    if (extensionContext) {
+      this.extensionContext = extensionContext;
+      this.fileService = new FileService(extensionContext);
+    }
 
+    console.log('Setting up message handling for panel');
+    
     panel.webview.onDidReceiveMessage(
       async (message) => {
-        await this.handleMessage(message, panel);
+        console.log('🔵 Extension received message from webview:', message);
+        console.log('🔵 Message command:', message.command);
+        console.log('🔵 Message keys:', Object.keys(message));
+        
+        try {
+          await this.handleMessage(message, panel, originalFilePath);
+        } catch (error) {
+          console.error('❌ Error handling webview message:', error);
+          panel.webview.postMessage({
+            command: 'error',
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
       }
     );
+    
+    console.log('Message handler setup completed');
   }
 
   /**
    * Handle incoming messages from the webview
    */
-  private async handleMessage(message: any, panel: vscode.WebviewPanel): Promise<void> {
-    console.log('Received message from webview:', message);
+  private async handleMessage(message: any, panel: vscode.WebviewPanel, originalFilePath?: string): Promise<void> {
+    console.log('🔸 Processing message command:', message.command);
+    
     switch (message.command) {
       case 'updateFlowchart':
         await this.handleRegeneration(panel);
@@ -64,8 +96,33 @@ export class WebviewMessageHandler {
         break;
       }
       
+      case 'saveDiagram':
+        console.log('Saving diagram - message received:', message);
+        console.log('Original file path:', originalFilePath);
+        console.log('Extension context available:', !!this.extensionContext);
+        await this.handleSaveDiagram(message, panel, originalFilePath);
+        break;
+        
+      case 'getSavedDiagrams':
+        await this.handleGetSavedDiagrams(message, panel);
+        break;
+        
+      case 'loadSavedDiagram':
+        await this.handleLoadSavedDiagram(message, panel);
+        break;
+
+      case 'deleteSavedDiagram':
+        await this.handleDeleteSavedDiagram(message, panel);
+        break;
+
+      case 'checkboxStates':
+        // Handle checkbox state changes if needed
+        console.log('Checkbox states updated:', message);
+        break;
+      
       default:
-        console.log('Unknown message command:', message.command);
+        console.log('❓ Unknown message command:', message.command);
+        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, requestInitialState, saveDiagram, getSavedDiagrams, loadSavedDiagram, checkboxStates');
         break;
     }
   }
@@ -163,13 +220,13 @@ export class WebviewMessageHandler {
         return;
       }
 
-      const scriptPath = FileService.getMainScriptPath(this.originalFilePath);
+      const scriptPath = this.fileService.getMainScriptPath();
 
       // Check if the Python script still exists
       if (!FileService.fileExists(scriptPath)) {
         panel.webview.postMessage({ 
           command: 'regenerationError', 
-          error: 'Python script not found. Please ensure main.py exists in the same directory.' 
+          error: 'Python script not found. Please ensure main.py exists in the extension\'s flowchart directory.' 
         });
         return;
       }
@@ -230,7 +287,7 @@ export class WebviewMessageHandler {
 
       try {
         // Read the updated files
-        const output = FileService.readFlowchartOutput(this.originalFilePath);
+        const output = this.fileService.readFlowchartOutput(this.originalFilePath);
         const cleanDiagram = FileService.cleanMermaidCode(output.mermaidCode);
 
         // Send the updated diagram to the webview
@@ -407,6 +464,205 @@ export class WebviewMessageHandler {
     }
     const next = maxVersion + 1;
     return `${baseName}_${next}.png`;
+  }
+
+  /**
+   * Handle save diagram command
+   */
+  private async handleSaveDiagram(message: any, panel: vscode.WebviewPanel, originalFilePath?: string): Promise<void> {
+    try {
+      // Initialize storage service if not already done
+      if (!this.storageService) {
+        this.storageService = new StorageService(this.extensionContext);
+      }
+
+      const { mermaidCode } = message;
+      console.log('Mermaid code found');
+      
+      if (!mermaidCode || typeof mermaidCode !== 'string') {
+        panel.webview.postMessage({
+          command: 'saveDiagramResult',
+          success: false,
+          error: 'Invalid mermaid code provided'
+        });
+        return;
+      }
+
+      const result = await this.storageService.saveFlowchart(mermaidCode, originalFilePath);
+      console.log('Result:', result);
+      if (result.success) {
+        panel.webview.postMessage({
+          command: 'saveDiagramResult',
+          success: true,
+          savedFlowchart: result.savedFlowchart
+        });
+        
+        // Show success notification with button to open folder
+        const openFolder = 'Open Folder';
+        vscode.window.showInformationMessage('Flowchart saved successfully!', openFolder).then(selection => {
+          if (selection === openFolder) {
+            const folderPath = this.storageService.getStorageDirectory();
+            vscode.env.openExternal(vscode.Uri.file(folderPath));
+          }
+        });
+      } else {
+        panel.webview.postMessage({
+          command: 'saveDiagramResult',
+          success: false,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      panel.webview.postMessage({
+        command: 'saveDiagramResult',
+        success: false,
+        error: errorMessage
+      });
+    }
+  }
+
+  /**
+   * Handle get saved diagrams command
+   */
+  private async handleGetSavedDiagrams(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      // Initialize storage service if not already done
+      if (!this.storageService) {
+        this.storageService = new StorageService(this.extensionContext);
+      }
+
+      const result = await this.storageService.getSavedFlowcharts();
+      
+      if (result.success) {
+        panel.webview.postMessage({
+          command: 'savedDiagramsList',
+          success: true,
+          flowcharts: result.flowcharts
+        });
+      } else {
+        panel.webview.postMessage({
+          command: 'savedDiagramsList',
+          success: false,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      panel.webview.postMessage({
+        command: 'savedDiagramsList',
+        success: false,
+        error: errorMessage
+      });
+    }
+  }
+
+  /**
+   * Handle load saved diagram command
+   */
+  private async handleLoadSavedDiagram(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      // Initialize storage service if not already done
+      if (!this.storageService) {
+        this.storageService = new StorageService(this.extensionContext);
+      }
+
+      const { id } = message;
+      
+      if (!id || typeof id !== 'string') {
+        panel.webview.postMessage({
+          command: 'loadSavedDiagramResult',
+          success: false,
+          error: 'Invalid diagram ID provided'
+        });
+        return;
+      }
+
+      const result = await this.storageService.loadFlowchart(id);
+      
+      if (result.success && result.flowchart) {
+        // Update the webview with the loaded diagram
+        panel.webview.postMessage({
+          command: 'updateFlowchart',
+          diagram: result.flowchart.mermaidCode
+        });
+        
+        // Show success notification
+        vscode.window.showInformationMessage(`Loaded saved flowchart: ${result.flowchart.name}`);
+      } else {
+        panel.webview.postMessage({
+          command: 'loadSavedDiagramResult',
+          success: false,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      panel.webview.postMessage({
+        command: 'loadSavedDiagramResult',
+        success: false,
+        error: errorMessage
+      });
+    }
+  }
+
+  /**
+   * Handle delete saved diagram request
+   */
+  private async handleDeleteSavedDiagram(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      console.log('🗑️ Deleting saved diagram:', message);
+      
+      if (!this.storageService) {
+        this.storageService = new StorageService(this.extensionContext!);
+      }
+      
+      const { id } = message;
+      
+      if (!id || typeof id !== 'string') {
+        panel.webview.postMessage({
+          command: 'deleteSavedDiagramResult',
+          success: false,
+          error: 'Invalid diagram ID provided'
+        });
+        return;
+      }
+
+      const result = await this.storageService.deleteFlowchart(id);
+      
+      if (result.success) {
+        // Show success notification
+        vscode.window.showInformationMessage(`Deleted saved flowchart: ${result.flowchart?.name || 'Unknown'}`);
+        
+        // Send success response
+        panel.webview.postMessage({
+          command: 'deleteSavedDiagramResult',
+          success: true,
+          id: id
+        });
+        
+        // Refresh the saved diagrams list
+        const flowcharts = await this.storageService.getSavedFlowcharts();
+        panel.webview.postMessage({
+          command: 'savedDiagramsList',
+          flowcharts: flowcharts
+        });
+      } else {
+        panel.webview.postMessage({
+          command: 'deleteSavedDiagramResult',
+          success: false,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error deleting saved diagram:', error);
+      panel.webview.postMessage({
+        command: 'deleteSavedDiagramResult',
+        success: false,
+        error: errorMessage
+      });
+    }
   }
 
   /**

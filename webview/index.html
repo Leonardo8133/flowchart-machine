@@ -58,11 +58,28 @@
         <div class="controls-row">
             <div class="button-group">
                 <button id="regenerateBtn" class="control-button">
-                    🔄 Regenerate Flowchart
+                    🔄 Regenerate
                 </button>
                 <button id="savePngBtn" class="control-button">
-                    💾 Save Flowchart (PNG)
+                    ⬇️ Download (PNG)
                 </button>
+                <button id="saveDiagramBtn" class="control-button">
+                    💾 Save
+                </button>
+                <button id="showSavedBtn" class="control-button">
+                    📁 Diagrams
+                </button>
+            </div>
+        </div>
+        
+        <!-- Saved Diagrams Floating List -->
+        <div id="savedDiagramsList" class="saved-diagrams-list hidden">
+            <div class="saved-diagrams-header">
+                <h4>Saved Diagrams</h4>
+                <span id="savedDiagramsCount" class="saved-diagrams-count">0 files</span>
+            </div>
+            <div id="savedDiagramsContent" class="saved-diagrams-content">
+                <!-- Saved diagrams will be populated here -->
             </div>
         </div>
         <div class="mermaid-container-wrapper">

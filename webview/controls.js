@@ -141,7 +141,7 @@ function handleSavePngClick() {
         console.error('PNG conversion failed:', error);
         // Re-enable button on error
         savePngBtn.disabled = false;
-        savePngBtn.textContent = "💾 Save Flowchart (PNG)";
+        savePngBtn.textContent = "⬇️ Download (PNG)";
     }
 }
 
@@ -233,14 +233,14 @@ function updateControlStates(message) {
         case 'regenerationComplete':
             if (regenerateBtn) {
                 regenerateBtn.disabled = false;
-                regenerateBtn.textContent = "🔄 Regenerate Flowchart";
+                regenerateBtn.textContent = "🔄 Regenerate";
             }
             break;
             
         case 'regenerationError':
             if (regenerateBtn) {
                 regenerateBtn.disabled = false;
-                regenerateBtn.textContent = "🔄 Regenerate Flowchart";
+                regenerateBtn.textContent = "🔄 Regenerate";
             }
             break;
             
@@ -248,7 +248,7 @@ function updateControlStates(message) {
         case 'pngSaveError':
             if (savePngBtn) {
                 savePngBtn.disabled = false;
-                savePngBtn.textContent = "💾 Save Flowchart (PNG)";
+                savePngBtn.textContent = "⬇️ Download (PNG)";
             }
             break;
     }

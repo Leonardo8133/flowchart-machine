@@ -7,7 +7,6 @@ import { StorageService } from '../services/storageService';
  */
 export class ConfigCommands {
   private static configService = ConfigService.getInstance();
-  private static storageService = StorageService.getInstance();
 
   /**
    * Register all configuration commands

@@ -6,10 +6,12 @@ import { WebviewManager } from '../webview/webviewManager';
 export class GenerateFlowchartCommand {
   private context: vscode.ExtensionContext;
   private webviewManager: WebviewManager;
+  private fileService: FileService;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
     this.webviewManager = new WebviewManager(context);
+    this.fileService = new FileService(context);
   }
 
   /**
@@ -46,10 +48,10 @@ export class GenerateFlowchartCommand {
     }
 
     // Check if the Python script exists
-    const scriptPath = FileService.getMainScriptPath(filePath);
+    const scriptPath = this.fileService.getMainScriptPath();
     if (!FileService.fileExists(scriptPath)) {
       vscode.window.showErrorMessage(
-        `Python script not found at: ${scriptPath}. Please ensure main.py exists in the same directory as your Python file.`
+        `Python script not found at: ${scriptPath}. Please ensure main.py exists in the extension's flowchart directory.`
       );
       return;
     }
@@ -117,7 +119,7 @@ export class GenerateFlowchartCommand {
 
           try {
             // Read the output files
-            const output = FileService.readFlowchartOutput(filePath);
+            const output = this.fileService.readFlowchartOutput(filePath);
             progress.report({ increment: 100 });
 
             // Create the webview panel

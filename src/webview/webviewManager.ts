@@ -62,7 +62,7 @@ export class WebviewManager {
     panel.webview.html = htmlContent;
 
     // Set up message handling
-    this.messageHandler.setupMessageHandling(panel, this.originalFilePath);
+    this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context);
 
     return panel;
   }

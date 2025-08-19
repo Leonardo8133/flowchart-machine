@@ -35,14 +35,14 @@ A VS Code extension that generates flowcharts from Python code using Mermaid dia
 
 3. The extension will:
    - Check if Python is available on your system
-   - Look for `main.py` in the same directory as your Python file
+   - Use the built-in `main.py` script from the extension's flowchart directory
    - Execute the Python script to generate flowchart data
    - Display the flowchart in a new webview panel
 
 ## Requirements
 
 - **Python**: Must be installed and available in your system PATH
-- **main.py**: A Python script that generates flowchart data (must be in the same directory as your Python file)
+- **main.py**: A Python script that generates flowchart data (built into the extension)
 - **VS Code**: Version 1.101.0 or higher
 
 ## File Structure
@@ -51,13 +51,13 @@ A VS Code extension that generates flowcharts from Python code using Mermaid dia
 flowchart-machine/
 ├── src/
 │   └── extension.ts          # Main extension code
-├── webview.html              # Webview template
+├── webview/                  # Webview files
 ├── out/
 │   └── extension.js          # Compiled extension
-├── flowchart/                # Example Python files
-│   ├── main.py              # Python flowchart generator
-│   ├── example.py           # Sample Python file
-│   └── flowchart.mmd        # Generated Mermaid diagram
+├── flowchart/                # Extension's Python processing files
+│   ├── main.py              # Built-in Python flowchart generator
+│   ├── flowchart_processor.py # Core flowchart processing logic
+│   └── flowchart_postprocessor.py # Post-processing and optimization
 └── package.json              # Extension manifest
 ```
 
@@ -65,13 +65,13 @@ flowchart-machine/
 
 ### Extension Not Working
 1. **Check Python Installation**: Ensure Python is installed and accessible via `python --version` or `python3 --version`
-2. **Check main.py**: Ensure `main.py` exists in the same directory as your Python file
+2. **Check main.py**: The extension includes its own `main.py` script - no additional files needed
 3. **Check Console**: Open VS Code's Developer Console (Help > Toggle Developer Tools) for error messages
 4. **Reload Extension**: Try reloading VS Code (Ctrl+Shift+P > "Developer: Reload Window")
 
 ### Common Issues
 - **"Python is not available"**: Install Python and ensure it's in your system PATH
-- **"main.py not found"**: Place `main.py` in the same directory as your Python file
+- **"main.py not found"**: The extension's built-in main.py script is missing - reinstall the extension
 - **"Flowchart file not generated"**: Check that `main.py` runs successfully and generates `flowchart.mmd`
 
 ### PowerShell Execution Policy
