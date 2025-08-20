@@ -13,12 +13,18 @@ class FlowchartGenerator:
         self.processor = FlowchartProcessor()
         self.post_processor = FlowchartPostProcessor(self.processor)
 
-    def generate(self, python_code):
+    def generate(self, python_code, breakpoint_lines=None):
         """Generate a complete Mermaid flowchart from Python code."""
         try:
+            # Set breakpoints AFTER processor is created
+            print("Breakpoint lines", breakpoint_lines)
+            if breakpoint_lines:
+                self.processor.set_breakpoints(breakpoint_lines)
+
             # Step 1: Process the code and create initial structure
             if not self.processor.process_code(python_code):
                 return f"graph TD\n    error[\"Error processing code\"]", {}
+            
             
             # Step 2: Post-process the graph (optimize and redirect connections)
             self.post_processor.post_process()
@@ -47,16 +53,23 @@ def main():
     with open(file_path, "r", encoding="utf-8") as f:
         code = f.read()
 
+    # Get breakpoint information from environment
+    breakpoint_lines = []
+    if os.environ.get('HAS_BREAKPOINTS') == '1':
+        breakpoint_lines = [int(x) for x in os.environ.get('BREAKPOINT_LINES', '').split(',') if x]
+
     builder = FlowchartGenerator()
-    mermaid_output, tooltip_data = builder.generate(code)
+    mermaid_output, tooltip_data = builder.generate(code, breakpoint_lines)
 
     # Save the Mermaid flowchart
-    output_path_mmd = os.path.join(os.path.dirname(file_path), "flowchart.mmd")
+    temp_dir = os.path.join(os.path.dirname(__file__), "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    output_path_mmd = os.path.join(temp_dir, "flowchart.mmd")
     with open(output_path_mmd, "w", encoding="utf-8") as out:
         out.write(mermaid_output)
 
     # Save the tooltip data as JSON
-    output_path_json = os.path.join(os.path.dirname(file_path), "tooltip_data.json")
+    output_path_json = os.path.join(temp_dir, "tooltip_data.json")
     with open(output_path_json, "w", encoding="utf-8") as out:
         json.dump(tooltip_data, out, indent=4)
 

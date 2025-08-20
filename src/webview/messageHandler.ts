@@ -72,34 +72,7 @@ export class WebviewMessageHandler {
         await this.handleConfigUpdate(message, panel);
         break;
       
-      case 'requestInitialState': {
-        const config = vscode.workspace.getConfiguration('flowchartMachine');
-        const showPrints = config.get('nodes.processTypes.prints', true);
-        const detailFunctions = config.get('nodes.processTypes.functions', true);
-        const forLoops = config.get('nodes.processTypes.forLoops', true);
-        const whileLoops = config.get('nodes.processTypes.whileLoops', true);
-        const variables = config.get('nodes.processTypes.variables', true);
-        const ifs = config.get('nodes.processTypes.ifs', true);
-        const imports = config.get('nodes.processTypes.imports', true);
-        const exceptions = config.get('nodes.processTypes.exceptions', true);
-        panel.webview.postMessage({
-          command: 'updateInitialState',
-          showPrints,
-          detailFunctions,
-          forLoops,
-          whileLoops,
-          variables,
-          ifs,
-          imports,
-          exceptions,
-        });
-        break;
-      }
-      
       case 'saveDiagram':
-        console.log('Saving diagram - message received:', message);
-        console.log('Original file path:', originalFilePath);
-        console.log('Extension context available:', !!this.extensionContext);
         await this.handleSaveDiagram(message, panel, originalFilePath);
         break;
         
@@ -115,85 +88,58 @@ export class WebviewMessageHandler {
         await this.handleDeleteSavedDiagram(message, panel);
         break;
 
-      case 'checkboxStates':
-        // Handle checkbox state changes if needed
-        console.log('Checkbox states updated:', message);
+      case 'getCurrentCheckboxStatesValues':
+        await this.handleGetCurrentCheckboxStatesValues(message, panel);
         break;
       
       default:
         console.log('❓ Unknown message command:', message.command);
-        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, requestInitialState, saveDiagram, getSavedDiagrams, loadSavedDiagram, checkboxStates');
+        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, saveDiagram, getSavedDiagrams, loadSavedDiagram');
         break;
     }
   }
 
+  private async handleGetCurrentCheckboxStatesValues(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    const checkboxStates = this.getCurrentCheckboxStates();
+    panel.webview.postMessage({
+      command: 'updateCheckboxStates',
+      checkboxStates: checkboxStates
+    });
+  }
+
   /**
-   * Get current checkbox states from the webview
+   * Get current checkbox states from VS Code configuration
    */
-  private async getCurrentCheckboxStates(panel: vscode.WebviewPanel): Promise<{ 
+  private getCurrentCheckboxStates(): { 
     showPrints: boolean; 
-    detailFunctions: boolean;
-    forLoops: boolean;
-    whileLoops: boolean;
-    variables: boolean;
-    ifs: boolean;
-    imports: boolean;
-    exceptions: boolean;
-  }> {
-    try {
-      // Request current checkbox states from the webview
-      return new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          // Fallback to VS Code config if webview doesn't respond
-          const config = vscode.workspace.getConfiguration('flowchartMachine');
-          resolve({
-            showPrints: config.get('nodes.processTypes.prints', true),
-            detailFunctions: config.get('nodes.processTypes.functions', true),
-            forLoops: config.get('nodes.processTypes.forLoops', true),
-            whileLoops: config.get('nodes.processTypes.whileLoops', true),
-            variables: config.get('nodes.processTypes.variables', true),
-            ifs: config.get('nodes.processTypes.ifs', true),
-            imports: config.get('nodes.processTypes.imports', true),
-            exceptions: config.get('nodes.processTypes.exceptions', true)
-          });
-        }, 1000);
-
-        // Listen for the response
-        const messageListener = panel.webview.onDidReceiveMessage((message) => {
-          if (message.command === 'checkboxStates') {
-            clearTimeout(timeout);
-            messageListener.dispose();
-            resolve({
-              showPrints: message.showPrints ?? true,
-              detailFunctions: message.detailFunctions ?? true,
-              forLoops: message.forLoops ?? true,
-              whileLoops: message.whileLoops ?? true,
-              variables: message.variables ?? true,
-              ifs: message.ifs ?? true,
-              imports: message.imports ?? true,
-              exceptions: message.exceptions ?? true
-            });
-          }
-        });
-
-        // Request the states
-        panel.webview.postMessage({ command: 'getCheckboxStates' });
-      });
-    } catch (error) {
-      console.error('Failed to get checkbox states, using defaults:', error);
-      // Fallback to VS Code config
-      const config = vscode.workspace.getConfiguration('flowchartMachine');
-      return {
-        showPrints: config.get('nodes.processTypes.prints', true),
-        detailFunctions: config.get('nodes.processTypes.functions', true),
-        forLoops: config.get('nodes.processTypes.forLoops', true),
-        whileLoops: config.get('nodes.processTypes.whileLoops', true),
-        variables: config.get('nodes.processTypes.variables', true),
-        ifs: config.get('nodes.processTypes.ifs', true),
-        imports: config.get('nodes.processTypes.imports', true),
-        exceptions: config.get('nodes.processTypes.exceptions', true)
-      };
+    showFunctions: boolean;
+    showForLoops: boolean;
+    showWhileLoops: boolean;
+    showVariables: boolean;
+    showIfs: boolean;
+    showImports: boolean;
+    showReturns: boolean;
+    showExceptions: boolean;
+  } {
+    const config = vscode.workspace.getConfiguration('flowchartMachine', vscode.workspace.workspaceFolders?.[0]);
+    function getConfig(key: string, fallback: boolean) {
+      // Try workspace first, then global
+      let value = config.inspect<boolean>(key);
+      if (value?.workspaceValue !== undefined) return value.workspaceValue;
+      if (value?.globalValue !== undefined) return value.globalValue;
+      return fallback;
     }
+    return {
+      showPrints: getConfig('nodes.processTypes.prints', true),
+      showFunctions: getConfig('nodes.processTypes.functions', true),
+      showForLoops: getConfig('nodes.processTypes.forLoops', true),
+      showWhileLoops: getConfig('nodes.processTypes.whileLoops', true),
+      showVariables: getConfig('nodes.processTypes.variables', true),
+      showIfs: getConfig('nodes.processTypes.ifs', true),
+      showImports: getConfig('nodes.processTypes.imports', true),
+      showReturns: getConfig('nodes.processTypes.returns', true),
+      showExceptions: getConfig('nodes.processTypes.exceptions', true)
+    };
   }
 
   /**
@@ -232,18 +178,31 @@ export class WebviewMessageHandler {
       }
 
       // Execute the Python script again
-      const checkboxStates = await this.getCurrentCheckboxStates(panel);
+      const checkboxStates = this.getCurrentCheckboxStates();
+      console.log('Retrieved checkbox states for Python execution:', checkboxStates);
+      
+      
       const env = {
-        ...process.env,
         SHOW_PRINTS: checkboxStates.showPrints ? '1' : '0',
-        DETAIL_FUNCTIONS: checkboxStates.detailFunctions ? '1' : '0',
-        SHOW_FOR_LOOPS: checkboxStates.forLoops ? '1' : '0',
-        SHOW_WHILE_LOOPS: checkboxStates.whileLoops ? '1' : '0',
-        SHOW_VARIABLES: checkboxStates.variables ? '1' : '0',
-        SHOW_IFS: checkboxStates.ifs ? '1' : '0',
-        SHOW_IMPORTS: checkboxStates.imports ? '1' : '0',
-        SHOW_EXCEPTIONS: checkboxStates.exceptions ? '1' : '0'
+        SHOW_FUNCTIONS: checkboxStates.showFunctions ? '1' : '0',
+        SHOW_FOR_LOOPS: checkboxStates.showForLoops ? '1' : '0',
+        SHOW_WHILE_LOOPS: checkboxStates.showWhileLoops ? '1' : '0',
+        SHOW_VARIABLES: checkboxStates.showVariables ? '1' : '0',
+        SHOW_IFS: checkboxStates.showIfs ? '1' : '0',
+        SHOW_IMPORTS: checkboxStates.showImports ? '1' : '0',
+        SHOW_RETURNS: checkboxStates.showReturns ? '1' : '0',
+        SHOW_EXCEPTIONS: checkboxStates.showExceptions ? '1' : '0'
       };
+
+      const breakpoints = vscode.debug.breakpoints.filter(bp => 
+        (bp as any).location?.uri?.fsPath === this.originalFilePath
+      );
+      const breakpointLines = breakpoints.map(bp => (bp as any).location?.range?.start?.line + 1).filter(line => line);
+      // Add breakpoint info to environment variables
+      (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
+      (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
+
+      console.log('Environment variables for Python execution:', env);
       
       const result = await PythonService.executeScript(scriptPath, [this.originalFilePath], env);
       
@@ -477,7 +436,6 @@ export class WebviewMessageHandler {
       }
 
       const { mermaidCode } = message;
-      console.log('Mermaid code found');
       
       if (!mermaidCode || typeof mermaidCode !== 'string') {
         panel.webview.postMessage({
@@ -670,8 +628,13 @@ export class WebviewMessageHandler {
    */
   private async handleConfigUpdate(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
+      console.log('🔧 Configuration update request received:', message);
       const { key, value } = message;
-      console.log('Updating configuration:', key, value);
+      
+      // Validate message
+      if (key === undefined || value === undefined) {
+        throw new Error(`Invalid message format: key=${key}, value=${value}`);
+      }
       
       // Map the checkbox keys to actual VS Code configuration keys
       let configKey: string;
@@ -679,25 +642,28 @@ export class WebviewMessageHandler {
         case 'showPrints':
           configKey = 'flowchartMachine.nodes.processTypes.prints';
           break;
-        case 'detailFunctions':
+        case 'showFunctions':
           configKey = 'flowchartMachine.nodes.processTypes.functions';
           break;
-        case 'forLoops':
+        case 'showForLoops':
           configKey = 'flowchartMachine.nodes.processTypes.forLoops';
           break;
-        case 'whileLoops':
+        case 'showWhileLoops':
           configKey = 'flowchartMachine.nodes.processTypes.whileLoops';
           break;
-        case 'variables':
+        case 'showVariables':
           configKey = 'flowchartMachine.nodes.processTypes.variables';
           break;
-        case 'ifs':
+        case 'showIfs':
           configKey = 'flowchartMachine.nodes.processTypes.ifs';
           break;
-        case 'imports':
+        case 'showImports':
           configKey = 'flowchartMachine.nodes.processTypes.imports';
           break;
-        case 'exceptions':
+        case 'showReturns':
+          configKey = 'flowchartMachine.nodes.processTypes.returns';
+          break;
+        case 'showExceptions':
           configKey = 'flowchartMachine.nodes.processTypes.exceptions';
           break;
         default:
@@ -705,24 +671,25 @@ export class WebviewMessageHandler {
       }
       
       // Update the VS Code configuration
-      await vscode.workspace.getConfiguration().update(configKey, value, vscode.ConfigurationTarget.Global);
+      try {
+        await vscode.workspace.getConfiguration().update(configKey, value, vscode.ConfigurationTarget.Workspace);
+      } catch (workspaceError) {
+        console.error('🔧 Workspace update failed:', workspaceError);
+      }
       
-      // Acknowledge the update
-      panel.webview.postMessage({ 
-        command: 'configUpdated',
-        key,
-        value
-      });
+      // Verify the update by reading it back
+      const updatedValue = vscode.workspace.getConfiguration().get(configKey);
+      console.log('🔧 Configuration updated, new value (full key):', updatedValue);
       
-      console.log(`Configuration updated: ${configKey} = ${value}`);
+      // Check if either update worked
+      if (updatedValue !== value) {
+        throw new Error(`Configuration update failed: expected ${value}, got ${updatedValue}.`);
+      }
+      
+      // Show success notification to user
+      vscode.window.showInformationMessage(`Setting updated: ${key} = ${value ? 'enabled' : 'disabled'}`);
     } catch (error) {
-      console.error('Configuration update failed:', error);
-      panel.webview.postMessage({ 
-        command: 'configUpdated',
-        key: message.key,
-        value: message.value,
-        error: `Configuration update failed: ${error}`
-      });
+      console.error('🔧 Configuration update failed:', error);
     }
   }
 }

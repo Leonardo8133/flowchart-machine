@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 def test_function():
     count = 0
     count += 1
+    print(count)
     return count
 
 result = test_function()

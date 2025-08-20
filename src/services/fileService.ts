@@ -57,19 +57,19 @@ export class FileService {
   }
 
   /**
-   * Get the path to the flowchart output file in the same directory as the Python file
+   * Get the path to the flowchart output file in the temp folder
    */
   getFlowchartPath(pythonFilePath: string): string {
-    const dirPath = FileService.getDirectoryPath(pythonFilePath);
-    return path.join(dirPath, 'flowchart.mmd');
+    const extensionPath = this.context.extensionPath;
+    return path.join(extensionPath, 'flowchart', 'temp', 'flowchart.mmd');
   }
 
   /**
-   * Get the path to the tooltip data file in the same directory as the Python file
+   * Get the path to the tooltip data file in the temp folder
    */
   getTooltipDataPath(pythonFilePath: string): string {
-    const dirPath = FileService.getDirectoryPath(pythonFilePath);
-    return path.join(dirPath, 'tooltip_data.json');
+    const extensionPath = this.context.extensionPath;
+    return path.join(extensionPath, 'flowchart', 'temp', 'tooltip_data.json');
   }
 
   /**
@@ -85,7 +85,6 @@ export class FileService {
     }
 
     const mermaidCode = FileService.readFile(flowPath);
-    console.log('Mermaid code:', mermaidCode);
 
     // Read tooltip data
     let tooltipData = {};

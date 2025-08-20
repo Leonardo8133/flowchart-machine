@@ -1,4 +1,0 @@
-{
-    "print5": "<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>",
-    "return6": "<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>"
-}

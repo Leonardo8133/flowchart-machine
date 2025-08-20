@@ -23,33 +23,6 @@ function handleExtensionMessage(event) {
             tooltipData = message.tooltipData || {};
             break;
             
-        case 'updateInitialState':
-            if (message.showPrints !== undefined && showPrintsCheckbox) {
-                showPrintsCheckbox.checked = message.showPrints;
-            }
-            if (message.detailFunctions !== undefined && detailFunctionsCheckbox) {
-                detailFunctionsCheckbox.checked = message.detailFunctions;
-            }
-            if (message.forLoops !== undefined && showForLoopsCheckbox) {
-                showForLoopsCheckbox.checked = message.forLoops;
-            }
-            if (message.whileLoops !== undefined && showWhileLoopsCheckbox) {
-                showWhileLoopsCheckbox.checked = message.whileLoops;
-            }
-            if (message.variables !== undefined && showVariablesCheckbox) {
-                showVariablesCheckbox.checked = message.variables;
-            }
-            if (message.ifs !== undefined && showIfsCheckbox) {
-                showIfsCheckbox.checked = message.ifs;
-            }
-            if (message.imports !== undefined && showImportsCheckbox) {
-                showImportsCheckbox.checked = message.imports;
-            }
-            if (message.exceptions !== undefined && showExceptionsCheckbox) {
-                showExceptionsCheckbox.checked = message.exceptions;
-            }
-            break;
-            
         case 'regenerationComplete':
             console.log('Regeneration completed successfully');
             updateControlStates(message);
@@ -124,40 +97,16 @@ function handleExtensionMessage(event) {
                 showNotification(`Failed to delete diagram: ${message.error}`, 'error');
             }
             break;
-            
-        case 'configUpdated':
-            console.log('Configuration updated:', message.key, message.value);
+    
+        case 'updateCheckboxStates':
+            updateCheckboxStates(message.checkboxStates);
             break;
-            
-        case 'getCheckboxStates':
-            // Return current checkbox states to the extension
-            if (window.vscode) {
-                window.vscode.postMessage({
-                    command: 'checkboxStates',
-                    showPrints: showPrintsCheckbox ? showPrintsCheckbox.checked : true,
-                    detailFunctions: detailFunctionsCheckbox ? detailFunctionsCheckbox.checked : true,
-                    forLoops: showForLoopsCheckbox ? showForLoopsCheckbox.checked : true,
-                    whileLoops: showWhileLoopsCheckbox ? showWhileLoopsCheckbox.checked : true,
-                    variables: showVariablesCheckbox ? showVariablesCheckbox.checked : true,
-                    ifs: showIfsCheckbox ? showIfsCheckbox.checked : true,
-                    imports: showImportsCheckbox ? showImportsCheckbox.checked : true,
-                    exceptions: showExceptionsCheckbox ? showExceptionsCheckbox.checked : true
-                });
-            }
-            break;
-    }
+        }
 }
 
 // Debug function to check container state
 function debugContainerState() {
-    console.log('=== Container State Debug ===');
-    console.log('mermaidContainer variable:', mermaidContainer);
-    console.log('mermaidContainer by ID:', document.getElementById('mermaidContainer'));
-    console.log('mermaidContainer by class:', document.querySelector('.mermaid'));
-    console.log('mermaidContainer by selector:', document.querySelector('.mermaid#mermaidContainer'));
-    console.log('All mermaid elements:', document.querySelectorAll('.mermaid'));
-    console.log('Content div:', document.querySelector('#content'));
-    console.log('=============================');
+
 }
 
 // Expose debug function globally for testing

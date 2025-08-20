@@ -18,52 +18,42 @@ function storeDiagramCode(diagramCode) {
 window.storeDiagramCode = storeDiagramCode;
 
 document.addEventListener("DOMContentLoaded", function () {
-    // Wait longer for all scripts and external libraries to load
+    // Initialize controls first
+    if (typeof initializeControls === "function") {
+        initializeControls();
+        initializeSavedDiagrams();
+    }
+    
+    // Initialize tooltip functionality
+    if (typeof initializeTooltip === "function") {
+        initializeTooltip();
+    }
+    
+    // Set up message handling
+    if (typeof handleExtensionMessage === "function") {
+        window.addEventListener('message', handleExtensionMessage);
+    }
+    
+    // Wait a bit more for controls to be fully initialized
     setTimeout(() => {
-        // Check if all required functions are available
-        if (typeof initializeControls === 'function' && 
-            typeof initializeTooltip === 'function' && 
-            typeof handleExtensionMessage === 'function' &&
-            typeof initializeAndRender === 'function') {
-            
-            // Initialize all components
-            initializeControls();
-            initializeTooltip();
-            initializeSavedDiagrams();
-            
-            // Set up message handling
-            window.addEventListener('message', handleExtensionMessage);
-            
-            // Request initial config from extension using existing VS Code API instance
-            if (window.vscode) {
-                window.vscode.postMessage({ command: 'requestInitialState' });
-            }
-            
-            // Initialize Mermaid
-            if (typeof acquireVsCodeApi === "function") {
-                initializeAndRender();
-            } else {
-                const container = document.getElementById('mermaidContainer');
-                if (container) {
-                    container.innerHTML = 'This webview is designed to run in VS Code. Open a Python file and use the "Generate Python Flowchart" command.';
-                }
-            }
+        // Initialize Mermaid
+        if (typeof acquireVsCodeApi === "function") {
+            initializeAndRender();
         } else {
-            console.error('Some required functions are not available:', {
-                initializeControls: typeof initializeControls,
-                initializeTooltip: typeof initializeTooltip,
-                handleExtensionMessage: typeof handleExtensionMessage,
-                initializeAndRender: typeof initializeAndRender
-            });
+            const container = document.getElementById('mermaidContainer');
+            if (container) {
+                container.innerHTML = 'This webview is designed to run in VS Code. Open a Python file and use the "Generate Python Flowchart" command.';
+            }
         }
-    }, 500);
+    }, 100); // Reduced from 500ms to 100ms since controls are already initialized
 });
 
 // Initialize saved diagrams functionality
 function initializeSavedDiagrams() {
     const saveDiagramBtn = document.getElementById('saveDiagramBtn');
     const showSavedBtn = document.getElementById('showSavedBtn');
-    const savedDiagramsList = document.getElementById('savedDiagramsList');
+
+    console.log("initializeSavedDiagrams");
     
     if (saveDiagramBtn) {
         saveDiagramBtn.addEventListener('click', handleSaveDiagram);
@@ -72,24 +62,13 @@ function initializeSavedDiagrams() {
     if (showSavedBtn) {
         showSavedBtn.addEventListener('click', handleShowSavedDiagrams);
     }
-    
-    // Note: hideSavedBtn is now handled by the main show/hide button
-    
-    // Add hover effect for the saved diagrams list
-    if (savedDiagramsList) {
-        savedDiagramsList.addEventListener('mouseenter', () => {
-            savedDiagramsList.classList.remove('fade');
-        });
-        
-        savedDiagramsList.addEventListener('mouseleave', () => {
-            savedDiagramsList.classList.add('fade');
-        });
-    }
 }
 
 // Handle save diagram button click
 function handleSaveDiagram() {
     // Try to get mermaid code from global variable first, then from element
+
+    console.log("handleSaveDiagram")
     let mermaidCode = currentDiagramCode;
     
     if (!mermaidCode || !mermaidCode.trim()) {
@@ -111,13 +90,7 @@ function handleSaveDiagram() {
     console.log('Saving diagram');
     // Send message to extension to save the diagram
     if (window.vscode) {
-        console.log('📤 Sending message to extension to save the diagram');
-        console.log('📤 VS Code API object:', window.vscode);
-        console.log('📤 Message object:', {
-            command: 'saveDiagram',
-            mermaidCode: mermaidCode.substring(0, 100) + '...'
-        });
-        
+        console.log('📤 Sending message to extension to save the diagram');        
         try {
             window.vscode.postMessage({
                 command: 'saveDiagram',

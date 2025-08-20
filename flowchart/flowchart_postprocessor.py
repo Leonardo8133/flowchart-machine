@@ -83,10 +83,14 @@ class FlowchartPostProcessor:
 		lines = []
 
 		def build(scope, indent):
+			# Only create subgraph if this scope has visible nodes
+			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
+			if not scope_nodes:
+				return
+				
 			lines.append("    " * indent + f"subgraph {scope}")
-			for nid, sc in self.processor.node_scopes.items():
-				if sc == scope:
-					lines.append("    " * (indent + 1) + nid)
+			for nid in scope_nodes:
+				lines.append("    " * (indent + 1) + nid)
 			for child in sorted(self.processor.scope_children.get(scope, [])):
 				build(child, indent + 1)
 			lines.append("    " * indent + "end")
@@ -113,11 +117,9 @@ class FlowchartPostProcessor:
 		
 		# Step 1: Optimize graph (remove bypass nodes)
 		self._optimize_graph()
-		print("Graph optimization completed")
 		
 		# Step 2: Keep connections as-is (no subgraph redirection)
 		self._redirect_connections_to_subgraphs()
-		print("Connection redirection completed")
 		
 		print("=== Post-processing completed ===")
 

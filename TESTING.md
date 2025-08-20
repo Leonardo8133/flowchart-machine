@@ -98,7 +98,7 @@ Tests create temporary workspaces in:
 ### Test Data
 - Sample Python files with various content
 - Mock `main.py` scripts for flowchart generation
-- Expected output files (flowchart.mmd, tooltip_data.json)
+- Expected output files (temp/flowchart.mmd, temp/tooltip_data.json)
 
 ## 📊 Test Coverage
 

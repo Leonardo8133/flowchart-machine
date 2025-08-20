@@ -32,8 +32,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
     context.subscriptions.push(openSavedFlowchartsDisposable);
-    
-    console.log('Commands registered successfully:', EXTENSION_ID);
 
     // Test if the commands are available
     vscode.commands.getCommands().then(commands => {

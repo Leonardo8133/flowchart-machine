@@ -75,6 +75,7 @@ export class GenerateFlowchartCommand {
         const ifs = config.get('nodes.processTypes.ifs', true);
         const imports = config.get('nodes.processTypes.imports', true);
         const exceptions = config.get('nodes.processTypes.exceptions', true);
+        const returns = config.get('nodes.processTypes.returns', true);
 
         // Set environment variables for Python script
         const env = {
@@ -86,8 +87,19 @@ export class GenerateFlowchartCommand {
           SHOW_VARIABLES: variables ? '1' : '0',
           SHOW_IFS: ifs ? '1' : '0',
           SHOW_IMPORTS: imports ? '1' : '0',
-          SHOW_EXCEPTIONS: exceptions ? '1' : '0'
+          SHOW_EXCEPTIONS: exceptions ? '1' : '0',
+          SHOW_RETURNS: returns ? '1' : '0'
         };
+
+        // Get breakpoints for the current file
+        const breakpoints = vscode.debug.breakpoints.filter(bp => 
+          (bp as any).location?.uri?.fsPath === filePath
+        );
+        const breakpointLines = breakpoints.map(bp => (bp as any).location?.range?.start?.line + 1).filter(line => line);
+        console.log("Breakpoint lines 213", breakpointLines);
+        // Add breakpoint info to environment variables
+        (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
+        (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
         
         PythonService.executeScript(scriptPath, [filePath], env).then(result => {
           if (!result.success) {

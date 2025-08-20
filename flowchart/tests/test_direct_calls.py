@@ -26,10 +26,11 @@ def example_function():
             print(f"{i} is odd, skipping helper_function.")
 
     count = 0
-    while count < 3:
+    while count < 5:
         print(f"While loop iteration {count + 1}")
         count += 1
 
     print("Example function completed.")
 
 example_function()
+print("Hello, World!")

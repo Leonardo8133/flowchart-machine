@@ -72,7 +72,7 @@ flowchart-machine/
 ### Common Issues
 - **"Python is not available"**: Install Python and ensure it's in your system PATH
 - **"main.py not found"**: The extension's built-in main.py script is missing - reinstall the extension
-- **"Flowchart file not generated"**: Check that `main.py` runs successfully and generates `flowchart.mmd`
+- **"Flowchart file not generated"**: Check that `main.py` runs successfully and generates `flowchart.mmd` in the `temp/` folder
 
 ### PowerShell Execution Policy
 If you encounter PowerShell execution policy errors when running npm commands:

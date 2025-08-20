@@ -13,10 +13,6 @@ async function initializeAndRender() {
     try {
         console.log("Initializing Mermaid...");
         
-        // waitMermaidToLoad();
-        
-        console.log("Mermaid library loaded, initializing...");
-        
         // Find the mermaid container element
         mermaidContainer = document.getElementById('mermaidContainer');
         

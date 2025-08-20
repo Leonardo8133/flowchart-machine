@@ -2,13 +2,14 @@
 let regenerateBtn;
 let savePngBtn;
 let showPrintsCheckbox;
-let detailFunctionsCheckbox;
+let showFunctionsCheckbox;
 let showForLoopsCheckbox;
 let showWhileLoopsCheckbox;
 let showVariablesCheckbox;
 let showIfsCheckbox;
 let showImportsCheckbox;
 let showExceptionsCheckbox;
+let showReturnsCheckbox;
 let mermaidCodeText;
 let showCodeBtn;
 let dropdownToggle;
@@ -26,14 +27,15 @@ function initializeControls() {
     // Get references to control elements
     regenerateBtn = document.getElementById('regenerateBtn');
     savePngBtn = document.getElementById('savePngBtn');
-    showPrintsCheckbox = document.getElementById('showPrintsCheckbox');
-    detailFunctionsCheckbox = document.getElementById('detailFunctionsCheckbox');
-    showForLoopsCheckbox = document.getElementById('showForLoopsCheckbox');
-    showWhileLoopsCheckbox = document.getElementById('showWhileLoopsCheckbox');
-    showVariablesCheckbox = document.getElementById('showVariablesCheckbox');
-    showIfsCheckbox = document.getElementById('showIfsCheckbox');
-    showImportsCheckbox = document.getElementById('showImportsCheckbox');
-    showExceptionsCheckbox = document.getElementById('showExceptionsCheckbox');
+    showPrintsCheckbox = document.getElementById('showPrints');
+    showFunctionsCheckbox = document.getElementById('showFunctions');
+    showForLoopsCheckbox = document.getElementById('showForLoops');
+    showWhileLoopsCheckbox = document.getElementById('showWhileLoops');
+    showVariablesCheckbox = document.getElementById('showVariables');
+    showIfsCheckbox = document.getElementById('showIfs');
+    showImportsCheckbox = document.getElementById('showImports');
+    showExceptionsCheckbox = document.getElementById('showExceptions');
+    showReturnsCheckbox = document.getElementById('showReturns');
     mermaidCodeText = document.getElementById('mermaidCodeText');
     showCodeBtn = document.getElementById('showCodeBtn');
     dropdownToggle = document.getElementById('dropdownToggle');
@@ -49,35 +51,39 @@ function initializeControls() {
     }
     
     if (showPrintsCheckbox) {
-        showPrintsCheckbox.addEventListener('change', handleShowPrintsChange);
+        showPrintsCheckbox.addEventListener('change', handleConfigChange);
     }
     
-    if (detailFunctionsCheckbox) {
-        detailFunctionsCheckbox.addEventListener('change', handleDetailFunctionsChange);
+    if (showFunctionsCheckbox) {
+        showFunctionsCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showForLoopsCheckbox) {
-        showForLoopsCheckbox.addEventListener('change', handleShowForLoopsChange);
+        showForLoopsCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showWhileLoopsCheckbox) {
-        showWhileLoopsCheckbox.addEventListener('change', handleShowWhileLoopsChange);
+        showWhileLoopsCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showVariablesCheckbox) {
-        showVariablesCheckbox.addEventListener('change', handleShowVariablesChange);
+        showVariablesCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showIfsCheckbox) {
-        showIfsCheckbox.addEventListener('change', handleShowIfsChange);
+        showIfsCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showImportsCheckbox) {
-        showImportsCheckbox.addEventListener('change', handleShowImportsChange);
+        showImportsCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showExceptionsCheckbox) {
-        showExceptionsCheckbox.addEventListener('change', handleShowExceptionsChange);
+        showExceptionsCheckbox.addEventListener('change', handleConfigChange);
+    }
+
+    if (showReturnsCheckbox) {
+        showReturnsCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showCodeBtn) {
@@ -90,6 +96,10 @@ function initializeControls() {
 
     // Close dropdown when clicking outside
     document.addEventListener('click', handleOutsideClick);
+
+    // Handle Retrieve Initial Values for Checkboxes
+    getCurrentCheckboxStatesValues();
+
 }
 
 function handleShowCodeClick() {
@@ -145,86 +155,21 @@ function handleSavePngClick() {
     }
 }
 
-function handleShowPrintsChange(event) {
+function handleConfigChange(event) {
+    // Checkboxes IDS need to match the configuration keys
     const value = event.target.checked;
-    console.log('Show prints changed:', value);
-    
+    const configName = event.target.id;
+    console.log('🔧 Configuration changed:', value, 'Key:', configName);
     if (vscode) {
-        vscode.postMessage({
+        const message = {
             command: 'updateConfig',
-            key: 'showPrints',
+            key: configName,
             value: value
-        });
-    }
-}
-
-function handleDetailFunctionsChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'detailFunctions',
-            value: detailFunctionsCheckbox.checked
-        });
-    }
-}
-
-function handleShowForLoopsChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'forLoops',
-            value: showForLoopsCheckbox.checked
-        });
-    }
-}
-
-function handleShowWhileLoopsChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'whileLoops',
-            value: showWhileLoopsCheckbox.checked
-        });
-    }
-}
-
-function handleShowVariablesChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'variables',
-            value: showVariablesCheckbox.checked
-        });
-    }
-}
-
-function handleShowIfsChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'ifs',
-            value: showIfsCheckbox.checked
-        });
-    }
-}
-
-function handleShowImportsChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'imports',
-            value: showImportsCheckbox.checked
-        });
-    }
-}
-
-function handleShowExceptionsChange() {
-    if (vscode) {
-        vscode.postMessage({
-            command: 'updateConfig',
-            key: 'exceptions',
-            value: showExceptionsCheckbox.checked
-        });
+        };
+        console.log('🔧 Sending message to extension:', message);
+        vscode.postMessage(message);
+    } else {
+        console.error('🔧 VS Code API not available');
     }
 }
 
@@ -252,4 +197,26 @@ function updateControlStates(message) {
             }
             break;
     }
+}
+
+function getCurrentCheckboxStatesValues() {
+    if (vscode) {
+        vscode.postMessage({
+            command: 'getCurrentCheckboxStatesValues'
+        });
+    }
+}
+
+function updateCheckboxStates(checkboxStates) {
+    console.log('Updating checkbox states:', checkboxStates);
+    showPrintsCheckbox.checked = checkboxStates.showPrints;
+    showFunctionsCheckbox.checked = checkboxStates.showFunctions;
+    showForLoopsCheckbox.checked = checkboxStates.showForLoops;
+    showWhileLoopsCheckbox.checked = checkboxStates.showWhileLoops;
+    showVariablesCheckbox.checked = checkboxStates.showVariables;
+    showIfsCheckbox.checked = checkboxStates.showIfs;
+    showImportsCheckbox.checked = checkboxStates.showImports;
+    showReturnsCheckbox.checked = checkboxStates.showReturns;
+    showExceptionsCheckbox.checked = checkboxStates.showExceptions;
+    
 }

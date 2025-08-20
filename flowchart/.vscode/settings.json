@@ -1,0 +1,11 @@
+{
+    "flowchartMachine.nodes.processTypes.prints": false,
+    "flowchartMachine.nodes.processTypes.functions": true,
+    "flowchartMachine.nodes.processTypes.forLoops": true,
+    "flowchartMachine.nodes.processTypes.whileLoops": true,
+    "flowchartMachine.nodes.processTypes.variables": true,
+    "flowchartMachine.nodes.processTypes.ifs": true,
+    "flowchartMachine.nodes.processTypes.imports": true,
+    "flowchartMachine.nodes.processTypes.exceptions": true,
+    "flowchartMachine.nodes.processTypes.returns": true
+}

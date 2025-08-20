@@ -61,12 +61,9 @@ export class StorageService {
       console.log('File path:', filePath);
 
       // Save the mermaid code to file
-      console.log('Writing mermaid code to file...');
       try {
         fs.writeFileSync(filePath, mermaidCode, 'utf8');
-        console.log('Mermaid code written to file successfully');
       } catch (writeError) {
-        console.error('Error writing mermaid code to file:', writeError);
         throw new Error(`Failed to write mermaid code to file: ${writeError}`);
       }
 

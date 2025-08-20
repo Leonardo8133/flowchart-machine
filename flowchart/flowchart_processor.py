@@ -21,24 +21,40 @@ class FlowchartProcessor:
         self.tooltip_data = {} # Data to be exported as JSON
         self.node_scopes = {}  # Track which scope each node belongs to
         self.scope_children = {}  # Map parent scope to called function scopes
+        self.breakpoint_lines = set()
+        self.last_added_node = None
         
         # Read configuration from environment variables
         self.show_prints = os.environ.get('SHOW_PRINTS', '1') == '1'
-        self.detail_functions = os.environ.get('DETAIL_FUNCTIONS', '1') == '1'
+        self.show_functions = os.environ.get('SHOW_FUNCTIONS', '1') == '1'
         self.show_for_loops = os.environ.get('SHOW_FOR_LOOPS', '1') == '1'
         self.show_while_loops = os.environ.get('SHOW_WHILE_LOOPS', '1') == '1'
         self.show_variables = os.environ.get('SHOW_VARIABLES', '1') == '1'
         self.show_ifs = os.environ.get('SHOW_IFS', '1') == '1'
         self.show_imports = os.environ.get('SHOW_IMPORTS', '1') == '1'
         self.show_exceptions = os.environ.get('SHOW_EXCEPTIONS', '1') == '1'
+        self.show_returns = os.environ.get('SHOW_RETURNS', '1') == '1'
+
         # Track whether we've already rendered an import node
         self._first_import_rendered = False
+
+    def set_breakpoints(self, lines):
+        self.breakpoint_lines = set(lines)
+
+    def _should_highlight_breakpoint(self, node):
+        if node and hasattr(node, 'lineno'):
+            return node.lineno in self.breakpoint_lines
+        return False
 
     def _generate_id(self, prefix="node"):
         self.node_counter += 1
         return f"{prefix}{self.node_counter}"
 
     def _add_node(self, node_id, text, shape=('["', '"]'), scope=None):
+        # Check if this node should be highlighted as a breakpoint
+        if self._should_highlight_breakpoint(self.last_added_node):
+            # Add breakpoint styling to the node text
+            text = f"🔴 {text}" if text != " " else ""
         sanitized_text = html.escape(text, quote=False) \
                              .replace('"', '#quot;') \
                              .replace('!', '!')
@@ -67,10 +83,77 @@ class FlowchartProcessor:
 
     def _get_node_text(self, node):
         text = ast.unparse(node).strip()
+        
         if "'" in text and '"' not in text:
-            return text.replace("'", '"')
+            text = text.replace("'", '"')
+        text = self._simplify_data_structure(text, node)
+        
+        if len(text) >= 80:
+            text = text[:77] + "..."
+
         return text
+
+    def _simplify_data_structure(self, text, node=None):
+        """Simplify complex data structures to readable representations."""
+
+        var_name = None
+        if node and hasattr(node, 'targets') and node.targets:
+            target = node.targets[0]
+            if isinstance(target, ast.Name):
+                var_name = target.id
+        elif node and hasattr(node, 'target'):
+            # For AugAssign
+            if isinstance(node.target, ast.Name):
+                var_name = node.target.id
+
+        if node and hasattr(node, 'value'):
+            if isinstance(node.value, (ast.List, ast.Dict, ast.Tuple, ast.Set)):
+                name = var_name or "var"
+                if isinstance(node.value, ast.List):
+                    # Check if list contains dictionaries or other complex types
+                    nested_types = self._get_nested_types(node.value)
+                    if nested_types:
+                        return f'{name} = List[{nested_types}]'
+                    else:
+                        return f'{name} = List'
+                elif isinstance(node.value, ast.Dict):
+                    # Check if dict values are complex
+                    nested_types = self._get_nested_types(node.value)
+                    if nested_types:
+                        return f'{name} = Dict[{nested_types}]'
+                    else:
+                        return f'{name} = Dict'
+                elif isinstance(node.value, ast.Tuple):
+                    nested_types = self._get_nested_types(node.value)
+                    if nested_types:
+                        return f'{name} = Tuple[{nested_types}]'
+                    else:
+                        return f'{name} = Tuple'
+                elif isinstance(node.value, ast.Set):
+                    nested_types = self._get_nested_types(node.value)
+                    if nested_types:
+                        return f'{name} = Set[{nested_types}]'
+                    else:
+                        return f'{name} = Set'
+
+        return text
+
+    def _get_nested_types(self, node):
+        """Get the nested data types as a string representation."""
+        types = set()
+        elements = []
+        if isinstance(node, ast.List) or isinstance(node, ast.Tuple) or isinstance(node, ast.Set):
+            elements = node.elts
+        elif isinstance(node, ast.Dict):
+            elements = node.values
+        for elt in elements:
+            if isinstance(elt, (ast.List, ast.Tuple, ast.Set, ast.Dict)):
+                types.add(type(elt).__name__)
+            elif isinstance(elt, ast.Constant):
+                types.add(type(elt.value).__name__)
+        return ", ".join(sorted(types)) if types else None
     
+
     def _extract_context(self, tree):
         """
         Pre-pass to accurately extract docstrings and variables for each function,
@@ -118,7 +201,7 @@ class FlowchartProcessor:
             )
             if is_docstring:
                 continue # Do not process this node, effectively making it invisible
-
+            
             # Apply filters based on configuration
             if not self._filter_for_loops(node):
                 continue
@@ -128,21 +211,21 @@ class FlowchartProcessor:
                 continue
             if not self._filter_ifs(node):
                 continue
-            if not self._filter_imports(node):
-                continue
             if not self._filter_exceptions(node):
                 continue
-
+            if not self._filter_returns(node):
+                continue
+            
+            self.last_added_node = node
             handler_name = f"_handle_{type(node).__name__.lower()}"
             handler = getattr(self, handler_name, self._handle_unsupported)
-            current_id = handler(node, current_id, scope)
-        return current_id
+            new_id = handler(node, current_id, scope)
 
-    def _filter_prints(self, name):
-        # If show_prints is False and this is a print function, filter it out
-        if not self.show_prints and name == 'print':
-            return False
-        return True
+            if current_id == new_id:
+                continue
+
+            current_id = new_id
+        return current_id
 
     def _filter_for_loops(self, node):
         # If show_for_loops is False, filter out for loops
@@ -179,16 +262,25 @@ class FlowchartProcessor:
         if not self.show_exceptions and isinstance(node, ast.Try):
             return False
         return True
-    
-    def _filter_functions(self, name):
-        # If detail_functions is False, filter out function calls
-        if not self.detail_functions and name in self.function_defs:
+
+    def _filter_returns(self, node):
+        # If show_returns is False, filter out return statements
+        if not self.show_returns and isinstance(node, ast.Return):
             return False
+        return True
+    
+    def _filter_main_guard(self, node):
+        if isinstance(node, ast.If):
+            if '__name__ == "__main__"' in self._get_node_text(node.test):
+                return False
         return True
 
     def _handle_if(self, node, prev_id, scope):
         # FIX: Add "If:" prefix
-        text = f"If: {self._get_node_text(node.test)}"
+        condition_text = self._get_node_text(node.test)
+        if len(condition_text) > 30:  # Adjust this limit as needed
+            condition_text = condition_text[:27] + "..."
+        text = f"If: {condition_text}"
         cond_id = self._generate_id("if_cond")
         self._add_node(cond_id, text, shape=('{"', '"}'), scope=scope)
         self._add_connection(prev_id, cond_id)
@@ -207,6 +299,8 @@ class FlowchartProcessor:
             if false_path_end:
                 self._add_connection(false_path_end, merge_id)
         else:
+            if not self._filter_main_guard(node):
+                return merge_id
             # If no else clause, connect condition directly to merge
             self._add_connection(cond_id, merge_id, label="False")
         
@@ -226,9 +320,11 @@ class FlowchartProcessor:
         # Process loop body and get the last node
         body_end_id = self._process_node_list(node.body, loop_cond_id, scope)
         
-        # Connect the loop body back to the loop condition for iteration
-        if body_end_id:
+        # Always connect back to loop condition for iteration
+        # If body_end_id exists, use it; otherwise connect condition to itself
+        if body_end_id and body_end_id != loop_cond_id:
             self._add_connection(body_end_id, loop_cond_id, label="Next Iteration")
+
         
         self.loop_stack.pop()
         # Connect loop condition to exit when done
@@ -238,17 +334,37 @@ class FlowchartProcessor:
 
     def _handle_expr(self, node, prev_id, scope):
         if isinstance(node.value, ast.Call):
+
             call = node.value
             func_name = getattr(call.func, 'id', None)
+            
+            # Check for attribute calls like sys.exit()
+            if func_name is None and hasattr(call.func, 'attr'):
+                attr_name = call.func.attr
+                if hasattr(call.func, 'value') and hasattr(call.func.value, 'id'):
+                    module_name = call.func.value.id
+                    full_name = f"{module_name}.{attr_name}"
+                    if full_name in ['sys.exit', 'os._exit']:
+                        return self._handle_exit_function(node, prev_id, scope)
+            
+            # Check for direct function names
+            if func_name in ['exit', 'quit']:
+                return self._handle_exit_function(node, prev_id, scope)
 
             # Handle print statements and other function calls
             if func_name == 'print':
+                if not self.show_prints:
+                    return prev_id
+                
                 # Create a simple print node
                 print_id = self._generate_id("print")
                 self._add_node(print_id, self._get_node_text(node), shape=('["', '"]'), scope=scope)
                 self._add_connection(prev_id, print_id)
                 return print_id
             
+            if not self.show_functions:
+                return prev_id
+
             # Handle other function calls
             if func_name and func_name in self.function_defs:
                 # Track nesting relationship between scopes
@@ -257,7 +373,10 @@ class FlowchartProcessor:
                 
                 # For direct function calls (not assignments), show the call node
                 call_id = self._generate_id(f"call_{func_name}")
-                self._add_node(call_id, f"Call: {self._get_node_text(node)}", shape=('[["', '"]]'), scope=scope)
+                text = f"Call: {self._get_node_text(node)}"
+                if self._should_highlight_breakpoint(node):
+                    text = f"🔴 {text}" if text else ""
+                self._add_node(call_id, text, shape=('[["', '"]]'), scope=scope)
                 self._add_connection(prev_id, call_id)
                 
                 end_call_id = self._generate_id("end_call")
@@ -289,13 +408,18 @@ class FlowchartProcessor:
         # Process loop body
         body_end_id = self._process_node_list(node.body, loop_cond_id, scope)
         
-        if body_end_id:
+        # Always connect back to loop condition for iteration
+        # If body_end_id exists, use it; otherwise connect condition to itself
+        if body_end_id and body_end_id != loop_cond_id:
             # Connect body end back to loop condition for iteration
-            self._add_connection(body_end_id, loop_cond_id, label="True")
+            self._add_connection(body_end_id, loop_cond_id, label="Next Iteration")
+        else:
+            # If no body or body loops back to same node, create self-loop
+            self._add_connection(loop_cond_id, loop_cond_id, label="Next Iteration")
         
         self.loop_stack.pop()
         # Connect loop condition to exit when condition is false
-        self._add_connection(loop_cond_id, loop_exit_id, label="False")
+        self._add_connection(loop_cond_id, loop_exit_id, label="Done")
         
         return loop_exit_id
 
@@ -311,6 +435,9 @@ class FlowchartProcessor:
     def _handle_assign(self, node, prev_id, scope):
         # Check if the right-hand side is a function call
         if len(node.targets) == 1 and isinstance(node.value, ast.Call):
+            if not self.show_functions:
+                return prev_id
+
             call = node.value
             func_name = getattr(call.func, 'id', None)
             
@@ -371,6 +498,8 @@ class FlowchartProcessor:
     def _handle_import(self, node, prev_id, scope):
         """Handle import statements like 'import os'"""
         # If we've already added an import, skip further imports
+        if not self.show_imports:
+            return prev_id
         if self._first_import_rendered:
             # Add "..." to the previous node to indicate more imports
             if prev_id in self.nodes:
@@ -389,6 +518,8 @@ class FlowchartProcessor:
     def _handle_importfrom(self, node, prev_id, scope):
         """Handle from imports like 'from os import path'"""
         # If we've already added an import, skip further imports
+        if not self.show_imports:
+            return prev_id
         if self._first_import_rendered:
             return prev_id
         module = node.module or ""
@@ -405,7 +536,7 @@ class FlowchartProcessor:
         self._add_node(unsupported_id, f"Unsupported Node: {type(node).__name__}", shape=('[/"', r'\"\]'), scope=scope)
         self._add_connection(prev_id, unsupported_id)
         return unsupported_id
-    
+
     def _handle_break(self, node, prev_id, scope):
         if self.loop_stack: self._add_connection(prev_id, self.loop_stack[-1]['exit'])
         return None
@@ -414,12 +545,25 @@ class FlowchartProcessor:
         if self.loop_stack: self._add_connection(prev_id, self.loop_stack[-1]['start'])
         return None
 
+    def _handle_exit_function(self, node, prev_id, scope):
+        """Handle functions that exit the current function/program."""
+        exit_id = self._generate_id("exit_function")
+        
+        # Create exit node
+        text = f"Exit: {self._get_node_text(node)}"
+        self._add_node(exit_id, text, shape=('[/"', r'"\]'), scope=scope)
+        self._add_connection(prev_id, exit_id)
+        
+        # Exit nodes don't connect to anything - they just end the flow
+        # No connections needed
+        
+        return None  # No further processing after exit
+
     def process_code(self, python_code):
         """Process Python code and generate the initial flowchart structure."""
         try:
             print("=== Starting flowchart processing ===")
             tree = ast.parse(python_code)
-            self.__init__()
             self._extract_context(tree)
 
             start_id = self._generate_id("start")
@@ -437,23 +581,9 @@ class FlowchartProcessor:
             # Process main flow nodes starting from start_id
             current_id = start_id
             for node in main_flow_nodes:
-                # Apply filters
-                if not self._filter_for_loops(node):
-                    continue
-                if not self._filter_while_loops(node):
-                    continue
-                if not self._filter_variables(node):
-                    continue
-                if not self._filter_ifs(node):
-                    continue
-                if not self._filter_imports(node):
-                    continue
-                if not self._filter_exceptions(node):
-                    continue
-
-                # Process each node individually
                 handler_name = f"_handle_{type(node).__name__.lower()}"
                 handler = getattr(self, handler_name, self._handle_unsupported)
+                self.last_added_node = node
                 current_id = handler(node, current_id, scope=None)
 
             # Connect the last node to end
