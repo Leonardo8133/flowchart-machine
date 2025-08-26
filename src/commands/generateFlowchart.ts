@@ -19,7 +19,7 @@ export class GenerateFlowchartCommand {
    */
   async execute(): Promise<void> {
     console.log('Command executed: extension.generateFlowchart');
-    
+
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       vscode.window.showErrorMessage("No active editor.");
@@ -64,7 +64,7 @@ export class GenerateFlowchartCommand {
     }, async (progress) => {
       progress.report({ increment: 0 });
 
-      return new Promise<void>((resolve, reject) => {
+      return new Promise<void>(async (resolve, reject) => {
         // Read configuration for node processing types
         const config = vscode.workspace.getConfiguration('flowchartMachine');
         const showPrints = config.get('nodes.processTypes.prints', true);
@@ -92,62 +92,61 @@ export class GenerateFlowchartCommand {
         };
 
         // Get breakpoints for the current file
-        const breakpoints = vscode.debug.breakpoints.filter(bp => 
+        const breakpoints = vscode.debug.breakpoints.filter(bp =>
           (bp as any).location?.uri?.fsPath === filePath
         );
         const breakpointLines = breakpoints.map(bp => (bp as any).location?.range?.start?.line + 1).filter(line => line);
-        console.log("Breakpoint lines 213", breakpointLines);
         // Add breakpoint info to environment variables
         (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
         (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
-        
-        PythonService.executeScript(scriptPath, [filePath], env).then(result => {
-          if (!result.success) {
-            vscode.window.showErrorMessage("Error generating flowchart. See console for details.");
-            console.error(`Python execution error: ${result.error}`);
-            console.error(`stderr: ${result.stderr}`);
-            reject(new Error(result.error));
-            return;
-          }
-          // Show all logging and prints executed by the .py file
-          if (result.stdout || result.stderr) {
-            const outputChannel = vscode.window.createOutputChannel('Flowchart Machine - Python Output');
-            outputChannel.show();
-            
-            if (result.stdout) {
-              outputChannel.appendLine('=== Python Script Output ===');
-              outputChannel.appendLine(result.stdout);
-            }
-            
-            if (result.stderr) {
-              outputChannel.appendLine('=== Python Script Errors ===');
-              outputChannel.appendLine(result.stderr);
-            }
-            
-            outputChannel.appendLine('=== End Python Output ===\n');
-          }
-          
-          progress.report({ increment: 50 });
 
-          try {
-            // Read the output files
-            const output = this.fileService.readFlowchartOutput(filePath);
-            progress.report({ increment: 100 });
+        const result = await PythonService.executeScript(scriptPath, [filePath], env);
 
-            // Create the webview panel
-            this.webviewManager.createFlowchartWebview(
-              output.mermaidCode, 
-              output.tooltipData, 
-              FileService.getBaseName(filePath),
-              filePath
-            );
-            resolve();
-          } catch (error) {
-            reject(error);
+        if (!result.success) {
+          vscode.window.showErrorMessage("Error generating flowchart. See console for details.");
+          console.error(`Python execution error: ${result.error}`);
+          console.error(`stderr: ${result.stderr}`);
+          reject(new Error(result.error));
+          return;
+        }
+        // Show all logging and prints executed by the .py file
+        if (result.stdout || result.stderr) {
+          const outputChannel = vscode.window.createOutputChannel('Flowchart Machine - Python Output');
+          outputChannel.show();
+
+          if (result.stdout) {
+            outputChannel.appendLine('=== Python Script Output ===');
+            outputChannel.appendLine(result.stdout);
           }
-        }).catch(error => {
+
+          if (result.stderr) {
+            outputChannel.appendLine('=== Python Script Errors ===');
+            outputChannel.appendLine(result.stderr);
+          }
+
+          outputChannel.appendLine('=== End Python Output ===\n');
+        }
+
+        progress.report({ increment: 50 });
+
+        try {
+          // Read the output files
+          const output = this.fileService.readFlowchartOutput(filePath);
+          progress.report({ increment: 100 });
+
+          console.log("cleanDiagram GENERATE", output.mermaidCode);
+
+          // Create the webview panel
+          this.webviewManager.createFlowchartWebview(
+            output.mermaidCode,
+            output.tooltipData,
+            FileService.getBaseName(filePath),
+            filePath
+          );
+          resolve();
+        } catch (error) {
           reject(error);
-        });
+        }
       });
     });
   }

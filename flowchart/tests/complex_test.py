@@ -16,10 +16,10 @@ def read_config_file(config_path: str) -> Dict[str, any]:
             config = json.load(f)
         return config
     except FileNotFoundError:
-        print(f"Config file not found: {config_path}")
+        # print(f"Config file not found: {config_path}")
         return {}
     except json.JSONDecodeError:
-        print(f"Invalid JSON in config file: {config_path}")
+        # print(f"Invalid JSON in config file: {config_path}")
         return {}
 
 def validate_data(data: List[Dict]) -> tuple[bool, List[str]]:

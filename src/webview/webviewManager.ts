@@ -85,8 +85,12 @@ export class WebviewManager {
     const filePath = this.originalFilePath || '';
     const formattedFilePath = filePath ? this.formatFilePath(filePath) : '';
     
+    // Don't escape the diagram - let Mermaid handle it naturally
+    // The Python code already sanitizes problematic characters
+    const escapedDiagram = cleanDiagram;
+    
     const replacements: Record<string, string> = {
-      '<!-- DIAGRAM_PLACEHOLDER -->': cleanDiagram,
+      '<!-- DIAGRAM_PLACEHOLDER -->': escapedDiagram,
       '{{filePath}}': formattedFilePath,
       '{{stylesUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'styles.css')).toString(),
       '{{mermaidInitUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'mermaid-init.js')).toString(),

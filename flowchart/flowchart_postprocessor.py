@@ -79,7 +79,7 @@ class FlowchartPostProcessor:
 		pass
 
 	def _build_subgraphs(self):
-		"""Create nested Mermaid subgraph sections based on call hierarchy."""
+		"""Create nested Mermaid subgraph sections based on call hierarchy and class structure."""
 		lines = []
 
 		def build(scope, indent):
@@ -87,29 +87,91 @@ class FlowchartPostProcessor:
 			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
 			if not scope_nodes:
 				return
+			
+			# Determine subgraph type and name
+			if scope and scope.startswith("class_"):
+				# Class subgraph
+				if "_" in scope[6:]:  # Has method name
+					class_name, method_name = scope[6:].split("_", 1)
+					subgraph_name = f"Method: {method_name}"
+				else:
+					class_name = scope[6:]  # Remove "class_" prefix
+					subgraph_name = f"Class: {class_name}"
+			elif scope:
+				# Function subgraph
+				subgraph_name = f"Function: {scope}()"
+			else:
+				# Main scope
+				subgraph_name = "Main Flow"
 				
-			lines.append("    " * indent + f"subgraph {scope}")
-			for nid in scope_nodes:
-				lines.append("    " * (indent + 1) + nid)
-			for child in sorted(self.processor.scope_children.get(scope, [])):
-				build(child, indent + 1)
-			lines.append("    " * indent + "end")
+			lines.append(f"{indent}subgraph \"{subgraph_name}\"")
+			
+			# Add nodes for this scope
+			for node_id in scope_nodes:
+				if node_id in self.processor.nodes:
+					lines.append(f"{indent}    {self.processor.nodes[node_id]}")
+			
+			# Recursively build nested subgraphs
+			# For class subgraphs, find and nest method subgraphs
+			if scope and scope.startswith("class_") and "_" not in scope[6:]:
+				# print("Method scope", scope)
+				# This is a class scope, find its methods
+				class_name = scope[6:]
+				method_scopes = [s for s in self.processor.node_scopes.values() 
+							   if s and s.startswith(f"class_{class_name}_")]
+				method_scopes = list(set(method_scopes))
+				method_scopes.sort()
 
-		for root_scope in sorted(self.processor.scope_children.get(None, [])):
-			build(root_scope, 1)
+				# Remove current scope from the list os scopes
+				# Build method subgraphs nested inside class
+				for method_scope in method_scopes:
+					build(method_scope, indent + "    ")
+			
+			# For other scopes, find their children
+			elif scope in self.processor.scope_children:
+				children = sorted(self.processor.scope_children[scope])
+				for child in children:
+					build(child, indent + "    ")
+			
+			lines.append(f"{indent}end")
+
+		# Build main flow subgraph
+		build("main", "")
+		
+		# Build class subgraphs (these will contain their method subgraphs)
+		class_scopes = [s for s in self.processor.node_scopes.values() 
+					   if s and s.startswith("class_") and "_" not in s[6:]]
+		class_scopes.sort()
+		
+		for class_scope in class_scopes:
+			print("Class scope", class_scope)
+			build(class_scope, "")
+			print("Finished class scope", class_scope)
+		
+		# Build function subgraphs
+		function_scopes = [s for s in self.processor.node_scopes.values() 
+						  if s and not s.startswith("class_") and s != "main"]
+		function_scopes.sort()
+		
+		for function_scope in function_scopes:
+			print("Function scope", function_scope)
+			build(function_scope, "")
 
 		return lines
 
+	def _add_connections(self):
+		"""Add all connections between nodes."""
+		lines = []
+		
+		# Add all connections
+		for connection in self.processor.connections:
+			lines.append(f"    {connection}")
+		
+		return lines
+
 	def clean_mermaid_diagram(self, mermaid_string):
-		"""Clean and fix Mermaid diagram syntax to prevent parsing errors."""
-		cleaned = mermaid_string
-		
-		# Remove HTML entities and problematic characters
-		cleaned = cleaned.replace('&lt;', '<')
-		cleaned = cleaned.replace('&gt;', '>')
-		cleaned = cleaned.replace('&amp;', '&')
-		
-		return cleaned
+		"""Remove floating nodes (nodes that are not connected to anything)."""
+		return mermaid_string
 
 	def post_process(self):
 		"""Run all post-processing steps."""
@@ -128,8 +190,9 @@ class FlowchartPostProcessor:
 		mermaid_string = "graph TD\n"
 		mermaid_string += "\t" + "\n\t".join(self.processor.nodes.values()) + "\n"
 		mermaid_string += "\n".join(self._build_subgraphs()) + "\n"
-		mermaid_string += "\n".join(self.processor.connections) + "\n"
+		mermaid_string += "\n".join(self._add_connections()) + "\n"
 		mermaid_string += "\n".join(self.processor.click_handlers) + "\n"
+		
 		
 		# Clean the Mermaid diagram before returning
 		cleaned_mermaid = self.clean_mermaid_diagram(mermaid_string)

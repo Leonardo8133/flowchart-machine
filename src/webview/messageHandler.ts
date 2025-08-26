@@ -33,11 +33,7 @@ export class WebviewMessageHandler {
     console.log('Setting up message handling for panel');
     
     panel.webview.onDidReceiveMessage(
-      async (message) => {
-        console.log('🔵 Extension received message from webview:', message);
-        console.log('🔵 Message command:', message.command);
-        console.log('🔵 Message keys:', Object.keys(message));
-        
+      async (message) => {        
         try {
           await this.handleMessage(message, panel, originalFilePath);
         } catch (error) {
@@ -56,9 +52,7 @@ export class WebviewMessageHandler {
   /**
    * Handle incoming messages from the webview
    */
-  private async handleMessage(message: any, panel: vscode.WebviewPanel, originalFilePath?: string): Promise<void> {
-    console.log('🔸 Processing message command:', message.command);
-    
+  private async handleMessage(message: any, panel: vscode.WebviewPanel, originalFilePath?: string): Promise<void> {    
     switch (message.command) {
       case 'updateFlowchart':
         await this.handleRegeneration(panel);
@@ -201,16 +195,21 @@ export class WebviewMessageHandler {
       // Add breakpoint info to environment variables
       (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
       (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
-
-      console.log('Environment variables for Python execution:', env);
       
       const result = await PythonService.executeScript(scriptPath, [this.originalFilePath], env);
       
+      if (!result.success) {
+        console.error(`Regeneration error: ${result.error}`);
+        panel.webview.postMessage({ 
+          command: 'regenerationError', 
+          error: `Error generating flowchart: ${result.error}` 
+        });
+        return;
+      }
       // Show Python script output in VS Code output panel
-      console.log('Python script has output, creating output panel...');
-      const outputChannel = vscode.window.createOutputChannel('Flowchart Machine - Python Output');
-      outputChannel.show();
       if (result.stdout || result.stderr) {
+        const outputChannel = vscode.window.createOutputChannel('Flowchart Machine - Python Output');
+        outputChannel.show();
         
         if (result.stdout) {
           console.log('Adding stdout to output panel:', result.stdout);
@@ -231,24 +230,14 @@ export class WebviewMessageHandler {
         vscode.window.showInformationMessage(
           'Python script output available in "Flowchart Machine - Python Output" panel. View → Output → Flowchart Machine - Python Output'
         );
-      } else {
-        console.log('No Python output to display');
       }
       
-      if (!result.success) {
-        console.error(`Regeneration error: ${result.error}`);
-        panel.webview.postMessage({ 
-          command: 'regenerationError', 
-          error: `Error generating flowchart: ${result.error}` 
-        });
-        return;
-      }
-
       try {
         // Read the updated files
         const output = this.fileService.readFlowchartOutput(this.originalFilePath);
         const cleanDiagram = FileService.cleanMermaidCode(output.mermaidCode);
-
+        
+        console.log("cleanDiagram REGENERATED", cleanDiagram);
         // Send the updated diagram to the webview
         panel.webview.postMessage({
           command: 'updateFlowchart',

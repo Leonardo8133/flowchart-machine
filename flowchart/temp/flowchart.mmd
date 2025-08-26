@@ -1,231 +1,109 @@
 graph TD
 	start1[Start]
 	end2[End]
-	expr3["#quot;\nComplex test file for flowchart generation testing.\nContains various Pyth..."]
-	import4[/"import os
-..."\]
-	if_cond5{"If: __name__ == #quot;__main__#quot;"}
-	call_main7[["Call: main()"]]
-	if_cond9{"If: len(sys.argv) < 2"}
-	exit_function11[/"Exit: sys.exit(1)"\]
-	assign12["config_file = sys.argv[1]"]
-	assign13["config = read_config_file(config_file)"]
-	unsupported15[/"Unsupported Node: Try\"\]
-	if_cond16{"If: not config"}
-	assign18["config = Dict[bool]"]
-	assign19["sample_data = List[Dict]"]
-	assign20["is_valid, errors = validate_data(sample_data)"]
-	assign22["errors = List"]
-	assign23["is_valid = True"]
-	for_loop24{{"For Loop: (i, item) in enumerate(data)"}}
-	if_cond26{"If: not isinstance(item, dict)"}
-	expr28[["errors.append(f#quot;Item {i} is not a dictionary#quot;)"]]
-	assign29["is_valid = False"]
-	if_cond30{"If: #quot;id#quot; not in item"}
-	expr32[["errors.append(f#quot;Item {i} missing 'id' field#quot;)"]]
-	assign33["is_valid = False"]
-	if_cond34{"If: #quot;name#quot; not in item"}
-	expr36[["errors.append(f#quot;Item {i} missing 'name' field#quot;)"]]
-	assign37["is_valid = False"]
-	return38["var = Tuple"]
-	if_cond39{"If: not is_valid"}
-	for_loop41{{"For Loop: error in errors"}}
-	exit_function43[/"Exit: sys.exit(1)"\]
-	assign44["processed_data = process_items(sample_data, config)"]
-	assign46["processed = List"]
-	for_loop47{{"For Loop: item in items"}}
-	if_cond49{"If: config.get(#quot;filter_enabled#quot;..."}
-	if_cond51{"If: item.get(#quot;status#quot;) == #quot;inac..."}
-	assign53["processed_item = item.copy()"]
-	if_cond54{"If: config.get(#quot;uppercase_names..."}
-	assign56["processed_item[#quot;name#quot;] = item[#quot;name#quot;].upper()"]
-	if_cond57{"If: config.get(#quot;add_timestamp#quot;,..."}
-	assign59["processed_item[#quot;processed_at#quot;] = datetime.datetime.now().isoformat()"]
-	expr60[["processed.append(processed_item)"]]
-	return61["return processed"]
-	assign62["stats = calculate_statistics(processed_data)"]
-	if_cond64{"If: not data"}
-	return66["var = Dict[Dict, int]"]
-	assign67["total_score = sum((item.get(#quot;score#quot;, 0) for item in data))"]
-	assign68["avg_score = total_score / len(data)"]
-	assign69["status_counts = Dict"]
-	for_loop70{{"For Loop: item in data"}}
-	assign72["status = item.get(#quot;status#quot;, #quot;unknown#quot;)"]
-	assign73["status_counts[status] = status_counts.get(status, 0) + 1"]
-	return74["var = Dict"]
-	assign75["output_file = #quot;output_results.json#quot;"]
-	unsupported76[/"Unsupported Node: Try\"\]
-    subgraph main
-        if_cond9
-        exit_function11
-        assign12
-        assign13
-        if_cond16
-        assign18
-        assign19
-        assign20
-        if_cond39
-        for_loop41
-        exit_function43
-        assign44
-        assign62
-        assign75
-        unsupported76
-        subgraph calculate_statistics
-            if_cond64
-            return66
-            assign67
-            assign68
-            assign69
-            for_loop70
-            assign72
-            assign73
-            return74
-        end
-        subgraph process_items
-            assign46
-            for_loop47
-            if_cond49
-            if_cond51
-            assign53
-            if_cond54
-            assign56
-            if_cond57
-            assign59
-            expr60
-            return61
-        end
-        subgraph read_config_file
-            unsupported15
-        end
-        subgraph validate_data
-            assign22
-            assign23
-            for_loop24
-            if_cond26
-            expr28
-            assign29
-            if_cond30
-            expr32
-            assign33
-            if_cond34
-            expr36
-            assign37
-            return38
-        end
+	expr3["'\nTest file to verify the fixed class subgraph behavior.\nClasses should be ..."]
+	print6["print('Starting class subgraph test')"]
+	assign7["simple = SimpleClass('test')"]
+	method___init__8[["Constructor: __init__(name)"]]
+	assign9["self.name = name"]
+	assign10["self.value = 0"]
+	print11["print(f'Created {name}')"]
+	assign12["complex_obj = ComplexClass('hello world')"]
+	method___init__13[["Constructor: __init__(data)"]]
+	assign14["self.data = data"]
+	assign15["self.processed = False"]
+	print16["print('Initializing complex class')"]
+	method_call17[["Call: simple.set_value(42)"]]
+	method_set_value18[["Method: set_value(value)"]]
+	assign19["self.value = value"]
+	print20["print(f'Set value to {value}')"]
+	return21["return self.value"]
+	method_call22[["Call: complex_obj.process_data()"]]
+	method_process_data23[["Method: process_data()"]]
+	if_cond24{"If: not self.processed"}
+	assign25["self.data = self.data.upper()"]
+	assign26["self.processed = True"]
+	print27["print('Data processed')"]
+	assign28["result = complex_obj.get_result()"]
+	method_get_result29[["Method: get_result()"]]
+	return30["return self.data"]
+	print31["print(f'Final result: {result}')"]
+	print32["print('Class subgraph test completed')"]
+subgraph "Function: main()"
+    start1[Start]
+    end2[End]
+    expr3["'\nTest file to verify the fixed class subgraph behavior.\nClasses should be ..."]
+    print6["print('Starting class subgraph test')"]
+    assign7["simple = SimpleClass('test')"]
+    assign12["complex_obj = ComplexClass('hello world')"]
+    method_call17[["Call: simple.set_value(42)"]]
+    method_call22[["Call: complex_obj.process_data()"]]
+    assign28["result = complex_obj.get_result()"]
+    print31["print(f'Final result: {result}')"]
+    print32["print('Class subgraph test completed')"]
+end
+subgraph "Class: ComplexClass"
+    subgraph "Method: __init__"
+        method___init__13[["Constructor: __init__(data)"]]
+        assign14["self.data = data"]
+        assign15["self.processed = False"]
+        print16["print('Initializing complex class')"]
     end
-	start1 --> expr3
-	expr3 --> import4
-	import4 --> if_cond5
-	if_cond5 --> call_main7
-	call_main7 --> if_cond9
-	if_cond9 --> exit_function11
-	if_cond9 -->|False| assign12
-	assign12 --> assign13
-	assign13 --> unsupported15
-	unsupported15 --> if_cond16
-	if_cond16 --> assign18
-	assign18 --> assign19
-	if_cond16 -->|False| assign19
-	assign19 --> assign20
-	assign20 --> assign22
-	assign22 --> assign23
-	assign23 --> for_loop24
-	for_loop24 --> if_cond26
-	if_cond26 --> expr28
-	expr28 --> assign29
-	assign29 --> for_loop24
-	if_cond26 -->|False| if_cond30
-	if_cond30 --> expr32
-	expr32 --> assign33
-	assign33 --> if_cond34
-	if_cond30 -->|False| if_cond34
-	if_cond34 --> expr36
-	expr36 --> assign37
-	assign37 --> for_loop24
-	if_cond34 -->|False| for_loop24
-	for_loop24 -->|Done| return38
-	return38 --> if_cond39
-	if_cond39 --> for_loop41
-	for_loop41 -->|Done| exit_function43
-	if_cond39 -->|False| assign44
-	assign44 --> assign46
-	assign46 --> for_loop47
-	for_loop47 --> if_cond49
-	if_cond49 --> if_cond51
-	if_cond51 --> for_loop47
-	if_cond51 -->|False| assign53
-	if_cond49 -->|False| assign53
-	assign53 --> if_cond54
-	if_cond54 --> assign56
-	assign56 --> if_cond57
-	if_cond54 -->|False| if_cond57
-	if_cond57 --> assign59
-	assign59 --> expr60
-	if_cond57 -->|False| expr60
-	expr60 -->|Next Iteration| for_loop47
-	for_loop47 -->|Done| return61
-	return61 --> assign62
-	assign62 --> if_cond64
-	if_cond64 --> return66
-	return66 --> assign75
-	if_cond64 -->|False| assign67
-	assign67 --> assign68
-	assign68 --> assign69
-	assign69 --> for_loop70
-	for_loop70 --> assign72
-	assign72 --> assign73
-	assign73 -->|Next Iteration| for_loop70
-	for_loop70 -->|Done| return74
-	return74 --> assign75
-	assign75 --> unsupported76
-	unsupported76 --> end2
-click if_cond9 setClickedNode
-click exit_function11 setClickedNode
-click assign12 setClickedNode
-click assign13 setClickedNode
-click unsupported15 setClickedNode
-click if_cond16 setClickedNode
-click assign18 setClickedNode
-click assign19 setClickedNode
-click assign20 setClickedNode
-click assign22 setClickedNode
-click assign23 setClickedNode
-click for_loop24 setClickedNode
-click if_cond26 setClickedNode
-click expr28 setClickedNode
-click assign29 setClickedNode
-click if_cond30 setClickedNode
-click expr32 setClickedNode
-click assign33 setClickedNode
-click if_cond34 setClickedNode
-click expr36 setClickedNode
-click assign37 setClickedNode
-click return38 setClickedNode
-click if_cond39 setClickedNode
-click for_loop41 setClickedNode
-click exit_function43 setClickedNode
-click assign44 setClickedNode
-click assign46 setClickedNode
-click for_loop47 setClickedNode
-click if_cond49 setClickedNode
-click if_cond51 setClickedNode
-click assign53 setClickedNode
-click if_cond54 setClickedNode
-click assign56 setClickedNode
-click if_cond57 setClickedNode
-click assign59 setClickedNode
-click expr60 setClickedNode
-click return61 setClickedNode
-click assign62 setClickedNode
-click if_cond64 setClickedNode
-click return66 setClickedNode
-click assign67 setClickedNode
-click assign68 setClickedNode
-click assign69 setClickedNode
-click for_loop70 setClickedNode
-click assign72 setClickedNode
-click assign73 setClickedNode
-click return74 setClickedNode
-click assign75 setClickedNode
-click unsupported76 setClickedNode
+    subgraph "Method: get_result"
+        method_get_result29[["Method: get_result()"]]
+        return30["return self.data"]
+    end
+    subgraph "Method: process_data"
+        method_process_data23[["Method: process_data()"]]
+        if_cond24{"If: not self.processed"}
+        assign25["self.data = self.data.upper()"]
+        assign26["self.processed = True"]
+        print27["print('Data processed')"]
+    end
+end
+subgraph "Class: SimpleClass"
+    subgraph "Method: __init__"
+        method___init__8[["Constructor: __init__(name)"]]
+        assign9["self.name = name"]
+        assign10["self.value = 0"]
+        print11["print(f'Created {name}')"]
+    end
+    subgraph "Method: set_value"
+        method_set_value18[["Method: set_value(value)"]]
+        assign19["self.value = value"]
+        print20["print(f'Set value to {value}')"]
+        return21["return self.value"]
+    end
+end
+        start1 --> expr3
+        expr3 --> print6
+        print6 --> assign7
+        assign7 -->|Call __init__| method___init__8
+        method___init__8 --> assign9
+        assign9 --> assign10
+        assign10 --> print11
+        assign7 --> assign12
+        assign12 -->|Call __init__| method___init__13
+        method___init__13 --> assign14
+        assign14 --> assign15
+        assign15 --> print16
+        assign12 --> method_call17
+        method_call17 -->|Execute| method_set_value18
+        method_set_value18 --> assign19
+        assign19 --> print20
+        print20 --> return21
+        return21 -->|Return| method_call17
+        method_call17 --> method_call22
+        method_call22 -->|Execute| method_process_data23
+        method_process_data23 --> if_cond24
+        if_cond24 --> assign25
+        assign25 --> assign26
+        assign26 --> print27
+        method_call22 --> assign28
+        assign28 -->|Execute| method_get_result29
+        method_get_result29 --> return30
+        return30 -->|Return| assign28
+        assign28 --> print31
+        print31 --> print32
+        print32 --> end2
+

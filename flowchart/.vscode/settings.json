@@ -1,5 +1,5 @@
 {
-    "flowchartMachine.nodes.processTypes.prints": false,
+    "flowchartMachine.nodes.processTypes.prints": true,
     "flowchartMachine.nodes.processTypes.functions": true,
     "flowchartMachine.nodes.processTypes.forLoops": true,
     "flowchartMachine.nodes.processTypes.whileLoops": true,
