@@ -95,6 +95,11 @@
           "default": true,
           "description": "Process class definitions"
         },
+        "flowchartMachine.nodes.processTypes.mergeCommonNodes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Merge common nodes"
+        },
         "flowchartMachine.nodes.processTypes.exceptions": {
           "type": "boolean",
           "default": true,

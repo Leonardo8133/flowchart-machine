@@ -114,7 +114,6 @@ class FlowchartPostProcessor:
 			# Recursively build nested subgraphs
 			# For class subgraphs, find and nest method subgraphs
 			if scope and scope.startswith("class_") and "_" not in scope[6:]:
-				# print("Method scope", scope)
 				# This is a class scope, find its methods
 				class_name = scope[6:]
 				method_scopes = [s for s in self.processor.node_scopes.values() 
@@ -144,9 +143,7 @@ class FlowchartPostProcessor:
 		class_scopes.sort()
 		
 		for class_scope in class_scopes:
-			print("Class scope", class_scope)
 			build(class_scope, "")
-			print("Finished class scope", class_scope)
 		
 		# Build function subgraphs
 		function_scopes = [s for s in self.processor.node_scopes.values() 
@@ -154,7 +151,6 @@ class FlowchartPostProcessor:
 		function_scopes.sort()
 		
 		for function_scope in function_scopes:
-			print("Function scope", function_scope)
 			build(function_scope, "")
 
 		return lines

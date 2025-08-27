@@ -7,5 +7,7 @@
     "flowchartMachine.nodes.processTypes.ifs": true,
     "flowchartMachine.nodes.processTypes.imports": true,
     "flowchartMachine.nodes.processTypes.exceptions": true,
-    "flowchartMachine.nodes.processTypes.returns": true
+    "flowchartMachine.nodes.processTypes.returns": true,
+    "flowchartMachine.nodes.processTypes.classes": true,
+    "flowchartMachine.nodes.processTypes.mergeCommonNodes": true
 }

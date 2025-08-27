@@ -114,6 +114,8 @@ export class WebviewMessageHandler {
     showImports: boolean;
     showReturns: boolean;
     showExceptions: boolean;
+    showClasses: boolean;
+    mergeCommonNodes: boolean;
   } {
     const config = vscode.workspace.getConfiguration('flowchartMachine', vscode.workspace.workspaceFolders?.[0]);
     function getConfig(key: string, fallback: boolean) {
@@ -132,7 +134,9 @@ export class WebviewMessageHandler {
       showIfs: getConfig('nodes.processTypes.ifs', true),
       showImports: getConfig('nodes.processTypes.imports', true),
       showReturns: getConfig('nodes.processTypes.returns', true),
-      showExceptions: getConfig('nodes.processTypes.exceptions', true)
+      showExceptions: getConfig('nodes.processTypes.exceptions', true),
+      showClasses: getConfig('nodes.processTypes.classes', true),
+      mergeCommonNodes: getConfig('nodes.processTypes.mergeCommonNodes', true)
     };
   }
 
@@ -185,7 +189,9 @@ export class WebviewMessageHandler {
         SHOW_IFS: checkboxStates.showIfs ? '1' : '0',
         SHOW_IMPORTS: checkboxStates.showImports ? '1' : '0',
         SHOW_RETURNS: checkboxStates.showReturns ? '1' : '0',
-        SHOW_EXCEPTIONS: checkboxStates.showExceptions ? '1' : '0'
+        SHOW_EXCEPTIONS: checkboxStates.showExceptions ? '1' : '0',
+        SHOW_CLASSES: checkboxStates.showClasses ? '1' : '0',
+        MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0'
       };
 
       const breakpoints = vscode.debug.breakpoints.filter(bp => 
@@ -654,6 +660,12 @@ export class WebviewMessageHandler {
           break;
         case 'showExceptions':
           configKey = 'flowchartMachine.nodes.processTypes.exceptions';
+          break;
+        case 'showClasses':
+          configKey = 'flowchartMachine.nodes.processTypes.classes';
+          break;
+        case 'mergeCommonNodes':
+          configKey = 'flowchartMachine.nodes.processTypes.mergeCommonNodes';
           break;
         default:
           configKey = `flowchartMachine.${key}`;

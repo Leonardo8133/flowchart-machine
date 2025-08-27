@@ -2,77 +2,63 @@ graph TD
 	start1[Start]
 	end2[End]
 	expr3["'\nTest file to verify the fixed class subgraph behavior.\nClasses should be ..."]
-	print6["print('Starting class subgraph test')"]
+	print6["print(`Starting class subgraph test`)"]
 	assign7["simple = SimpleClass('test')"]
 	method___init__8[["Constructor: __init__(name)"]]
-	assign9["self.name = name"]
-	assign10["self.value = 0"]
-	print11["print(f'Created {name}')"]
-	assign12["complex_obj = ComplexClass('hello world')"]
-	method___init__13[["Constructor: __init__(data)"]]
-	assign14["self.data = data"]
-	assign15["self.processed = False"]
-	print16["print('Initializing complex class')"]
-	method_call17[["Call: simple.set_value(42)"]]
-	method_set_value18[["Method: set_value(value)"]]
-	assign19["self.value = value"]
-	print20["print(f'Set value to {value}')"]
-	return21["return self.value"]
-	method_call22[["Call: complex_obj.process_data()"]]
-	method_process_data23[["Method: process_data()"]]
-	if_cond24{"If: not self.processed"}
-	assign25["self.data = self.data.upper()"]
-	assign26["self.processed = True"]
-	print27["print('Data processed')"]
-	assign28["result = complex_obj.get_result()"]
-	method_get_result29[["Method: get_result()"]]
-	return30["return self.data"]
-	print31["print(f'Final result: {result}')"]
-	print32["print('Class subgraph test completed')"]
+	assign9["self.name = name\nself.value = 0\nprint(f`Created {name}`)"]
+	assign10["complex_obj = ComplexClass('hello world')"]
+	method___init__11[["Constructor: __init__(data)"]]
+	assign12["self.data = data\nself.processed = False\nprint(`Initializing complex class`)\nprint(f`Data: {self.data}`)"]
+	method_call13[["Call: simple.set_value(42)"]]
+	method_set_value14[["Method: set_value(value)"]]
+	assign15["self.value = value\nprint(f`Set value to {value}`)"]
+	return16["return self.value"]
+	method_call17[["Call: complex_obj.process_data()"]]
+	method_process_data18[["Method: process_data()"]]
+	if_cond19{"If: not self.processed"}
+	assign20["self.data = self.data.upper()"]
+	assign21["self.processed = True\nprint(`Data processed`)\nprint(f`Data: {self.data}`)"]
+	assign22["result = complex_obj.get_result()"]
+	method_get_result23[["Method: get_result()"]]
+	return24["return self.data"]
+	print25["print(`Final result:`)\nprint(`Class subgraph test completed`)\nprint(`Test`)"]
 subgraph "Function: main()"
     start1[Start]
     end2[End]
     expr3["'\nTest file to verify the fixed class subgraph behavior.\nClasses should be ..."]
-    print6["print('Starting class subgraph test')"]
+    print6["print(`Starting class subgraph test`)"]
     assign7["simple = SimpleClass('test')"]
-    assign12["complex_obj = ComplexClass('hello world')"]
-    method_call17[["Call: simple.set_value(42)"]]
-    method_call22[["Call: complex_obj.process_data()"]]
-    assign28["result = complex_obj.get_result()"]
-    print31["print(f'Final result: {result}')"]
-    print32["print('Class subgraph test completed')"]
+    assign10["complex_obj = ComplexClass('hello world')"]
+    method_call13[["Call: simple.set_value(42)"]]
+    method_call17[["Call: complex_obj.process_data()"]]
+    assign22["result = complex_obj.get_result()"]
+    print25["print(`Final result:`)\nprint(`Class subgraph test completed`)\nprint(`Test`)"]
 end
 subgraph "Class: ComplexClass"
     subgraph "Method: __init__"
-        method___init__13[["Constructor: __init__(data)"]]
-        assign14["self.data = data"]
-        assign15["self.processed = False"]
-        print16["print('Initializing complex class')"]
+        method___init__11[["Constructor: __init__(data)"]]
+        assign12["self.data = data\nself.processed = False\nprint(`Initializing complex class`)\nprint(f`Data: {self.data}`)"]
     end
     subgraph "Method: get_result"
-        method_get_result29[["Method: get_result()"]]
-        return30["return self.data"]
+        method_get_result23[["Method: get_result()"]]
+        return24["return self.data"]
     end
     subgraph "Method: process_data"
-        method_process_data23[["Method: process_data()"]]
-        if_cond24{"If: not self.processed"}
-        assign25["self.data = self.data.upper()"]
-        assign26["self.processed = True"]
-        print27["print('Data processed')"]
+        method_process_data18[["Method: process_data()"]]
+        if_cond19{"If: not self.processed"}
+        assign20["self.data = self.data.upper()"]
+        assign21["self.processed = True\nprint(`Data processed`)\nprint(f`Data: {self.data}`)"]
     end
 end
 subgraph "Class: SimpleClass"
     subgraph "Method: __init__"
         method___init__8[["Constructor: __init__(name)"]]
-        assign9["self.name = name"]
-        assign10["self.value = 0"]
-        print11["print(f'Created {name}')"]
+        assign9["self.name = name\nself.value = 0\nprint(f`Created {name}`)"]
     end
     subgraph "Method: set_value"
-        method_set_value18[["Method: set_value(value)"]]
-        assign19["self.value = value"]
-        print20["print(f'Set value to {value}')"]
-        return21["return self.value"]
+        method_set_value14[["Method: set_value(value)"]]
+        assign15["self.value = value\nprint(f`Set value to {value}`)"]
+        return16["return self.value"]
     end
 end
         start1 --> expr3
@@ -80,30 +66,21 @@ end
         print6 --> assign7
         assign7 -->|Call __init__| method___init__8
         method___init__8 --> assign9
-        assign9 --> assign10
-        assign10 --> print11
-        assign7 --> assign12
-        assign12 -->|Call __init__| method___init__13
-        method___init__13 --> assign14
-        assign14 --> assign15
-        assign15 --> print16
-        assign12 --> method_call17
-        method_call17 -->|Execute| method_set_value18
-        method_set_value18 --> assign19
-        assign19 --> print20
-        print20 --> return21
-        return21 -->|Return| method_call17
-        method_call17 --> method_call22
-        method_call22 -->|Execute| method_process_data23
-        method_process_data23 --> if_cond24
-        if_cond24 --> assign25
-        assign25 --> assign26
-        assign26 --> print27
-        method_call22 --> assign28
-        assign28 -->|Execute| method_get_result29
-        method_get_result29 --> return30
-        return30 -->|Return| assign28
-        assign28 --> print31
-        print31 --> print32
-        print32 --> end2
+        assign7 --> assign10
+        assign10 -->|Call __init__| method___init__11
+        method___init__11 --> assign12
+        assign10 --> method_call13
+        method_call13 -->|Execute| method_set_value14
+        method_set_value14 --> assign15
+        assign15 --> return16
+        method_call13 --> method_call17
+        method_call17 -->|Execute| method_process_data18
+        method_process_data18 --> if_cond19
+        if_cond19 --> assign20
+        assign20 --> assign21
+        method_call17 --> assign22
+        assign22 -->|Execute| method_get_result23
+        method_get_result23 --> return24
+        assign22 --> print25
+        print25 --> end2
 

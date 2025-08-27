@@ -40,6 +40,107 @@ class NodeHandler:
     def handle(self, node, prev_id, scope):
         """Handle a specific node type. Must be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement handle method")
+    
+    def _should_consolidate_with_previous(self, prev_id, scope):
+        """Check if we should consolidate with the previous node."""
+
+        if not self.processor.merge_common_nodes:
+            return False
+
+        if not prev_id or prev_id not in self.processor.nodes:
+            return False
+        
+        prev_node_def = self.processor.nodes[prev_id]
+        prev_scope = self.processor.node_scopes.get(prev_id)
+        
+        # Check if previous node is in same scope
+        if prev_scope != scope:
+            return False
+        
+        # Check if previous node is a print statement
+        if 'print(' in prev_node_def:
+            return True
+        
+        # Check if previous node is a simple assignment (no function calls)
+        if self._is_simple_assignment(prev_node_def):
+            return True
+        
+        # Check if previous node is an augmented assignment
+        if '=' in prev_node_def and ('+=' in prev_node_def or '-=' in prev_node_def or 
+                                    '*=' in prev_node_def or '/=' in prev_node_def or 
+                                    '%=' in prev_node_def or '**=' in prev_node_def or 
+                                    '//=' in prev_node_def or '&=' in prev_node_def or 
+                                    '|=' in prev_node_def or '^=' in prev_node_def or 
+                                    '<<=' in prev_node_def or '>>=' in prev_node_def):
+            return True
+        
+        return False
+    
+    def _can_consolidate_current_node(self, node):
+        """Check if the current node can be consolidated."""
+        # Only consolidate print statements and simple assignments
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+            # Check if it's a print statement
+            if hasattr(node.value.func, 'id') and node.value.func.id == 'print':
+                return True
+        
+        # Check for simple assignments (no function calls)
+        if isinstance(node, ast.Assign):
+            # Check if the value is a simple expression (not a function call)
+            if not isinstance(node.value, ast.Call):
+                return True
+        
+        # Check for augmented assignments
+        if isinstance(node, ast.AugAssign):
+            # Check if the value is a simple expression (not a function call)
+            if not isinstance(node.value, ast.Call):
+                return True
+        
+        return False
+    
+    def _is_simple_assignment(self, node_def):
+        """Check if a node is a simple assignment without function calls."""
+        # Look for assignment patterns like "var = value" or "var += value"
+        if '=' in node_def and not self._has_function_call(node_def):
+            return True
+        return False
+    
+    def _has_function_call(self, node_def):
+        """Check if a node definition contains a function call."""
+        return '(' in node_def and ')' in node_def
+    
+    def _consolidate_with_previous(self, node, prev_id, scope):
+        """Consolidate this node with the previous one."""
+        prev_text = self.processor.nodes[prev_id]
+        prev_content = self._extract_text_from_node(prev_text)
+        
+        # Get current node's text
+        current_text = self.processor._get_node_text(node)
+        
+        # Create consolidated text
+        consolidated_text = f"{prev_content}\\n{current_text}"
+        
+        # Update the previous node with consolidated text
+        self.processor.nodes[prev_id] = f'{prev_id}["{consolidated_text}"]'
+        
+        # Return the previous node ID since we're using it
+        return prev_id
+    
+    def _extract_text_from_node(self, node_def):
+        """Extract text content from a node definition."""
+        start = node_def.find('[')
+        end = node_def.rfind(']')
+        if start != -1 and end != -1:
+            text = node_def[start+1:end]
+            # Remove outer quotes if present
+            if text.startswith('"') and text.endswith('"'):
+                text = text[1:-1]
+            elif text.startswith("'") and text.endswith("'"):
+                text = text[1:-1]
+            # Replace all remaining quotes with backticks to avoid Mermaid parsing issues
+            text = text.replace('"', '`').replace("'", '`')
+            return text
+        return ""
 
 class IfHandler(NodeHandler):
     """Handle if statements."""
@@ -148,6 +249,11 @@ class PrintHandler(NodeHandler):
         if not self.processor.show_prints:
             return prev_id
         
+        # Check if the previous node can be consolidated AND current node can be consolidated
+        if self._should_consolidate_with_previous(prev_id, scope):
+            return self._consolidate_with_previous(node, prev_id, scope)
+        
+        # Regular single print statement
         print_id = self.processor._generate_id("print")
         self.processor._add_node(print_id, self.processor._get_node_text(node), shape=FlowchartConfig.SHAPES['print'], scope=scope)
         self.processor._add_connection(prev_id, print_id)
@@ -168,22 +274,23 @@ class ExprHandler(NodeHandler):
                     module_name = call.func.value.id
                     full_name = f"{module_name}.{attr_name}"
                     if full_name in FlowchartConfig.EXIT_FUNCTIONS:
-                        return self.processor._handle_exit_function(node, prev_id, scope)
+                        return self.handlers['exit_function'].handle(node, prev_id, scope)
                     
-                    # This might be a method call on an object
-                    # For now, just create a simple method call node
                     return self._handle_method_call(node, prev_id, scope, attr_name)
             
             # Check for direct function names
             if func_name in FlowchartConfig.EXIT_FUNCTIONS:
-                return self.processor._handle_exit_function(node, prev_id, scope)
+                return self.handlers['exit_function'].handle(node, prev_id, scope)
 
             # Handle print statements and other function calls
             if func_name == 'print':
-                return self.processor._handle_print(node, prev_id, scope)
+                return self.processor.handlers['print'].handle(node, prev_id, scope)
             
             # Handle class instantiation
             if func_name and func_name in self.processor.class_defs:
+                if not self.processor.show_classes:
+                    return prev_id
+                
                 return self._handle_class_instantiation(node, prev_id, scope, func_name)
                
             if not self.processor.show_functions:
@@ -223,23 +330,20 @@ class ExprHandler(NodeHandler):
     
     def _handle_method_call(self, node, prev_id, scope, method_name):
         """Handle method calls on objects."""
-        # Create a method call node
-        print("Method call", method_name)
         method_call_id = self.processor._generate_id("method_call")
         text = f"Call: {self.processor._get_node_text(node)}"
         self.processor._add_node(method_call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
         self.processor._add_connection(prev_id, method_call_id)
         
+        if not self.processor.show_classes:
+            return method_call_id
+        
         # Try to find the method definition and create a subgraph for it
         # Look through all class definitions to find this method
         for class_name, class_node in self.processor.class_defs.items():
-            print("Class", class_name)
             for item in class_node.body:
-                # print("Item", item)
                 if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                    # Found the method, create a subgraph for it
-                    # print("Found method", method_name)
-                    self.processor._create_method_subgraph(class_name, method_name, item, method_call_id)
+                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, method_call_id)
                     break
         
         return method_call_id
@@ -259,7 +363,7 @@ class ExprHandler(NodeHandler):
             for item in class_node.body:
                 if isinstance(item, ast.FunctionDef) and item.name == '__init__':
                     # Create __init__ method subgraph and connect instantiation to it
-                    self.processor._create_method_subgraph(class_name, '__init__', item, instantiation_id)
+                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', item, instantiation_id)
                     break
             else:
                 # If no __init__ method found, connect to class node as fallback
@@ -309,10 +413,15 @@ class AssignHandler(NodeHandler):
             
             # Handle class instantiation assignment
             if func_name and func_name in self.processor.class_defs:
+                if not self.processor.show_classes:
+                    return prev_id
                 return self._handle_class_instantiation_assignment(node, prev_id, scope, func_name)
             
             # Handle method call assignment (like result = obj.method())
             if func_name is None and hasattr(call.func, 'attr'):
+                if not self.processor.show_classes:
+                    return prev_id
+
                 attr_name = call.func.attr
                 # This is a method call assignment
                 return self._handle_method_call_assignment(node, prev_id, scope, attr_name)
@@ -340,6 +449,9 @@ class AssignHandler(NodeHandler):
                 return end_call_id
         
         # Regular assignment
+        if self._should_consolidate_with_previous(prev_id, scope):
+            return self._consolidate_with_previous(node, prev_id, scope)
+
         assign_id = self.processor._generate_id("assign")
         self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
         self.processor._add_connection(prev_id, assign_id)
@@ -358,7 +470,7 @@ class AssignHandler(NodeHandler):
             for item in class_node.body:
                 if isinstance(item, ast.FunctionDef) and item.name == method_name:
                     # Found the method, create a subgraph for it
-                    self.processor._create_method_subgraph(class_name, method_name, item, assign_id)
+                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, assign_id)
                     break
         
         return assign_id
@@ -368,7 +480,6 @@ class AssignHandler(NodeHandler):
         # Create assignment node
         assign_id = self.processor._generate_id("assign")
         self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
-        print("Assign ID", assign_id, "Scope", scope, "Class Name", class_name)
         self.processor._add_connection(prev_id, assign_id)
         
         # Find the class and connect to its __init__ method
@@ -378,7 +489,7 @@ class AssignHandler(NodeHandler):
             for item in class_node.body:
                 if isinstance(item, ast.FunctionDef) and item.name == '__init__':
                     # Create __init__ method subgraph and connect assignment to it
-                    self.processor._create_method_subgraph(class_name, '__init__', item, assign_id)
+                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', item, assign_id)
                     # Delete the class node
                     break
         
@@ -388,6 +499,10 @@ class AugAssignHandler(NodeHandler):
     """Handle augmented assignments like count += 1, x *= 2, etc."""
     
     def handle(self, node, prev_id, scope):
+        # Check if the previous node can be consolidated AND current node can be consolidated
+        if self._should_consolidate_with_previous(prev_id, scope):
+            return self._consolidate_with_previous(node, prev_id, scope)
+
         augassign_id = self.processor._generate_id("augassign")
         # Get the operator symbol
         op_symbol = self.processor._get_operator_symbol(node.op)
@@ -442,6 +557,9 @@ class ClassHandler(NodeHandler):
     nodes_to_delete : list = []
     
     def handle(self, node, prev_id, scope):
+        if not self.processor.show_classes:
+            return prev_id
+        
         # Store class info for method calls and context (always needed)
         self.processor.class_defs[node.name] = node
         
@@ -503,6 +621,47 @@ class ClassHandler(NodeHandler):
             "class_variables": sorted(class_variables),
             "type": "class"
         }
+
+    def _create_method_subgraph(self, class_name, method_name, method_node, call_node_id):
+        """Create a subgraph for a method that is being called."""
+        # Create method scope
+        method_scope = f"class_{class_name}_{method_name}"
+        
+        # Create method node with arguments
+        method_id = self.processor._generate_id(f"method_{method_name}")
+        args_text = self._get_method_arguments(method_node)
+        if method_name == '__init__':
+            text = f"Constructor: __init__({args_text})"
+        else:
+            text = f"Method: {method_name}({args_text})"
+        self.processor._add_node(method_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=method_scope)
+        
+        # Connect the call to the method
+        label = "Call __init__" if method_name == '__init__' else "Execute"
+        self.processor._add_connection(call_node_id, method_id, label=label)
+        
+        # Store the calling node for this method scope so returns can connect back
+        if not hasattr(self, 'method_calling_nodes'):
+            self.method_calling_nodes = {}
+        self.method_calling_nodes[method_scope] = call_node_id
+        
+        # Process method body and create subgraph content
+        self._process_method_body(method_node, method_id, method_scope)
+
+    def _process_method_body(self, method_node, method_id, method_scope):
+        """Process method body and create nodes within the method scope."""
+        if method_node.body:
+            self.processor._process_node_list(method_node.body, method_id, method_scope)
+    
+    def _get_method_arguments(self, method_node):
+        """Extract method arguments as a string."""
+        args = []
+        for arg in method_node.args.args:
+            # Skip 'self' parameter
+            if arg.arg == 'self':
+                continue
+            args.append(arg.arg)
+        return ", ".join(args) if args else ""
 
 class FunctionDefHandler(NodeHandler):
     """Handle function definitions - they should not appear as nodes in the flowchart."""
@@ -781,14 +940,10 @@ class ExitFunctionHandler(NodeHandler):
     
     def handle(self, node, prev_id, scope):
         exit_id = self.processor._generate_id("exit_function")
-        
-        # Create exit node
         text = f"Exit: {self.processor._get_node_text(node)}"
         self.processor._add_node(exit_id, text, shape=FlowchartConfig.SHAPES['exit'], scope=scope)
         self.processor._add_connection(prev_id, exit_id)
-        
-        # Exit nodes don't connect to anything - they just end the flow
-        return None  # No further processing after exit
+        return None
 
 class FlowchartProcessor:
     """
@@ -837,7 +992,8 @@ class FlowchartProcessor:
             'show_imports': 'SHOW_IMPORTS',
             'show_exceptions': 'SHOW_EXCEPTIONS',
             'show_returns': 'SHOW_RETURNS',
-            'show_classes': 'SHOW_CLASSES'
+            'show_classes': 'SHOW_CLASSES',
+            'merge_common_nodes': 'MERGE_COMMON_NODES'
         }
         
         for attr, env_var in config_map.items():
@@ -868,7 +1024,8 @@ class FlowchartProcessor:
             ast.SetComp: ComprehensionHandler(self),
             ast.GeneratorExp: ComprehensionHandler(self),
             ast.FunctionDef: FunctionDefHandler(self),
-            ast.ClassDef: ClassHandler(self) # Register ClassHandler
+            ast.ClassDef: ClassHandler(self),
+            'print': PrintHandler(self)
         }
         self.default_handler = UnsupportedHandler(self)
 
@@ -948,6 +1105,11 @@ class FlowchartProcessor:
         text = ast.unparse(node).strip()
         text = text.replace("'", '"') if "'" in text and '"' not in text else text
         text = self._simplify_data_structure(text, node)
+        
+        # Replace quotes with backticks for print statements to avoid Mermaid parsing issues
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+            if hasattr(node.value.func, 'id') and node.value.func.id == 'print':
+                text = text.replace('"', '`').replace("'", '`')
         
         if len(text) >= FlowchartConfig.NODE_LIMITS['max_text_length']:
             text = text[:FlowchartConfig.NODE_LIMITS['max_text_length'] - 3] + "..."
@@ -1075,6 +1237,9 @@ class FlowchartProcessor:
 
     def _filter_for_loops(self, node):
         return self.show_for_loops or not isinstance(node, ast.For)
+    
+    def _filter_classes(self, node):
+        return self.show_classes or not isinstance(node, ast.ClassDef)
 
     def _filter_while_loops(self, node):
         return self.show_while_loops or not isinstance(node, ast.While)
@@ -1117,7 +1282,7 @@ class FlowchartProcessor:
                 continue
             
             self.last_added_node = node
-            handler = self.handlers.get(type(node), self.default_handler)
+            handler : NodeHandler = self.handlers.get(type(node), self.default_handler)
             new_id = handler.handle(node, current_id, scope)
 
             # Reset next node label after the first node
@@ -1150,77 +1315,6 @@ class FlowchartProcessor:
     def _should_highlight_breakpoint(self, node):
         """Check if node should be highlighted as breakpoint."""
         return node and hasattr(node, 'lineno') and node.lineno in self.breakpoint_lines
-
-    # ===== LEGACY COMPATIBILITY METHODS =====
-    
-    def _handle_print(self, node, prev_id, scope):
-        """Legacy method for backward compatibility with handlers."""
-        if not self.show_prints:
-            return prev_id
-        
-        print_id = self._generate_id("print")
-        if not self._add_node(print_id, self._get_node_text(node), shape=FlowchartConfig.SHAPES['print'], scope=scope):
-            return False
-        self._add_connection(prev_id, print_id)
-        return print_id
-
-    def _handle_exit_function(self, node, prev_id, scope):
-        """Legacy method for backward compatibility with handlers."""
-        exit_id = self._generate_id("exit_function")
-        text = f"Exit: {self._get_node_text(node)}"
-        self._add_node(exit_id, text, shape=FlowchartConfig.SHAPES['exit'], scope=scope)
-        self._add_connection(prev_id, exit_id)
-        return None
-
-    def _create_method_subgraph(self, class_name, method_name, method_node, call_node_id):
-        """Create a subgraph for a method that is being called."""
-        # Only create method subgraphs for methods that are actually called
-        # This prevents floating nodes from unused methods
-        print("Creating method subgraph", class_name, method_name)
-
-        # Create method scope
-        method_scope = f"class_{class_name}_{method_name}"
-        
-        # Create method node with arguments
-        method_id = self._generate_id(f"method_{method_name}")
-        args_text = self._get_method_arguments(method_node)
-        if method_name == '__init__':
-            text = f"Constructor: __init__({args_text})"
-        else:
-            text = f"Method: {method_name}({args_text})"
-        self._add_node(method_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=method_scope)
-        
-        # Connect the call to the method
-        label = "Call __init__" if method_name == '__init__' else "Execute"
-        self._add_connection(call_node_id, method_id, label=label)
-        
-        # Store the calling node for this method scope so returns can connect back
-        if not hasattr(self, 'method_calling_nodes'):
-            self.method_calling_nodes = {}
-        self.method_calling_nodes[method_scope] = call_node_id
-        
-        # Process method body and create subgraph content
-        self._process_method_body(method_node, method_id, method_scope)
-    
-    def _get_method_arguments(self, method_node):
-        """Extract method arguments as a string."""
-        args = []
-        for arg in method_node.args.args:
-            # Skip 'self' parameter
-            if arg.arg == 'self':
-                continue
-            args.append(arg.arg)
-        return ", ".join(args) if args else ""
-    
-    def _process_method_body(self, method_node, method_id, method_scope):
-        """Process method body and create nodes within the method scope."""
-        # Process the method body nodes
-        if method_node.body:
-            # Process the method body directly without Start/End nodes
-            body_end_id = self._process_node_list(method_node.body, method_id, method_scope)
-            
-            # If the method has a return statement, it will be handled by ReturnHandler
-            # If not, the method just ends naturally
 
     # ===== MAIN PROCESSING METHOD =====
     

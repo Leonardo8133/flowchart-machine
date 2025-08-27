@@ -10,6 +10,8 @@ let showIfsCheckbox;
 let showImportsCheckbox;
 let showExceptionsCheckbox;
 let showReturnsCheckbox;
+let showClassesCheckbox;
+let mergeCommonNodesCheckbox;
 let mermaidCodeText;
 let showCodeBtn;
 let dropdownToggle;
@@ -36,6 +38,8 @@ function initializeControls() {
     showImportsCheckbox = document.getElementById('showImports');
     showExceptionsCheckbox = document.getElementById('showExceptions');
     showReturnsCheckbox = document.getElementById('showReturns');
+    showClassesCheckbox = document.getElementById('showClasses');
+    mergeCommonNodesCheckbox = document.getElementById('mergeCommonNodes');
     mermaidCodeText = document.getElementById('mermaidCodeText');
     showCodeBtn = document.getElementById('showCodeBtn');
     dropdownToggle = document.getElementById('dropdownToggle');
@@ -84,6 +88,14 @@ function initializeControls() {
 
     if (showReturnsCheckbox) {
         showReturnsCheckbox.addEventListener('change', handleConfigChange);
+    }
+
+    if (showClassesCheckbox) {
+        showClassesCheckbox.addEventListener('change', handleConfigChange);
+    }
+
+    if (mergeCommonNodesCheckbox) {
+        mergeCommonNodesCheckbox.addEventListener('change', handleConfigChange);
     }
     
     if (showCodeBtn) {
@@ -218,5 +230,7 @@ function updateCheckboxStates(checkboxStates) {
     showImportsCheckbox.checked = checkboxStates.showImports;
     showReturnsCheckbox.checked = checkboxStates.showReturns;
     showExceptionsCheckbox.checked = checkboxStates.showExceptions;
+    showClassesCheckbox.checked = checkboxStates.showClasses;
+    mergeCommonNodesCheckbox.checked = checkboxStates.mergeCommonNodes;
     
 }

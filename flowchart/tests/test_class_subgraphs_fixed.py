@@ -26,12 +26,14 @@ class ComplexClass:
         self.data = data
         self.processed = False
         print("Initializing complex class")
+        print(f"Data: {self.data}")
     
     def process_data(self):
         if not self.processed:
             self.data = self.data.upper()
             self.processed = True
             print("Data processed")
+            print(f"Data: {self.data}")
     
     def get_result(self):
         return self.data
@@ -48,5 +50,6 @@ simple.set_value(42)
 complex_obj.process_data()
 result = complex_obj.get_result()
 
-print(f"Final result: {result}")
+print("Final result:")
 print("Class subgraph test completed")
+print("Test")
