@@ -3,3 +3,7 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+*/__pycache__/
+*/__pycache__/*
+flowchart/temp/tooltip_data.json
+flowchart/temp/flowchart.mmd
