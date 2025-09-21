@@ -7,3 +7,7 @@ node_modules
 */__pycache__/*
 flowchart/temp/tooltip_data.json
 flowchart/temp/flowchart.mmd
+flowchart/__pycache__/flowchart_postprocessor.cpython-311.pyc
+flowchart/__pycache__/flowchart_processor.cpython-311.pyc
+flowchart/temp/flowchart.mmd
+flowchart/temp/tooltip_data.json

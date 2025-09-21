@@ -81,8 +81,15 @@ class FlowchartPostProcessor:
 	def _build_subgraphs(self):
 		"""Create nested Mermaid subgraph sections based on call hierarchy and class structure."""
 		lines = []
+		visited_scopes = set()  # Track visited scopes to prevent infinite recursion
 
 		def build(scope, indent):
+			print(scope, "creating subgraph")
+			# Prevent infinite recursion
+			if scope in visited_scopes:
+				print(scope, "Scope already visited")
+				return
+			visited_scopes.add(scope)
 			# Only create subgraph if this scope has visible nodes
 			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
 			if not scope_nodes:
@@ -97,14 +104,18 @@ class FlowchartPostProcessor:
 				else:
 					class_name = scope[6:]  # Remove "class_" prefix
 					subgraph_name = f"Class: {class_name}"
+			elif scope == "main":
+				# Main flow - don't create a subgraph, just add nodes directly
+				subgraph_name = None
 			elif scope:
 				# Function subgraph
 				subgraph_name = f"Function: {scope}()"
 			else:
-				# Main scope
+				# Fallback for empty scope
 				subgraph_name = "Main Flow"
 				
-			lines.append(f"{indent}subgraph \"{subgraph_name}\"")
+			if subgraph_name:
+				lines.append(f"{indent}subgraph \"{subgraph_name}\"")
 			
 			# Add nodes for this scope
 			for node_id in scope_nodes:
@@ -132,7 +143,8 @@ class FlowchartPostProcessor:
 				for child in children:
 					build(child, indent + "    ")
 			
-			lines.append(f"{indent}end")
+			if subgraph_name:
+				lines.append(f"{indent}end")
 
 		# Build main flow subgraph
 		build("main", "")
@@ -141,17 +153,23 @@ class FlowchartPostProcessor:
 		class_scopes = [s for s in self.processor.node_scopes.values() 
 					   if s and s.startswith("class_") and "_" not in s[6:]]
 		class_scopes.sort()
-		
+
 		for class_scope in class_scopes:
+			visited_scopes.clear()  # Clear visited scopes for each top-level class
 			build(class_scope, "")
 		
-		# Build function subgraphs
+		# Build function subgraphs - only for scopes that have actual nodes
 		function_scopes = [s for s in self.processor.node_scopes.values() 
-						  if s and not s.startswith("class_") and s != "main"]
+						  if s and not s.startswith("class_")]
+		function_scopes = list(set(function_scopes))  # Remove duplicates
 		function_scopes.sort()
-		
+		print("Function scopes", function_scopes)
 		for function_scope in function_scopes:
-			build(function_scope, "")
+			print("\n\nprocessing function scope", function_scope)
+			# Only build subgraph if this scope has visible nodes
+			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == function_scope]
+			if scope_nodes:  # Only create subgraph if there are actual nodes
+				build(function_scope, "")
 
 		return lines
 

@@ -3,10 +3,11 @@ let currentZoom = 1;
 let isPanning = false;
 let lastPanPoint = { x: 0, y: 0 };
 let panOffset = { x: 0, y: 0 };
+let zoomCenterIndicator = null;
 
 // Zoom functions
 function zoomIn() {
-	currentZoom = Math.min(currentZoom * 1.2, 5);
+	currentZoom = Math.min(currentZoom * 1.2, 50);
 	updateTransform();
 	updateZoomLevel();
 }
@@ -29,7 +30,8 @@ function updateTransform() {
 	
 	const svg = mermaidContainer.querySelector('svg');
 	if (svg) {
-		svg.style.transformOrigin = 'center center';
+		// Don't override transform-origin here - let the zoom function control it
+		console.log('Updating transform', panOffset.x, panOffset.y, currentZoom);
 		svg.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px) scale(${currentZoom})`;
 	}
 }
@@ -47,8 +49,33 @@ function handleWheelZoom(event) {
 	
 	const delta = event.deltaY > 0 ? -1 : 1;
 	const zoomFactor = delta > 0 ? 1.1 : 0.9;
+	const newZoom = Math.max(0.1, Math.min(50, currentZoom * zoomFactor));
 	
-	currentZoom = Math.max(0.1, Math.min(5, currentZoom * zoomFactor));
+	if (!mermaidContainer) return;
+	
+	const svg = mermaidContainer.querySelector('svg');
+	if (!svg) return;
+	
+	// Get mouse position relative to the SVG
+	const svgRect = svg.getBoundingClientRect();
+	const mouseX = event.clientX - svgRect.left;
+	const mouseY = event.clientY - svgRect.top;
+	
+	// Calculate zoom ratio and mouse offset from center
+	const zoomRatio = newZoom / currentZoom;
+	
+	// Calculate the center of the SVG
+	const centerX = svgRect.width / 2;
+	const centerY = svgRect.height / 2;
+	const offsetX = mouseX - centerX;
+	const offsetY = mouseY - centerY;
+	
+	// Update pan offset to keep mouse position stationary
+	panOffset.x = panOffset.x - (offsetX * (zoomRatio - 1));
+	panOffset.y = panOffset.y - (offsetY * (zoomRatio - 1));
+	
+	// Apply the zoom
+	currentZoom = newZoom;
 	updateTransform();
 	updateZoomLevel();
 }

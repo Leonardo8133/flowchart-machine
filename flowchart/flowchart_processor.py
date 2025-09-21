@@ -172,13 +172,20 @@ class IfHandler(NodeHandler):
             
             return merge_id
         else:
-            # No else clause - check if we need a merge node
+            # No else clause - check if this is a main guard
             if not self.processor._filter_main_guard(node):
-                # This is a main guard, we need a merge node
-                merge_id = self.processor._generate_id("merge")
-                self.processor._add_node(merge_id, " ", shape=FlowchartConfig.SHAPES['merge'])
-                self.processor._add_connection(cond_id, merge_id, label="False")
-                return merge_id
+                # This is a main guard (if __name__ == "__main__":)
+                # Create a separate End node for the true path
+                true_end_id = self.processor._generate_id("end")
+                self.processor._add_node(true_end_id, "End", shape=FlowchartConfig.SHAPES['end'])
+                
+                if true_path_end:
+                    # Connect true path to the new End node
+                    self.processor._add_connection(true_path_end, true_end_id)
+                # Connect false path to the original End node
+                self.processor._add_connection(cond_id, self.processor.end_id, label="False")
+                # Return None since both paths are handled
+                return None
             else:
                 # Simple if statement in method context - no merge node needed
                 # The flow will continue naturally from the true path or condition
@@ -274,13 +281,13 @@ class ExprHandler(NodeHandler):
                     module_name = call.func.value.id
                     full_name = f"{module_name}.{attr_name}"
                     if full_name in FlowchartConfig.EXIT_FUNCTIONS:
-                        return self.handlers['exit_function'].handle(node, prev_id, scope)
+                        return self.processor.handlers['exit_function'].handle(node, prev_id, scope)
                     
                     return self._handle_method_call(node, prev_id, scope, attr_name)
             
             # Check for direct function names
             if func_name in FlowchartConfig.EXIT_FUNCTIONS:
-                return self.handlers['exit_function'].handle(node, prev_id, scope)
+                return self.processor.handlers['exit_function'].handle(node, prev_id, scope)
 
             # Handle print statements and other function calls
             if func_name == 'print':
@@ -1025,6 +1032,7 @@ class FlowchartProcessor:
             ast.GeneratorExp: ComprehensionHandler(self),
             ast.FunctionDef: FunctionDefHandler(self),
             ast.ClassDef: ClassHandler(self),
+            'exit_function': ExitFunctionHandler(self),
             'print': PrintHandler(self)
         }
         self.default_handler = UnsupportedHandler(self)
@@ -1329,9 +1337,9 @@ class FlowchartProcessor:
             
             # Create start and end nodes
             start_id = self._generate_id("start")
-            self._add_node(start_id, "Start", shape=FlowchartConfig.SHAPES['start'], scope="main")
+            self._add_node(start_id, "Start", shape=FlowchartConfig.SHAPES['start'])
             self.end_id = self._generate_id("end")
-            self._add_node(self.end_id, "End", shape=FlowchartConfig.SHAPES['end'], scope="main")
+            self._add_node(self.end_id, "End", shape=FlowchartConfig.SHAPES['end'])
 
             # Separate function definitions from main flow
             main_flow_nodes = [node for node in tree.body if not isinstance(node, ast.FunctionDef)]
@@ -1345,6 +1353,7 @@ class FlowchartProcessor:
             current_id = self._process_main_flow(start_id, main_flow_nodes)
             
             # Connect to end if needed
+            print("Connecting to end", current_id, self.end_id)
             if current_id and current_id != start_id and current_id is not False:
                 self._add_connection(current_id, self.end_id)
 
@@ -1377,6 +1386,8 @@ class FlowchartProcessor:
                 current_id = handler.handle(node, current_id)
             
             if current_id is False:  # Max nodes limit hit
+                break
+            elif current_id is None:  # Handler handled the flow completely (e.g., main guard)
                 break
         
         return current_id
