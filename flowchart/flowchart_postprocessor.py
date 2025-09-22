@@ -107,6 +107,10 @@ class FlowchartPostProcessor:
 			elif scope == "main":
 				# Main flow - don't create a subgraph, just add nodes directly
 				subgraph_name = None
+			elif scope and "_call_" in scope:
+				# Function call instance subgraph
+				func_name, call_instance = scope.split("_call_", 1)
+				subgraph_name = f"Function: {func_name}() - Call {call_instance}"
 			elif scope:
 				# Function subgraph
 				subgraph_name = f"Function: {scope}()"

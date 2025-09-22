@@ -28,6 +28,7 @@ class FlowchartConfig:
     }
     
     MAX_NODES = 100
+    MAX_NESTING_DEPTH = 6  # Maximum number of nested function call layers
     
     EXIT_FUNCTIONS = ['sys.exit', 'os._exit', 'exit', 'quit']
 
@@ -260,11 +261,114 @@ class PrintHandler(NodeHandler):
         if self._should_consolidate_with_previous(prev_id, scope):
             return self._consolidate_with_previous(node, prev_id, scope)
         
+        # Check if print has function calls as arguments or in f-strings
+        if hasattr(node.value, 'args') and node.value.args:
+            for arg in node.value.args:
+                if isinstance(arg, ast.Call):
+                    # Found a function call in print arguments, process it
+                    return self._handle_print_with_function_calls(node, prev_id, scope)
+                elif isinstance(arg, ast.JoinedStr):  # f-string
+                    # Check if f-string contains function calls
+                    if self._has_function_calls_in_fstring(arg):
+                        return self._handle_print_with_function_calls(node, prev_id, scope)
+        
         # Regular single print statement
         print_id = self.processor._generate_id("print")
         self.processor._add_node(print_id, self.processor._get_node_text(node), shape=FlowchartConfig.SHAPES['print'], scope=scope)
         self.processor._add_connection(prev_id, print_id)
         return print_id
+    
+    def _handle_print_with_function_calls(self, node, prev_id, scope):
+        """Handle print statements that contain function calls in their arguments."""
+        # Create print node with actual text
+        print_id = self.processor._generate_id("print")
+        print_text = self.processor._get_node_text(node)
+        self.processor._add_node(print_id, print_text, shape=FlowchartConfig.SHAPES['print'], scope=scope)
+        self.processor._add_connection(prev_id, print_id)
+        
+        current_id = print_id
+        
+        # Collect all function calls from arguments and f-strings
+        function_calls = []
+        for arg in node.value.args:
+            if isinstance(arg, ast.Call):
+                function_calls.append(arg)
+            elif isinstance(arg, ast.JoinedStr):  # f-string
+                function_calls.extend(self._extract_function_calls_from_fstring(arg))
+        
+        # Process each function call with unique call instances
+        call_counter = {}
+        for func_call in function_calls:
+            func_name = getattr(func_call.func, 'id', None)
+            if func_name and func_name in self.processor.function_defs:
+                # Track call instances for unique subgraph names
+                if func_name not in call_counter:
+                    call_counter[func_name] = 0
+                call_counter[func_name] += 1
+                call_instance = call_counter[func_name]
+                
+                # Process the function call
+                if self.processor._is_nesting_limit_exceeded():
+                    # Create placeholder for nested function call
+                    call_id = self.processor._generate_id(f"nesting_limit_{func_name}_{call_instance}")
+                    text = f"Call: {self.processor._get_node_text(ast.Expr(value=func_call))} (Max nesting depth {FlowchartConfig.MAX_NESTING_DEPTH} exceeded)"
+                    self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+                    self.processor._add_connection(current_id, call_id)
+                    current_id = call_id
+                else:
+                    # Process the function call with unique scope
+                    call_id = self.processor._generate_id(f"call_{func_name}_{call_instance}")
+                    text = f"Call: {self.processor._get_node_text(ast.Expr(value=func_call))}"
+                    self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+                    self.processor._add_connection(current_id, call_id)
+                    
+                    # Create unique scope for this call instance
+                    unique_scope = f"{func_name}_call_{call_instance}"
+                    
+                    # Process function body with unique scope
+                    function_node = self.processor.function_defs[func_name]
+                    end_call_id = self.processor._generate_id("end_call")
+                    self.processor._add_node(end_call_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                    self.processor.call_stack.append(end_call_id)
+                    
+                    # Increment nesting depth
+                    self.processor.current_nesting_depth += 1
+                    body_end_id = self.processor._process_node_list(function_node.body, call_id, scope=unique_scope)
+                    self.processor.current_nesting_depth -= 1
+                    
+                    self.processor.call_stack.pop()
+                    if body_end_id:
+                        self.processor._add_connection(body_end_id, end_call_id)
+                    current_id = end_call_id
+        
+        return current_id
+    
+    def _has_function_calls_in_fstring(self, fstring_node):
+        """Check if an f-string contains function calls."""
+        for value in fstring_node.values:
+            if isinstance(value, ast.FormattedValue):
+                # Check if the expression inside {} is a function call
+                if isinstance(value.value, ast.Call):
+                    return True
+                # Recursively check nested expressions
+                for node in ast.walk(value.value):
+                    if isinstance(node, ast.Call):
+                        return True
+        return False
+    
+    def _extract_function_calls_from_fstring(self, fstring_node):
+        """Extract function calls from an f-string."""
+        function_calls = []
+        for value in fstring_node.values:
+            if isinstance(value, ast.FormattedValue):
+                # Check if the expression inside {} is a function call
+                if isinstance(value.value, ast.Call):
+                    function_calls.append(value.value)
+                # Recursively find nested function calls
+                for node in ast.walk(value.value):
+                    if isinstance(node, ast.Call) and node != value.value:
+                        function_calls.append(node)
+        return function_calls
 
 class ExprHandler(NodeHandler):
     """Handle expressions including function calls and class instantiation."""
@@ -305,27 +409,65 @@ class ExprHandler(NodeHandler):
 
             # Handle other function calls
             if func_name and func_name in self.processor.function_defs:
-                # Track nesting relationship between scopes
-                self.processor.scope_children.setdefault(scope, set()).add(func_name)
-                function_node = self.processor.function_defs[func_name]
+                # Check if nesting limit is exceeded
+                if self.processor._is_nesting_limit_exceeded():
+                    # Create a placeholder node indicating nesting limit exceeded
+                    call_id = self.processor._generate_id(f"nesting_limit_{func_name}")
+                    text = f"Call: {self.processor._get_node_text(node)} (Max nesting depth {FlowchartConfig.MAX_NESTING_DEPTH} exceeded)"
+                    if self.processor._should_highlight_breakpoint(node):
+                        text = f"🔴 {text}" if text else ""
+                    self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+                    self.processor._add_connection(prev_id, call_id)
+                    return call_id
                 
-                # For direct function calls (not assignments), show the call node
-                call_id = self.processor._generate_id(f"call_{func_name}")
-                text = f"Call: {self.processor._get_node_text(node)}"
-                if self.processor._should_highlight_breakpoint(node):
-                    text = f"🔴 {text}" if text else ""
-                self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
-                self.processor._add_connection(prev_id, call_id)
-                
-                end_call_id = self.processor._generate_id("end_call")
-                self.processor._add_node(end_call_id, " ", shape=FlowchartConfig.SHAPES['merge'])
-                self.processor.call_stack.append(end_call_id)
-                # When we enter a function, the scope changes to that function's name
-                body_end_id = self.processor._process_node_list(function_node.body, call_id, scope=func_name)
-                self.processor.call_stack.pop()
-                if body_end_id:
-                    self.processor._add_connection(body_end_id, end_call_id)
-                return end_call_id
+                # Check if this is a recursive call
+                if self.processor._is_recursive_call(func_name, scope):
+                    # Handle recursive call - create a loop back to function start
+                    call_id = self.processor._generate_id(f"recursive_call_{func_name}")
+                    text = f"Recursive Call: {self.processor._get_node_text(node)}"
+                    if self.processor._should_highlight_breakpoint(node):
+                        text = f"🔴 {text}" if text else ""
+                    self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+                    self.processor._add_connection(prev_id, call_id)
+                    
+                    # Connect back to function start to create recursion loop
+                    function_start = self.processor._get_function_start_node(func_name)
+                    if function_start:
+                        self.processor._add_connection(call_id, function_start, label="Recursion")
+                        # Store this as a recursive call for later processing
+                        if func_name not in self.processor.recursive_calls:
+                            self.processor.recursive_calls[func_name] = []
+                        self.processor.recursive_calls[func_name].append(call_id)
+                    
+                    return call_id
+                else:
+                    # Track nesting relationship between scopes
+                    self.processor.scope_children.setdefault(scope, set()).add(func_name)
+                    function_node = self.processor.function_defs[func_name]
+                    
+                    # For direct function calls (not assignments), show the call node
+                    call_id = self.processor._generate_id(f"call_{func_name}")
+                    text = f"Call: {self.processor._get_node_text(node)}"
+                    if self.processor._should_highlight_breakpoint(node):
+                        text = f"🔴 {text}" if text else ""
+                    self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+                    self.processor._add_connection(prev_id, call_id)
+                    
+                    end_call_id = self.processor._generate_id("end_call")
+                    self.processor._add_node(end_call_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                    self.processor.call_stack.append(end_call_id)
+                    
+                    # Increment nesting depth before processing function body
+                    self.processor.current_nesting_depth += 1
+                    # When we enter a function, the scope changes to that function's name
+                    body_end_id = self.processor._process_node_list(function_node.body, call_id, scope=func_name)
+                    # Decrement nesting depth after processing function body
+                    self.processor.current_nesting_depth -= 1
+                    
+                    self.processor.call_stack.pop()
+                    if body_end_id:
+                        self.processor._add_connection(body_end_id, end_call_id)
+                    return end_call_id
 
         # Handle other expressions
         expr_id = self.processor._generate_id("expr")
@@ -391,6 +533,20 @@ class ReturnHandler(NodeHandler):
         self.processor._add_node(return_id, text, scope=scope)
         self.processor._add_connection(prev_id, return_id)
         
+        # Check if return value contains a recursive function call
+        if node.value and isinstance(node.value, ast.Call):
+            func_name = getattr(node.value.func, 'id', None)
+            if func_name and self.processor._is_recursive_call(func_name, scope):
+                # This is a recursive return - create loop back to function start
+                function_start = self.processor._get_function_start_node(scope)
+                if function_start:
+                    self.processor._add_connection(return_id, function_start, label="Recursion")
+                    # Store this as a recursive call for later processing
+                    if scope not in self.processor.recursive_calls:
+                        self.processor.recursive_calls[scope] = []
+                    self.processor.recursive_calls[scope].append(return_id)
+                return None
+        
         # Check if we're in a method scope (class_methodName)
         if scope and scope.startswith("class_") and "_" in scope[6:]:
             # We're in a method, connect back to the calling node
@@ -437,23 +593,56 @@ class AssignHandler(NodeHandler):
                 return prev_id
 
             if func_name and func_name in self.processor.function_defs:
-                # This is a function call assignment, expand it
-                assign_id = self.processor._generate_id("assign")
-                self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
-                self.processor._add_connection(prev_id, assign_id)
+                # Check if nesting limit is exceeded
+                if self.processor._is_nesting_limit_exceeded():
+                    # Create a placeholder assignment indicating nesting limit exceeded
+                    assign_id = self.processor._generate_id("nesting_limit_assign")
+                    text = f"{self.processor._get_node_text(node)}\n (Max nesting depth {FlowchartConfig.MAX_NESTING_DEPTH} exceeded)"
+                    self.processor._add_node(assign_id, text, scope=scope)
+                    self.processor._add_connection(prev_id, assign_id)
+                    return assign_id
                 
-                # Track nesting relationship between scopes
-                self.processor.scope_children.setdefault(scope, set()).add(func_name)
-                function_node = self.processor.function_defs[func_name]
-                end_call_id = self.processor._generate_id("end_call")
-                self.processor._add_node(end_call_id, " ", shape=FlowchartConfig.SHAPES['merge'])
-                self.processor.call_stack.append(end_call_id)
-                # When we enter a function, the scope changes to that function's name
-                body_end_id = self.processor._process_node_list(function_node.body, assign_id, scope=func_name)
-                self.processor.call_stack.pop()
-                if body_end_id: 
-                    self.processor._add_connection(body_end_id, end_call_id)
-                return end_call_id
+                # Check if this is a recursive call
+                if self.processor._is_recursive_call(func_name, scope):
+                    # Handle recursive call assignment - create a loop back to function start
+                    assign_id = self.processor._generate_id("recursive_assign")
+                    self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
+                    self.processor._add_connection(prev_id, assign_id)
+                    
+                    # Connect back to function start to create recursion loop
+                    function_start = self.processor._get_function_start_node(func_name)
+                    if function_start:
+                        self.processor._add_connection(assign_id, function_start, label="Recursion")
+                        # Store this as a recursive call for later processing
+                        if func_name not in self.processor.recursive_calls:
+                            self.processor.recursive_calls[func_name] = []
+                        self.processor.recursive_calls[func_name].append(assign_id)
+                    
+                    return assign_id
+                else:
+                    # This is a function call assignment, expand it
+                    assign_id = self.processor._generate_id("assign")
+                    self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
+                    self.processor._add_connection(prev_id, assign_id)
+                    
+                    # Track nesting relationship between scopes
+                    self.processor.scope_children.setdefault(scope, set()).add(func_name)
+                    function_node = self.processor.function_defs[func_name]
+                    end_call_id = self.processor._generate_id("end_call")
+                    self.processor._add_node(end_call_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                    self.processor.call_stack.append(end_call_id)
+                    
+                    # Increment nesting depth before processing function body
+                    self.processor.current_nesting_depth += 1
+                    # When we enter a function, the scope changes to that function's name
+                    body_end_id = self.processor._process_node_list(function_node.body, assign_id, scope=func_name)
+                    # Decrement nesting depth after processing function body
+                    self.processor.current_nesting_depth -= 1
+                    
+                    self.processor.call_stack.pop()
+                    if body_end_id: 
+                        self.processor._add_connection(body_end_id, end_call_id)
+                    return end_call_id
         
         # Regular assignment
         if self._should_consolidate_with_previous(prev_id, scope):
@@ -979,6 +1168,13 @@ class FlowchartProcessor:
         self.class_defs = {} # Added for class definitions
         self.context_data = {}
         
+        # Recursion tracking
+        self.recursive_calls = {}  # Track recursive function calls
+        self.function_start_nodes = {}  # Track function start nodes for recursion loops
+        
+        # Nesting depth tracking
+        self.current_nesting_depth = 0  # Track current function call nesting depth
+        
         # Configuration and display settings
         self.breakpoint_lines = set()
         self._first_import_rendered = False
@@ -1282,6 +1478,10 @@ class FlowchartProcessor:
         if next_node_label is not None:
             self.next_node_label = next_node_label
         
+        # Track function start node for recursion detection
+        if scope and scope in self.function_defs and current_id not in self.function_start_nodes.values():
+            self.function_start_nodes[scope] = current_id
+        
         for index, node in enumerate(nodes):
             if current_id is None:
                 break
@@ -1323,6 +1523,20 @@ class FlowchartProcessor:
     def _should_highlight_breakpoint(self, node):
         """Check if node should be highlighted as breakpoint."""
         return node and hasattr(node, 'lineno') and node.lineno in self.breakpoint_lines
+
+    def _is_recursive_call(self, func_name, current_scope):
+        """Check if a function call is recursive (calling itself)."""
+        return func_name == current_scope
+
+    def _get_function_start_node(self, func_name):
+        """Get the start node ID for a function (first node in function body)."""
+        if func_name in self.function_start_nodes:
+            return self.function_start_nodes[func_name]
+        return None
+
+    def _is_nesting_limit_exceeded(self):
+        """Check if the current nesting depth exceeds the maximum allowed."""
+        return self.current_nesting_depth >= FlowchartConfig.MAX_NESTING_DEPTH
 
     # ===== MAIN PROCESSING METHOD =====
     
