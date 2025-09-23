@@ -30,8 +30,6 @@ function updateTransform() {
 	
 	const svg = mermaidContainer.querySelector('svg');
 	if (svg) {
-		// Don't override transform-origin here - let the zoom function control it
-		console.log('Updating transform', panOffset.x, panOffset.y, currentZoom);
 		svg.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px) scale(${currentZoom})`;
 	}
 }
@@ -147,8 +145,6 @@ function attachContainerEventListeners(container) {
 	container.addEventListener('mousemove', pan);
 	container.addEventListener('mouseup', endPan);
 	container.addEventListener('mouseleave', endPan);
-	
-	console.log('Event listeners attached to container');
 }
 
 // Initialize zoom controls
@@ -169,8 +165,6 @@ function initializeZoomControls() {
 	if (resetZoomBtn) {
 		resetZoomBtn.addEventListener('click', resetZoom);
 	}
-	
-	console.log('Zoom controls initialized');
 }
 
 // Add keyboard event listener

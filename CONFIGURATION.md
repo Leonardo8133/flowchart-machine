@@ -52,7 +52,6 @@ Manage flowchart persistence:
 - **Max Saved**: Maximum number of flowcharts to keep
 - **Storage Location**: Workspace or global storage
 - **Include Source Code**: Save original Python code
-- **Include Tooltip Data**: Save detailed node information
 - **Auto Cleanup**: Remove old flowcharts automatically
 
 ### **Appearance Settings**
@@ -110,7 +109,6 @@ Optimize extension performance:
   "flowchartMachine.storage.maxSavedFlowcharts": 50,
   "flowchartMachine.storage.storageLocation": "workspace",
   "flowchartMachine.storage.includeSourceCode": true,
-  "flowchartMachine.storage.includeTooltipData": true,
   "flowchartMachine.storage.autoCleanupDays": 30
 }
 ```
@@ -239,8 +237,7 @@ View detailed information about your stored flowcharts:
   "flowchartMachine.storage.saveFlowcharts": false,
   "flowchartMachine.storage.maxSavedFlowcharts": 10,
   "flowchartMachine.storage.autoCleanupDays": 7,
-  "flowchartMachine.storage.includeSourceCode": false,
-  "flowchartMachine.storage.includeTooltipData": false
+  "flowchartMachine.storage.includeSourceCode": false
 }
 ```
 

@@ -42,8 +42,6 @@ export interface StorageConfig {
   storageLocation: 'workspace' | 'global';
   /** Whether to include source code with saved flowcharts */
   includeSourceCode: boolean;
-  /** Whether to include tooltip data with saved flowcharts */
-  includeTooltipData: boolean;
   /** Auto-cleanup old flowcharts after days */
   autoCleanupDays: number;
   /** Export settings for PNG files */
@@ -76,7 +74,6 @@ export interface SavedFlowchart {
   /** Generated flowchart data */
   flowchart: {
     mermaidCode: string;
-    tooltipData: any;
     metadata: FlowchartMetadata;
   };
   /** Creation timestamp */
@@ -122,7 +119,6 @@ export type ConfigurationKey =
   | 'storage.maxSavedFlowcharts'
   | 'storage.storageLocation'
   | 'storage.includeSourceCode'
-  | 'storage.includeTooltipData'
   | 'storage.autoCleanupDays'
   | 'storage.export.defaultPngLocation'
   | 'storage.export.useCustomPngLocation'

@@ -1,41 +1,117 @@
 graph TD
 	start1[Start]
 	end2[End]
-	print3["print(f`Result: {add(multiply(2, 3), multiply(4, 5))}`)"]
-	call_add_14[["Call: add(multiply(2, 3), multiply(4, 5))"]]
-	assign6["result = a + b\nprint(f`Adding {a} + {b}`)"]
-	return7["return result"]
-	call_multiply_18[["Call: multiply(2, 3)"]]
-	assign10["result = a * b\nprint(f`Multiplying {a} * {b}`)"]
-	return11["return result"]
-	call_multiply_212[["Call: multiply(4, 5)"]]
-	assign14["result = a * b\nprint(f`Multiplying {a} * {b}`)"]
-	return15["return result"]
-    print3["print(f`Result: {add(multiply(2, 3), multiply(4, 5))}`)"]
-    call_add_14[["Call: add(multiply(2, 3), multiply(4, 5))"]]
-    call_multiply_18[["Call: multiply(2, 3)"]]
-    call_multiply_212[["Call: multiply(4, 5)"]]
-subgraph "Function: add() - Call 1"
-    assign6["result = a + b\nprint(f`Adding {a} + {b}`)"]
-    return7["return result"]
-end
-subgraph "Function: multiply() - Call 1"
-    assign10["result = a * b\nprint(f`Multiplying {a} * {b}`)"]
-    return11["return result"]
-end
-subgraph "Function: multiply() - Call 2"
-    assign14["result = a * b\nprint(f`Multiplying {a} * {b}`)"]
-    return15["return result"]
-end
-    	start1 --> print3
-    	print3 --> call_add_14
-    	call_add_14 --> assign6
-    	assign6 --> return7
-    	return7 --> call_multiply_18
-    	call_multiply_18 --> assign10
-    	assign10 --> return11
-    	return11 --> call_multiply_212
-    	call_multiply_212 --> assign14
-    	assign14 --> return15
-    	return15 --> end2
-
+	expr3["'\nComplex test file for flowchart generation testing.\nContains various Pyth..."]
+	import4[/"import os
+..."\]
+	if_cond5{"If: __name__ == '__main__'"}
+	call_main26[["Call: main2()"]]
+	if_cond8{"If: len(sys.argv) &lt 2"}
+	print9["print(`Usage: python complex_test.py &ltconfig_file&gt`)"]
+	exit_function10[/"Exit: sys.exit(1)"\]
+	assign11["config_file = sys.argv[1]"]
+	assign12["config = read_config_file(config_file)"]
+	if_cond23{"If: not config"}
+	print24["print(`Failed to read configuration, using defaults`)\nconfig = Dict[bool]\nsample_data = List[Dict]"]
+	assign25["is_valid, errors = validate_data(sample_data)"]
+	if_cond40{"If: not is_valid"}
+	print41["print(`Data validation failed:`)"]
+	for_loop42{{"For Loop: error in errors"}}
+	print44["print(f`  - {error}`)"]
+	exit_function45[/"Exit: sys.exit(1)"\]
+	print46["print(`Data validation passed`)"]
+	assign47["processed_data = process_items(sample_data, config)"]
+	print61["print(f`Processed {len(processed_data)} items`)"]
+	assign62["stats = calculate_statistics(processed_data)"]
+	print74["print(f`Statistics: {stats}`)\noutput_file = "output_results.json""]
+	try75{"Try"}
+	with77[["With: open(output_file, 'w') as f"]]
+	method_call78[["Call: json.dump({'processed_data': processed_data, 'statistics': stats, 'config_use..."]]
+	print79["print(f`Results saved to {output_file}`)"]
+	except80[["Except Exception as e"]]
+	print81["print(f`Failed to save results: {e}`)"]
+	exit_function82[/"Exit: sys.exit(1)"\]
+	print83["print(`Processing completed successfully`)"]
+	end84[End]
+    expr3["'\nComplex test file for flowchart generation testing.\nContains various Pyth..."]
+    import4[/"import os
+..."\]
+    if_cond5{"If: __name__ == '__main__'"}
+    call_main26[["Call: main2()"]]
+    subgraph "Function: main2()"
+        if_cond8{"If: len(sys.argv) &lt 2"}
+        print9["print(`Usage: python complex_test.py &ltconfig_file&gt`)"]
+        exit_function10[/"Exit: sys.exit(1)"\]
+        assign11["config_file = sys.argv[1]"]
+        assign12["config = read_config_file(config_file)"]
+        if_cond23{"If: not config"}
+        print24["print(`Failed to read configuration, using defaults`)\nconfig = Dict[bool]\nsample_data = List[Dict]"]
+        assign25["is_valid, errors = validate_data(sample_data)"]
+        if_cond40{"If: not is_valid"}
+        print41["print(`Data validation failed:`)"]
+        for_loop42{{"For Loop: error in errors"}}
+        print44["print(f`  - {error}`)"]
+        exit_function45[/"Exit: sys.exit(1)"\]
+        print46["print(`Data validation passed`)"]
+        assign47["processed_data = process_items(sample_data, config)"]
+        print61["print(f`Processed {len(processed_data)} items`)"]
+        assign62["stats = calculate_statistics(processed_data)"]
+        print74["print(f`Statistics: {stats}`)\noutput_file = "output_results.json""]
+        try75{"Try"}
+        with77[["With: open(output_file, 'w') as f"]]
+        method_call78[["Call: json.dump({'processed_data': processed_data, 'statistics': stats, 'config_use..."]]
+        print79["print(f`Results saved to {output_file}`)"]
+        except80[["Except Exception as e"]]
+        print81["print(f`Failed to save results: {e}`)"]
+        exit_function82[/"Exit: sys.exit(1)"\]
+        print83["print(`Processing completed successfully`)"]
+        subgraph "Function: calculate_statistics() (9 nodes)"
+            collapsed_nodes["Collapsed nodes (9)"]
+        end
+        subgraph "Function: process_items() (11 nodes)"
+            collapsed_nodes["Collapsed nodes (11)"]
+        end
+        subgraph "Function: read_config_file() (8 nodes)"
+            collapsed_nodes["Collapsed nodes (8)"]
+        end
+        subgraph "Function: validate_data() (12 nodes)"
+            collapsed_nodes["Collapsed nodes (12)"]
+        end
+    end
+        start1 --> expr3
+        expr3 --> import4
+        import4 --> if_cond5
+        if_cond5 --> call_main26
+        call_main26 --> if_cond8
+        if_cond8 --> print9
+        print9 --> exit_function10
+        if_cond8 --> assign11
+        assign11 --> assign12
+        if_cond23 --> print24
+        print24 --> assign25
+        if_cond40 --> print41
+        print41 --> for_loop42
+        for_loop42 -->|Next Iteration| print44
+        print44 -->|Next Iteration| for_loop42
+        for_loop42 -->|Done| exit_function45
+        if_cond40 --> print46
+        print46 --> assign47
+        print61 --> assign62
+        print74 --> try75
+        try75 -->|Try| with77
+        with77 --> method_call78
+        method_call78 --> print79
+        print79 --> print83
+        try75 -->|Exception| except80
+        except80 --> print81
+        print81 --> exit_function82
+        print83 --> end84
+        if_cond5 -->|False| end2
+        assign62 --> collapsed_nodes
+        collapsed_nodes --> print74
+        assign12 --> collapsed_nodes
+        collapsed_nodes --> if_cond23
+        assign47 --> collapsed_nodes
+        collapsed_nodes --> print61
+        assign25 --> collapsed_nodes
+        collapsed_nodes --> if_cond40

@@ -38,7 +38,7 @@ def process_data(data):
     
     return list(doubled_words)
 
-def main_function():
+def main_functionnnnnnnnnnn():
     """Main function demonstrating all handlers."""
     try:
         # Test with statement
@@ -72,5 +72,5 @@ def main_function():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main_function()
+    main_functionnnnnnnnnnn()
     print("Main function completed")

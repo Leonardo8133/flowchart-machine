@@ -1,31 +1,61 @@
 // Message handling from extension
 function handleExtensionMessage(event) {
     const message = event.data;
-    console.log('Received message from extension:', message);
     
     switch (message.command) {
         case 'updateFlowchart':
             if (message.diagram) {
+                // Store the diagram code globally for expand functionality
+                window.currentDiagramCode = message.diagram;
                 updateFlowchart(message.diagram);
                 // Store the diagram code for saving
                 if (typeof window.storeDiagramCode === 'function') {
                     window.storeDiagramCode(message.diagram);
                 }
-            }
-            
-            if (message.tooltipData) {
-                tooltipData = message.tooltipData;
+
+                // Update subgraph states if provided, otherwise reset
+                if (message.whitelist || message.forceCollapse || message.metadata) {
+                    if (typeof window.updateSubgraphStates === 'function') {
+                        window.updateSubgraphStates({
+                            whitelist: message.whitelist,
+                            forceCollapse: message.forceCollapse,
+                            metadata: message.metadata
+                        });
+                    }
+                } else {
+                    // Reset local UI states when a new diagram is loaded without state
+                    if (typeof window.resetSubgraphStates === 'function') {
+                        window.resetSubgraphStates();
+                    }
+                }
             }
             break;
-            
-        case 'updateTooltipData':
-            console.log('Updating tooltip data:', message.tooltipData);
-            tooltipData = message.tooltipData || {};
+
+        case 'storeCollapsedSubgraphs':
+            // Deprecated: metadata no longer used
+            if (typeof window.createExpandFunctions === 'function') {
+                window.createExpandFunctions();
+            }
             break;
             
         case 'regenerationComplete':
-            console.log('Regeneration completed successfully');
             updateControlStates(message);
+            // Add buttons after regeneration
+            if (typeof window.addSubgraphButtons === 'function') {
+                setTimeout(() => {
+                    window.addSubgraphButtons();
+                }, 100);
+            }
+            break;
+
+        case 'updateSubgraphStates':
+            if (typeof window.updateSubgraphStates === 'function') {
+                window.updateSubgraphStates({
+                    whitelist: message.whitelist,
+                    forceCollapse: message.forceCollapse,
+                    metadata: message.metadata
+                });
+            }
             break;
             
         case 'regenerationError':

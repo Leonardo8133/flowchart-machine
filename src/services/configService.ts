@@ -184,7 +184,6 @@ export class ConfigService {
         maxSavedFlowcharts: config.get('storage.maxSavedFlowcharts', DEFAULT_CONFIG.storage.maxSavedFlowcharts),
         storageLocation: config.get('storage.storageLocation', DEFAULT_CONFIG.storage.storageLocation),
         includeSourceCode: config.get('storage.includeSourceCode', DEFAULT_CONFIG.storage.includeSourceCode),
-        includeTooltipData: config.get('storage.includeTooltipData', DEFAULT_CONFIG.storage.includeTooltipData),
         autoCleanupDays: config.get('storage.autoCleanupDays', DEFAULT_CONFIG.storage.autoCleanupDays),
         export: {
           defaultPngLocation: config.get('storage.export.defaultPngLocation', DEFAULT_CONFIG.storage.export.defaultPngLocation),

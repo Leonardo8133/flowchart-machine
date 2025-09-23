@@ -18,9 +18,10 @@ export class WebviewManager {
    */
   createFlowchartWebview(
     mermaidCode: string, 
-    tooltipData: any, 
+    metadata: any, 
     fileName: string,
-    originalFilePath?: string
+    originalFilePath?: string,
+    whitelistService?: any
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
     this.originalFilePath = originalFilePath || 
@@ -62,7 +63,27 @@ export class WebviewManager {
     panel.webview.html = htmlContent;
 
     // Set up message handling
-    this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context);
+    this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context, whitelistService);
+
+    // Send initial diagram and state
+    if (mermaidCode) {
+      // Get current state from whitelistService if available
+      let currentWhitelist: string[] = [];
+      let forceCollapseList: string[] = [];
+
+      if (whitelistService) {
+        currentWhitelist = whitelistService.getWhitelist();
+        forceCollapseList = whitelistService.getForceCollapseList();
+      }
+
+      panel.webview.postMessage({
+        command: 'updateFlowchart',
+        diagram: mermaidCode,
+        metadata: metadata,
+        whitelist: currentWhitelist,
+        forceCollapse: forceCollapseList
+      });
+    }
 
     return panel;
   }
@@ -96,7 +117,7 @@ export class WebviewManager {
       '{{mermaidInitUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'mermaid-init.js')).toString(),
       '{{zoomPanUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'zoom-pan.js')).toString(),
       '{{controlsUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'controls.js')).toString(),
-      '{{tooltipUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'tooltip.js')).toString(),
+      '{{expandUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'expand.js')).toString(),
       '{{exportUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'export.js')).toString(),
       '{{messageHandlerUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'message-handler.js')).toString(),
       '{{mainUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'main.js')).toString(),
@@ -129,11 +150,11 @@ export class WebviewManager {
   private generateDebugHtml(
     htmlContent: string, 
     diagram: string, 
-    tooltipData: any, 
+    metadata: any, 
     htmlUri: vscode.Uri
   ): void {
     try {
-      const debugHtmlContent = this.injectDebugDataIntoHtml(htmlContent, diagram, tooltipData);
+      const debugHtmlContent = this.injectDebugDataIntoHtml(htmlContent, diagram, metadata);
       const debugHtmlPath = path.join(path.dirname(htmlUri.fsPath), 'webview_debug.html');
       fs.writeFileSync(debugHtmlPath, debugHtmlContent, 'utf-8');
       vscode.window.showInformationMessage(`Debug HTML saved to: ${debugHtmlPath}`);
@@ -145,8 +166,8 @@ export class WebviewManager {
   /**
    * Inject debug data into HTML for browser testing
    */
-  private injectDebugDataIntoHtml(template: string, diagram: string, tooltipData: any): string {
-    const payload = { type: 'init', diagram, tooltipData };
+  private injectDebugDataIntoHtml(template: string, diagram: string, metadata: any): string {
+    const payload = { type: 'init', diagram, metadata };
     const initScript = `\n<script>\nwindow.addEventListener('DOMContentLoaded', function(){\n  try {\n    window.postMessage(${JSON.stringify(payload)}, '*');\n  } catch(e) { console.error('Failed to inject init data', e); }\n});\n</script>\n`;
     const closing = '</body>';
     

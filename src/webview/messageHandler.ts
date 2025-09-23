@@ -6,12 +6,14 @@ import { PythonService } from '../services/pythonService';
 import { FileService } from '../services/fileService';
 import { ConfigService } from '../services/configService';
 import { StorageService } from '../services/storageService';
+import { WhitelistService } from '../services/whitelistService';
 
 export class WebviewMessageHandler {
   private originalFilePath?: string;
   private storageService: StorageService;
   private extensionContext: vscode.ExtensionContext;
   private fileService: FileService;
+  private whitelistService: WhitelistService | null = null;
 
   constructor() {
     // Initialize storage service when needed
@@ -23,11 +25,14 @@ export class WebviewMessageHandler {
   /**
    * Set up message handling for a webview panel
    */
-  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string, extensionContext?: vscode.ExtensionContext): void {
+  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string, extensionContext?: vscode.ExtensionContext, whitelistService?: WhitelistService): void {
     this.originalFilePath = originalFilePath;
     if (extensionContext) {
       this.extensionContext = extensionContext;
       this.fileService = new FileService(extensionContext);
+    }
+    if (whitelistService) {
+      this.whitelistService = whitelistService;
     }
 
     console.log('Setting up message handling for panel');
@@ -85,10 +90,22 @@ export class WebviewMessageHandler {
       case 'getCurrentCheckboxStatesValues':
         await this.handleGetCurrentCheckboxStatesValues(message, panel);
         break;
+
+      case 'expandSubgraph':
+        await this.handleExpandSubgraph(message, panel);
+        break;
+
+      case 'collapseSubgraph':
+        await this.handleCollapseSubgraph(message, panel);
+        break;
+
+      case 'updateMetadata':
+        await this.handleUpdateMetadata(message, panel);
+        break;
       
       default:
         console.log('❓ Unknown message command:', message.command);
-        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, saveDiagram, getSavedDiagrams, loadSavedDiagram');
+        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, saveDiagram, getSavedDiagrams, loadSavedDiagram, expandSubgraph, collapseSubgraph, updateMetadata');
         break;
     }
   }
@@ -99,6 +116,75 @@ export class WebviewMessageHandler {
       command: 'updateCheckboxStates',
       checkboxStates: checkboxStates
     });
+  }
+
+  /**
+   * Handle expand subgraph request
+   */
+  private async handleExpandSubgraph(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      const { scopeName } = message;
+      
+      if (!scopeName) {
+        return;
+      }
+      
+      // Add to whitelist and remove from force collapse list
+      const whitelistService = this.getWhitelistService();
+      whitelistService.addToWhitelist(scopeName);
+      whitelistService.removeFromForceCollapseList(scopeName);
+      // Regenerate flowchart with updated lists
+      await this.handleRegeneration(panel);
+    } catch (error) {
+      panel.webview.postMessage({
+        command: 'expandError',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Handle collapse subgraph request
+   */
+  private async handleCollapseSubgraph(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      const { scopeName } = message;
+      
+      if (!scopeName) {
+        return;
+      }
+      
+      // Remove from whitelist and add to force collapse list
+      const whitelistService = this.getWhitelistService();
+      whitelistService.removeFromWhitelist(scopeName);
+      whitelistService.addToForceCollapseList(scopeName);
+      // Regenerate flowchart with updated lists
+      await this.handleRegeneration(panel);
+    } catch (error) {
+      panel.webview.postMessage({
+        command: 'collapseError',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Handle update metadata request
+   */
+  private async handleUpdateMetadata(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      const { metadata } = message;
+      
+      if (metadata && metadata.collapsed_subgraphs) {
+        // Send collapsed subgraphs metadata to the webview
+        panel.webview.postMessage({
+          command: 'storeCollapsedSubgraphs',
+          metadata: metadata.collapsed_subgraphs
+        });
+      }
+    } catch (error) {
+      console.error('Error updating metadata:', error);
+    }
   }
 
   /**
@@ -121,8 +207,12 @@ export class WebviewMessageHandler {
     function getConfig(key: string, fallback: boolean) {
       // Try workspace first, then global
       let value = config.inspect<boolean>(key);
-      if (value?.workspaceValue !== undefined) return value.workspaceValue;
-      if (value?.globalValue !== undefined) return value.globalValue;
+      if (value?.workspaceValue !== undefined) {
+        return value.workspaceValue;
+      }
+      if (value?.globalValue !== undefined) {
+        return value.globalValue;
+      }
       return fallback;
     }
     return {
@@ -140,10 +230,11 @@ export class WebviewMessageHandler {
     };
   }
 
+
   /**
    * Handle flowchart regeneration request
    */
-  private async handleRegeneration(panel: vscode.WebviewPanel): Promise<void> {
+  private async handleRegeneration(panel: vscode.WebviewPanel, whitelist?: string[]): Promise<void> {
     try {
       console.log('Regenerating complete flowchart...');
       
@@ -179,6 +270,8 @@ export class WebviewMessageHandler {
       const checkboxStates = this.getCurrentCheckboxStates();
       console.log('Retrieved checkbox states for Python execution:', checkboxStates);
       
+      // Create file key from current file path
+      const fileKey = this.createFileKey(this.originalFilePath);
       
       const env = {
         SHOW_PRINTS: checkboxStates.showPrints ? '1' : '0',
@@ -191,7 +284,8 @@ export class WebviewMessageHandler {
         SHOW_RETURNS: checkboxStates.showReturns ? '1' : '0',
         SHOW_EXCEPTIONS: checkboxStates.showExceptions ? '1' : '0',
         SHOW_CLASSES: checkboxStates.showClasses ? '1' : '0',
-        MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0'
+        MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0',
+        FILE_KEY: fileKey,
       };
 
       const breakpoints = vscode.debug.breakpoints.filter(bp => 
@@ -201,7 +295,26 @@ export class WebviewMessageHandler {
       // Add breakpoint info to environment variables
       (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
       (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
+        
+      // Get whitelist and force collapse list from WhitelistService
+      const whitelistService = this.getWhitelistService();
+      const currentWhitelist = whitelist || whitelistService.getWhitelist();
+      const forceCollapseList = whitelistService.getForceCollapseList();
+
+      // Add whitelist to environment variables if provided
+      if (currentWhitelist && currentWhitelist.length > 0) {
+        (env as any).SUBGRAPH_WHITELIST = currentWhitelist.join(',');
+        console.log('Using whitelist for regeneration:', currentWhitelist);
+      }
       
+      // Add force collapse list to environment variables if provided
+      if (forceCollapseList && forceCollapseList.length > 0) {
+        (env as any).FORCE_COLLAPSE_LIST = forceCollapseList.join(',');
+        console.log('Using force collapse list for regeneration:', forceCollapseList);
+      }
+
+      console.log('Environment variables:', env);
+
       const result = await PythonService.executeScript(scriptPath, [this.originalFilePath], env);
       
       if (!result.success) {
@@ -242,19 +355,19 @@ export class WebviewMessageHandler {
         // Read the updated files
         const output = this.fileService.readFlowchartOutput(this.originalFilePath);
         const cleanDiagram = FileService.cleanMermaidCode(output.mermaidCode);
-        
-        console.log("cleanDiagram REGENERATED", cleanDiagram);
-        // Send the updated diagram to the webview
+        // Send the updated diagram to the webview with current state
         panel.webview.postMessage({
           command: 'updateFlowchart',
           diagram: cleanDiagram,
-          tooltipData: output.tooltipData
+          metadata: output.metadata,
+          whitelist: currentWhitelist,
+          forceCollapse: forceCollapseList
         });
 
-        // Update the global tooltip data in the webview
+        // Update the global metadata in the webview
         panel.webview.postMessage({
-          command: 'updateTooltipData',
-          tooltipData: output.tooltipData
+          command: 'updateMetadata',
+          metadata: output.metadata
         });
 
         // Notify completion
@@ -534,12 +647,19 @@ export class WebviewMessageHandler {
       const result = await this.storageService.loadFlowchart(id);
       
       if (result.success && result.flowchart) {
-        // Update the webview with the loaded diagram
+        // Get current state from whitelistService
+        const whitelistService = this.getWhitelistService();
+        const currentWhitelist = whitelistService.getWhitelist();
+        const forceCollapseList = whitelistService.getForceCollapseList();
+
+        // Update the webview with the loaded diagram and current state
         panel.webview.postMessage({
           command: 'updateFlowchart',
-          diagram: result.flowchart.mermaidCode
+          diagram: result.flowchart.mermaidCode,
+          whitelist: currentWhitelist,
+          forceCollapse: forceCollapseList
         });
-        
+
         // Show success notification
         vscode.window.showInformationMessage(`Loaded saved flowchart: ${result.flowchart.name}`);
       } else {
@@ -692,5 +812,29 @@ export class WebviewMessageHandler {
     } catch (error) {
       console.error('🔧 Configuration update failed:', error);
     }
+  }
+
+  /**
+   * Get or create WhitelistService for the current file
+   */
+  private getWhitelistService(): WhitelistService {
+    if (!this.whitelistService && this.originalFilePath) {
+      this.whitelistService = new WhitelistService(this.createFileKey(this.originalFilePath));
+      this.whitelistService.startSession();
+    }
+    if (!this.whitelistService) {
+      throw new Error('WhitelistService not initialized and no original file path available');
+    }
+    return this.whitelistService;
+  }
+
+  /**
+   * Create file key in format (parent)/(filename) from file path
+   */
+  private createFileKey(filePath: string): string {
+    const path = require('path');
+    const parentDir = path.basename(path.dirname(filePath));
+    const fileName = path.basename(filePath, path.extname(filePath));
+    return `(${parentDir})/(${fileName})`;
   }
 }

@@ -4,9 +4,7 @@ let currentDiagramCode = '';
 
 // Function to store the diagram code (called from message handler)
 function storeDiagramCode(diagramCode) {
-    currentDiagramCode = diagramCode;
-    console.log('Diagram code stored, length:', diagramCode.length);
-    
+    currentDiagramCode = diagramCode;    
     // Also update the mermaidCodeText element if it exists
     const mermaidCodeText = document.getElementById('mermaidCodeText');
     if (mermaidCodeText) {
@@ -22,11 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (typeof initializeControls === "function") {
         initializeControls();
         initializeSavedDiagrams();
-    }
-    
-    // Initialize tooltip functionality
-    if (typeof initializeTooltip === "function") {
-        initializeTooltip();
     }
     
     // Set up message handling

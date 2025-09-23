@@ -17,7 +17,6 @@ class FlowchartGenerator:
         """Generate a complete Mermaid flowchart from Python code."""
         try:
             # Set breakpoints AFTER processor is created
-            print("Breakpoint lines", breakpoint_lines)
             if breakpoint_lines:
                 self.processor.set_breakpoints(breakpoint_lines)
 
@@ -25,15 +24,14 @@ class FlowchartGenerator:
             if not self.processor.process_code(python_code):
                 return f"graph TD\n    error[\"Error processing code\"]", {}
             
-            
             # Step 2: Post-process the graph (optimize and redirect connections)
             self.post_processor.post_process()
             
             # Step 3: Generate final Mermaid output
-            mermaid_output, tooltip_data = self.post_processor.generate_mermaid()
+            mermaid_output, metadata = self.post_processor.generate_mermaid()
             
             print("=== Flowchart generation completed successfully ===")
-            return mermaid_output, tooltip_data
+            return mermaid_output, metadata
 
         except Exception as e:
             error_message = f"Error generating flowchart: {e.__class__.__name__} - {e}"
@@ -59,7 +57,7 @@ def main():
         breakpoint_lines = [int(x) for x in os.environ.get('BREAKPOINT_LINES', '').split(',') if x]
 
     builder = FlowchartGenerator()
-    mermaid_output, tooltip_data = builder.generate(code, breakpoint_lines)
+    mermaid_output, metadata = builder.generate(code, breakpoint_lines)
 
     # Save the Mermaid flowchart
     temp_dir = os.path.join(os.path.dirname(__file__), "temp")
@@ -68,10 +66,10 @@ def main():
     with open(output_path_mmd, "w", encoding="utf-8") as out:
         out.write(mermaid_output)
 
-    # Save the tooltip data as JSON
-    output_path_json = os.path.join(temp_dir, "tooltip_data.json")
+    # Save the metadata as JSON
+    output_path_json = os.path.join(temp_dir, "metadata.json")
     with open(output_path_json, "w", encoding="utf-8") as out:
-        json.dump(tooltip_data, out, indent=4)
+        json.dump(metadata, out, indent=4)
 
     print(f"[OK] Mermaid flowchart and data saved.")
 

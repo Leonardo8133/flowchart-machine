@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { PythonService } from '../services/pythonService';
 import { FileService } from '../services/fileService';
 import { WebviewManager } from '../webview/webviewManager';
+import { WhitelistService } from '../services/whitelistService';
 
 export class GenerateFlowchartCommand {
   private context: vscode.ExtensionContext;
@@ -134,14 +135,16 @@ export class GenerateFlowchartCommand {
           const output = this.fileService.readFlowchartOutput(filePath);
           progress.report({ increment: 100 });
 
-          console.log("cleanDiagram GENERATE", output.mermaidCode);
+          const whitelistService = new WhitelistService(this.createFileKey(filePath));
+          whitelistService.startSession();
 
           // Create the webview panel
           this.webviewManager.createFlowchartWebview(
             output.mermaidCode,
-            output.tooltipData,
+            output.metadata,
             FileService.getBaseName(filePath),
-            filePath
+            filePath,
+            whitelistService
           );
           resolve();
         } catch (error) {
@@ -159,5 +162,12 @@ export class GenerateFlowchartCommand {
     return vscode.commands.registerCommand('extension.generateFlowchart', () => {
       return command.execute();
     });
+  }
+
+  private createFileKey(filePath: string): string {
+    const path = require('path');
+    const parentDir = path.basename(path.dirname(filePath));
+    const fileName = path.basename(filePath, path.extname(filePath));
+    return `(${parentDir})/(${fileName})`;
   }
 }

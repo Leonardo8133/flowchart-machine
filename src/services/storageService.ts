@@ -78,7 +78,6 @@ export class StorageService {
       };
 
       // Update metadata file
-      console.log('Updating metadata file...');
       await this.updateMetadata(savedFlowchart);
       console.log('Metadata updated successfully');
 
@@ -170,18 +169,14 @@ export class StorageService {
     
     try {
       if (fs.existsSync(this.metadataFile)) {
-        console.log('Reading existing metadata file...');
         const content = fs.readFileSync(this.metadataFile, 'utf8');
         metadata = JSON.parse(content);
-        console.log('Existing metadata loaded, count:', Object.keys(metadata).length);
       } else {
         console.log('No existing metadata file found, creating new one');
       }
 
       metadata[savedFlowchart.id] = savedFlowchart;
-      console.log('Writing updated metadata to file...');
       fs.writeFileSync(this.metadataFile, JSON.stringify(metadata, null, 2), 'utf8');
-      console.log('Metadata file updated successfully');
     } catch (error) {
       console.error('Error updating metadata:', error);
       throw new Error(`Failed to update metadata: ${error}`);

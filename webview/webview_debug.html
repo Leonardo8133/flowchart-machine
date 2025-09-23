@@ -51,21 +51,20 @@ click return5 setClickedNode</div>
             <div class="zoom-level" id="zoomLevel">100%</div>
         </div> -->
         
-        <div id="tooltip" style="display: none;"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/mermaid-init.js"></script>
     <!-- <script src="{{zoomPanUri}}"></script> -->
     <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/controls.js"></script>
-    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/tooltip.js"></script>
+    <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/expand.js"></script>
     <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/message-handler.js"></script>
     <script src="https://file%2B.vscode-resource.vscode-cdn.net/c%3A/Users/Arthu/flowchart-machine/webview/main.js"></script>
 
 <script>
 window.addEventListener('DOMContentLoaded', function(){
   try {
-    window.postMessage({"type":"init","diagram":"graph TD\n    start1[Start]\n    end2[End]\n    call_sum3[[\"Call: sum(1, 2)\"]]\n    return5[\"return a + b\"]\n    subgraph sum\n        return5\n    end\n    start1 --> call_sum3\n    call_sum3 --> return5\n    return5 --> end2\nclick return5 setClickedNode","tooltipData":{"return5":"<h4>Context: sum()</h4><p><strong>Docstring:</strong> N/A</p><p><strong>Variables in scope:</strong> a, b</p>"}}, '*');
+    window.postMessage({"type":"init","diagram":"graph TD\n    start1[Start]\n    end2[End]\n    call_sum3[[\"Call: sum(1, 2)\"]]\n    return5[\"return a + b\"]\n    subgraph sum\n        return5\n    end\n    start1 --> call_sum3\n    call_sum3 --> return5\n    return5 --> end2\nclick return5 setClickedNode","metadata":{"collapsed_subgraphs":{}}}, '*');
   } catch(e) { console.error('Failed to inject init data', e); }
 });
 </script>

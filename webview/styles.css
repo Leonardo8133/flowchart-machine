@@ -189,6 +189,7 @@ body {
     min-height: 400px;
     width: 100%;
     box-sizing: border-box;
+    max-height: 80vh; /* Limit to 80% of viewport height */
 }
 
 .mermaid:active {
@@ -283,20 +284,6 @@ body {
     pointer-events: auto;
 }
 
-/* Tooltip */
-#tooltip {
-    position: absolute;
-    text-align: center;
-    max-width: 200px;
-    padding: 2px;
-    font-family: var(--vscode-font-family);
-    font-size: 12px;
-    background: hsl(20, 1.5873015873%, 12.3529411765%);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 2px;
-    pointer-events: none;
-    z-index: 100;
-}
 
 /* Clickable nodes */
 .clickable {
@@ -378,17 +365,22 @@ body {
 .mermaid-container-wrapper {
     position: relative;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 400px;
 }
 
 #mermaidContainer {
     width: 100%;
-    height: 100%;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 400px;
+    max-height: 80vh;
 }
 
 #mermaidContainer svg {

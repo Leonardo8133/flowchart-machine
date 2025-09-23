@@ -25,7 +25,6 @@ export const DEFAULT_CONFIG: FlowchartConfig = {
     maxSavedFlowcharts: 50,
     storageLocation: 'workspace',
     includeSourceCode: true,
-    includeTooltipData: true,
     autoCleanupDays: 30,
     export: {
       defaultPngLocation: '',
@@ -120,11 +119,6 @@ export const CONFIG_SCHEMA = {
     type: 'boolean',
     default: DEFAULT_CONFIG.storage.includeSourceCode,
     description: 'Include source code with saved flowcharts',
-  },
-  'flowchartMachine.storage.includeTooltipData': {
-    type: 'boolean',
-    default: DEFAULT_CONFIG.storage.includeTooltipData,
-    description: 'Include tooltip data with saved flowcharts',
   },
   'flowchartMachine.storage.autoCleanupDays': {
     type: 'number',

@@ -1,6 +1,6 @@
 // Mermaid initialization and rendering
 let mermaidContainer;
-let tooltipData = {};
+let metadata = {};
 
 function hideLoadingContainer() {
     const loadingContainer = document.getElementById('loadingContainer');
@@ -11,8 +11,6 @@ function hideLoadingContainer() {
 
 async function initializeAndRender() {
     try {
-        console.log("Initializing Mermaid...");
-        
         // Find the mermaid container element
         mermaidContainer = document.getElementById('mermaidContainer');
         
@@ -33,18 +31,46 @@ async function initializeAndRender() {
               .flowchart-link {
                 opacity: 0.7;
               }
+              /* Make subgraphs wider to accommodate buttons */
+              .cluster rect {
+                min-width: 200px !important;
+              }
+              /* Add padding to subgraph content */
+              .cluster {
+                padding: 20px !important;
+              }
+              /* Style for subgraph buttons */
+              .subgraph-buttons {
+                transition: opacity 0.1s ease-in-out;
+              }
+              .svg-button {
+                cursor: pointer;
+                transition: all 0.1s ease-in-out;
+              }
+              .svg-button:hover rect {
+                fill: #1177bb !important;
+                stroke: #1177bb !important;
+              }
             `
         });
         
         await mermaid.run();
+
+        // Store the initial diagram code for expand functionality
+        // The diagram is injected directly into the container as text content
+        const diagramText = mermaidContainer.textContent || mermaidContainer.innerText || '';
+        if (diagramText && diagramText.trim() && !diagramText.includes('DIAGRAM_PLACEHOLDER')) {
+            window.currentDiagramCode = diagramText.trim();
+        }
 
         hideLoadingContainer();
 
         // Attach event listeners to the initial container
         attachContainerEventListeners(mermaidContainer);
         
-        // Mark clickable nodes after a short delay
-        setTimeout(markClickableNodes, 300);
+        // Add expand/collapse buttons to subgraphs
+        setTimeout(addSubgraphButtons, 200);
+
     } catch (error) {
         hideLoadingContainer();
         console.error("Failed to initialize Mermaid:", error);
@@ -52,6 +78,7 @@ async function initializeAndRender() {
 }
 
 function updateFlowchart(diagram) {
+    window.currentDiagramCode = diagram;
     if (!mermaidContainer) {
         console.error('Mermaid container not found');
         return;
@@ -76,8 +103,6 @@ function updateFlowchart(diagram) {
         mermaid.render(uniqueId, diagram).then(({ svg }) => {
             // Insert the SVG content into our container
             mermaidContainer.innerHTML = svg;
-            
-            // Apply CSS to make subgraph labels opaque
             const style = document.createElement('style');
             style.textContent = `
               .cluster-label {
@@ -91,6 +116,26 @@ function updateFlowchart(diagram) {
                 stroke: #1e1e1e !important;
                 stroke-width: 2px !important;
                 paint-order: stroke !important;
+              }
+              /* Make subgraphs wider to accommodate buttons */
+              .cluster rect {
+                min-width: 200px !important;
+              }
+              /* Add padding to subgraph content */
+              .cluster {
+                padding: 20px !important;
+              }
+              /* Style for subgraph buttons */
+              .subgraph-buttons {
+                transition: opacity 0.1s ease-in-out;
+              }
+              .svg-button {
+                cursor: pointer;
+                transition: all 0.1s ease-in-out;
+              }
+              .svg-button:hover rect {
+                fill: #1177bb !important;
+                stroke: #1177bb !important;
               }
             `;
             document.head.appendChild(style);
@@ -111,8 +156,8 @@ function updateFlowchart(diagram) {
                 updateZoomLevel();
             }, 100);
             
-            // Mark clickable nodes again
-            setTimeout(markClickableNodes, 300);
+            // Add expand/collapse buttons to subgraphs
+            setTimeout(addSubgraphButtons, 150);
             
         }).catch(error => {
             console.error('Mermaid rendering failed:', error);
@@ -130,14 +175,113 @@ function updateFlowchart(diagram) {
     }
 }
 
-function markClickableNodes() {
-    if (!tooltipData || Object.keys(tooltipData).length === 0) return;
+// Function to add expand/collapse buttons to subgraphs
+function addSubgraphButtons() {
+    if (!mermaidContainer) return;
 
-    Object.keys(tooltipData).forEach((nodeId) => {
-        const el = document.getElementById(nodeId);
-        if (el) {
-            el.classList.add("clickable");
-            el.style.cursor = "pointer";
-        }
-    });
+    const subgraphs = mermaidContainer.querySelectorAll('g.cluster');
+    if (subgraphs.length === 0) {
+        requestAnimationFrame(addSubgraphButtons);
+        return;
+    }
+
+    const extractScopeName = (labelText) => {
+        const m = (labelText || '').match(/^(?:Function:|Class:)\s*([^()]+)/);
+        return (m ? m[1] : (labelText || '')).trim();
+    };
+
+    for (const subgraph of subgraphs) {
+        subgraph.querySelector('.subgraph-buttons')?.remove();
+
+        const labelEl = subgraph.querySelector('.cluster-label');
+        if (!labelEl) continue;
+
+        const scopeName = extractScopeName(labelEl.textContent || '');
+        if (!scopeName) continue;
+
+        const bbox = subgraph.getBBox();
+        if (!bbox) continue;
+
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'subgraph-buttons');
+        group.setAttribute('transform', `translate(${bbox.x + bbox.width - 33}, ${bbox.y + 3})`);
+        group.setAttribute('opacity', '0');
+        group.setAttribute('pointer-events', 'none');
+        const isCollapsed = window.isSubgraphCollapsed && window.isSubgraphCollapsed(scopeName);
+        const btn = createSVGButton(isCollapsed ? '+' : '-', isCollapsed ? 'Expand subgraph' : 'Collapse subgraph', 0, 0);
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const fn = isCollapsed ? window.expandSubgraph : window.collapseSubgraph;
+            if (typeof fn === 'function') fn(scopeName);
+        });
+
+        group.appendChild(btn);
+
+        subgraph.addEventListener('mouseenter', () => {
+            group.setAttribute('opacity', '1');
+            group.setAttribute('pointer-events', 'auto');
+        });
+        subgraph.addEventListener('mouseleave', () => {
+            group.setAttribute('opacity', '0');
+            group.setAttribute('pointer-events', 'none');
+        });
+
+        subgraph.appendChild(group);
+    }
 }
+
+// Helper function to create SVG buttons
+function createSVGButton(text, title, x, y) {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', 'svg-button');
+    group.setAttribute('transform', `translate(${x}, ${y})`);
+    
+    // Create button background
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', '30');
+    rect.setAttribute('height', '30');
+    rect.setAttribute('rx', '3');
+    rect.setAttribute('ry', '3');
+    rect.setAttribute('fill', '#0e639c');
+    rect.setAttribute('stroke', '#0e639c');
+    rect.setAttribute('stroke-width', '1');
+    rect.setAttribute('cursor', 'pointer');
+    
+    // Create button text
+    const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    textElement.setAttribute('x', '15');
+    textElement.setAttribute('y', '20');
+    textElement.setAttribute('text-anchor', 'middle');
+    textElement.setAttribute('fill', '#ffffff');
+    textElement.setAttribute('font-size', '14');
+    textElement.setAttribute('font-weight', 'bold');
+    textElement.setAttribute('font-family', 'var(--vscode-font-family)');
+    textElement.setAttribute('pointer-events', 'none');
+    textElement.textContent = text;
+    
+    // Add title for tooltip
+    const titleElement = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    titleElement.textContent = title;
+    
+    // Add hover effects
+    group.addEventListener('mouseenter', () => {
+        rect.setAttribute('fill', '#1177bb');
+        rect.setAttribute('stroke', '#1177bb');
+    });
+    
+    group.addEventListener('mouseleave', () => {
+        rect.setAttribute('fill', '#0e639c');
+        rect.setAttribute('stroke', '#0e639c');
+    });
+    
+    // Assemble the button
+    group.appendChild(rect);
+    group.appendChild(textElement);
+    group.appendChild(titleElement);
+    
+    return group;
+}
+
+// Make updateFlowchart globally available
+window.updateFlowchart = updateFlowchart;
+window.addSubgraphButtons = addSubgraphButtons;

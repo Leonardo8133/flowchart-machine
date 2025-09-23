@@ -85,7 +85,7 @@ def calculate_statistics(data: List[Dict]) -> Dict[str, any]:
         'status_counts': status_counts
     }
 
-def main():
+def main2():
     """Main execution function."""
     # Check command line arguments
     if len(sys.argv) < 2:
@@ -148,4 +148,4 @@ def main():
     print("Processing completed successfully")
 
 if __name__ == "__main__":
-    main()
+    main2()

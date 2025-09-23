@@ -5,7 +5,7 @@ A VS Code extension that generates flowcharts from Python code using Mermaid dia
 ## Features
 
 - Generate flowcharts from Python files
-- Interactive Mermaid diagrams with tooltips
+- Interactive Mermaid diagrams with collapsible subgraphs
 - Context menu integration for Python files
 - Progress tracking during generation
 - Error handling and user feedback

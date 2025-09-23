@@ -29,6 +29,7 @@ class FlowchartConfig:
     
     MAX_NODES = 100
     MAX_NESTING_DEPTH = 6  # Maximum number of nested function call layers
+    MAX_SUBGRAPH_NODES = 5  # Maximum nodes before subgraph becomes collapsible
     
     EXIT_FUNCTIONS = ['sys.exit', 'os._exit', 'exit', 'quit']
 
@@ -796,7 +797,7 @@ class ClassHandler(NodeHandler):
         return prev_id
     
     def _extract_class_context(self, class_node):
-        """Extract class context data for tooltips and method tracking."""
+        """Extract class context data for method tracking."""
         docstring = ast.get_docstring(class_node) or ""
         methods = []
         class_variables = []
@@ -1150,8 +1151,6 @@ class FlowchartProcessor:
         # Core data structures
         self.nodes = {}
         self.connections = []
-        self.click_handlers = []
-        self.tooltip_data = {}
         self.node_scopes = {}
         self.scope_children = {}
         
@@ -1253,38 +1252,7 @@ class FlowchartProcessor:
         sanitized_text = text.replace('<', '&lt').replace('>', '&gt').replace('"', "'")
         self.nodes[node_id] = f'{node_id}{shape[0]}{sanitized_text}{shape[1]}'
         self.node_scopes[node_id] = scope
-        
-        # Add tooltip data for function scopes
-        self._add_tooltip_data(node_id, scope)
-        
         return True
-
-    def _add_tooltip_data(self, node_id, scope):
-        """Add tooltip data for nodes in function or class scopes."""
-        if scope and scope in self.context_data:
-            self.click_handlers.append(f"click {node_id} setClickedNode")
-            context = self.context_data[scope]
-            
-            if context.get('type') == 'class':
-                # Class context data
-                docstring_html = html.escape(context['docstring'])
-                methods_html = html.escape(", ".join(context['methods']))
-                variables_html = html.escape(", ".join(context['class_variables']))
-                self.tooltip_data[node_id] = (
-                    f"<h4>Class: {scope}</h4>"
-                    f"<p><strong>Docstring:</strong> {docstring_html or 'N/A'}</p>"
-                    f"<p><strong>Methods:</strong> {methods_html or 'None'}</p>"
-                    f"<p><strong>Class Variables:</strong> {variables_html or 'None'}</p>"
-                )
-            else:
-                # Function context data
-                docstring_html = html.escape(context['docstring'])
-                variables_html = html.escape(", ".join(context['variables']))
-                self.tooltip_data[node_id] = (
-                    f"<h4>Context: {scope}()</h4>"
-                    f"<p><strong>Docstring:</strong> {docstring_html or 'N/A'}</p>"
-                    f"<p><strong>Variables in scope:</strong> {variables_html or 'None'}</p>"
-                )
 
     def _add_connection(self, from_id, to_id, label=""):
         """Add connection between nodes with fallback handling."""
@@ -1567,7 +1535,6 @@ class FlowchartProcessor:
             current_id = self._process_main_flow(start_id, main_flow_nodes)
             
             # Connect to end if needed
-            print("Connecting to end", current_id, self.end_id)
             if current_id and current_id != start_id and current_id is not False:
                 self._add_connection(current_id, self.end_id)
 

@@ -1,0 +1,84 @@
+{
+    "collapsed_subgraphs": {
+        "calculate_statistics": {
+            "node_count": 9,
+            "original_scope": "calculate_statistics",
+            "subgraph_name": "Function: calculate_statistics() (9 nodes)",
+            "collapsed_node_id": "collapsed_nodes",
+            "scope_nodes": [
+                "if_cond64",
+                "return65",
+                "assign72",
+                "for_loop69",
+                "assign67",
+                "assign68",
+                "assign66",
+                "assign71",
+                "return73"
+            ]
+        },
+        "read_config_file": {
+            "node_count": 8,
+            "original_scope": "read_config_file",
+            "subgraph_name": "Function: read_config_file() (8 nodes)",
+            "collapsed_node_id": "collapsed_nodes",
+            "scope_nodes": [
+                "except19",
+                "assign17",
+                "return20",
+                "with16",
+                "except21",
+                "return18",
+                "return22",
+                "try14"
+            ]
+        },
+        "process_items": {
+            "node_count": 11,
+            "original_scope": "process_items",
+            "subgraph_name": "Function: process_items() (11 nodes)",
+            "collapsed_node_id": "collapsed_nodes",
+            "scope_nodes": [
+                "if_cond57",
+                "return60",
+                "assign49",
+                "method_call59",
+                "if_cond52",
+                "for_loop50",
+                "if_cond53",
+                "if_cond55",
+                "assign56",
+                "assign58",
+                "assign54"
+            ]
+        },
+        "validate_data": {
+            "node_count": 12,
+            "original_scope": "validate_data",
+            "subgraph_name": "Function: validate_data() (12 nodes)",
+            "collapsed_node_id": "collapsed_nodes",
+            "scope_nodes": [
+                "for_loop28",
+                "if_cond33",
+                "assign27",
+                "assign35",
+                "method_call34",
+                "method_call31",
+                "if_cond30",
+                "method_call37",
+                "assign38",
+                "return39",
+                "if_cond36",
+                "assign32"
+            ]
+        }
+    },
+    "subgraph_whitelist": [
+        "main2"
+    ],
+    "force_collapse_list": [
+        "calculate_statistics",
+        "read_config_file",
+        "process_items"
+    ]
+}

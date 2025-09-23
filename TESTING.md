@@ -21,7 +21,7 @@ Tests the webview functionality:
 - Mermaid diagram handling
 - Message communication
 - Container management
-- Tooltip functionality
+- Collapsible subgraph functionality
 
 ## 🚀 Running Tests
 
@@ -74,7 +74,7 @@ scripts\test.bat [unit|lint|compile|all|help]
 
 ### Integration Tests
 - **Command Execution**: End-to-end command flow
-- **File Generation**: Flowchart and tooltip file creation
+- **File Generation**: Flowchart and metadata file creation
 - **Webview Communication**: Message passing between extension and webview
 
 ### Webview Tests
@@ -98,7 +98,7 @@ Tests create temporary workspaces in:
 ### Test Data
 - Sample Python files with various content
 - Mock `main.py` scripts for flowchart generation
-- Expected output files (temp/flowchart.mmd, temp/tooltip_data.json)
+- Expected output files (temp/flowchart.mmd, temp/metadata.json)
 
 ## 📊 Test Coverage
 
@@ -113,13 +113,13 @@ Tests create temporary workspaces in:
 ✅ Webview HTML structure  
 ✅ Mermaid diagram processing  
 ✅ Message command handling  
-✅ Tooltip data validation  
+✅ Metadata validation  
 ✅ Container replacement logic  
 
 ### Areas for Future Testing
 🔄 Webview message communication (requires VS Code Extension Host)  
 🔄 Mermaid rendering in actual webview  
-🔄 User interaction with tooltips  
+🔄 User interaction with collapsible subgraphs  
 🔄 Regeneration button functionality  
 🔄 Progress indicator display  
 

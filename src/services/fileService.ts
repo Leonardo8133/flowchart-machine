@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 export interface FlowchartOutput {
   mermaidCode: string;
-  tooltipData: any;
+  metadata: any;
 }
 
 export class FileService {
@@ -65,11 +65,11 @@ export class FileService {
   }
 
   /**
-   * Get the path to the tooltip data file in the temp folder
+   * Get the path to the metadata file in the temp folder
    */
-  getTooltipDataPath(pythonFilePath: string): string {
+  getMetadataPath(pythonFilePath: string): string {
     const extensionPath = this.context.extensionPath;
-    return path.join(extensionPath, 'flowchart', 'temp', 'tooltip_data.json');
+    return path.join(extensionPath, 'flowchart', 'temp', 'metadata.json');
   }
 
   /**
@@ -77,7 +77,7 @@ export class FileService {
    */
   readFlowchartOutput(pythonFilePath: string): FlowchartOutput {
     const flowPath = this.getFlowchartPath(pythonFilePath);
-    const tooltipDataPath = this.getTooltipDataPath(pythonFilePath);
+    const metadataPath = this.getMetadataPath(pythonFilePath);
 
     // Read flowchart content
     if (!FileService.fileExists(flowPath)) {
@@ -86,20 +86,20 @@ export class FileService {
 
     const mermaidCode = FileService.readFile(flowPath);
 
-    // Read tooltip data
-    let tooltipData = {};
-    if (FileService.fileExists(tooltipDataPath)) {
+    // Read metadata
+    let metadata = {};
+    if (FileService.fileExists(metadataPath)) {
       try {
-        tooltipData = JSON.parse(FileService.readFile(tooltipDataPath));
+        metadata = JSON.parse(FileService.readFile(metadataPath));
       } catch (e) {
-        vscode.window.showWarningMessage("Warning: Error parsing tooltip_data.json.");
+        vscode.window.showWarningMessage("Warning: Error parsing metadata file.");
         console.error(e);
       }
     }
 
     return {
       mermaidCode,
-      tooltipData
+      metadata
     };
   }
 

@@ -220,7 +220,6 @@ function getCurrentCheckboxStatesValues() {
 }
 
 function updateCheckboxStates(checkboxStates) {
-    console.log('Updating checkbox states:', checkboxStates);
     showPrintsCheckbox.checked = checkboxStates.showPrints;
     showFunctionsCheckbox.checked = checkboxStates.showFunctions;
     showForLoopsCheckbox.checked = checkboxStates.showForLoops;
