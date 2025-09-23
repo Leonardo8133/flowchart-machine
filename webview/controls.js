@@ -1,6 +1,8 @@
 // Controls initialization and event handling
 let regenerateBtn;
 let savePngBtn;
+let unfoldAllBtn;
+let collapseAllBtn;
 let showPrintsCheckbox;
 let showFunctionsCheckbox;
 let showForLoopsCheckbox;
@@ -29,6 +31,8 @@ function initializeControls() {
     // Get references to control elements
     regenerateBtn = document.getElementById('regenerateBtn');
     savePngBtn = document.getElementById('savePngBtn');
+    unfoldAllBtn = document.getElementById('unfoldAllBtn');
+    collapseAllBtn = document.getElementById('collapseAllBtn');
     showPrintsCheckbox = document.getElementById('showPrints');
     showFunctionsCheckbox = document.getElementById('showFunctions');
     showForLoopsCheckbox = document.getElementById('showForLoops');
@@ -46,10 +50,18 @@ function initializeControls() {
     dropdownContent = document.getElementById('dropdownContent');
 
     // Add event listeners
+    if (unfoldAllBtn) {
+        unfoldAllBtn.addEventListener('click', handleExpandAllClick);
+    }
+
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', handleCollapseAllClick);
+    }
+
     if (regenerateBtn) {
         regenerateBtn.addEventListener('click', handleRegenerateClick);
     }
-    
+
     if (savePngBtn) {
         savePngBtn.addEventListener('click', handleSavePngClick);
     }
@@ -132,16 +144,42 @@ function handleOutsideClick(event) {
     }
 }
 
+function handleExpandAllClick() {
+    console.log('Expand All button clicked');
+
+    if (vscode) {
+        console.log('VS Code API available, sending expand all command');
+        vscode.postMessage({
+            command: 'expandAllSubgraphs'
+        });
+    } else {
+        console.log('VS Code API not available');
+    }
+}
+
+function handleCollapseAllClick() {
+    console.log('Collapse All button clicked');
+
+    if (vscode) {
+        console.log('VS Code API available, sending collapse all command');
+        vscode.postMessage({
+            command: 'collapseAllSubgraphs'
+        });
+    } else {
+        console.log('VS Code API not available');
+    }
+}
+
 function handleRegenerateClick() {
     console.log('Regenerate button clicked');
-    
+
     if (vscode) {
         console.log('VS Code API available, sending regenerate command');
-        
+
         // Disable button during regeneration
         regenerateBtn.disabled = true;
         regenerateBtn.textContent = "⏳ Regenerating...";
-        
+
         vscode.postMessage({
             command: 'updateFlowchart'
         });

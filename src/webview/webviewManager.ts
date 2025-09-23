@@ -17,11 +17,12 @@ export class WebviewManager {
    * Create a new flowchart webview panel
    */
   createFlowchartWebview(
-    mermaidCode: string, 
-    metadata: any, 
+    mermaidCode: string,
+    metadata: any,
     fileName: string,
     originalFilePath?: string,
-    whitelistService?: any
+    whitelistService?: any,
+    processor?: any
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
     this.originalFilePath = originalFilePath || 
@@ -63,7 +64,12 @@ export class WebviewManager {
     panel.webview.html = htmlContent;
 
     // Set up message handling
-    this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context, whitelistService);
+    this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context, whitelistService, processor);
+
+    // Store the initial metadata in the message handler
+    if (metadata) {
+      (this.messageHandler as any).currentMetadata = metadata;
+    }
 
     // Send initial diagram and state
     if (mermaidCode) {

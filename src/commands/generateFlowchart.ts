@@ -144,7 +144,8 @@ export class GenerateFlowchartCommand {
             output.metadata,
             FileService.getBaseName(filePath),
             filePath,
-            whitelistService
+            whitelistService,
+            null // processor is not available in TypeScript
           );
           resolve();
         } catch (error) {

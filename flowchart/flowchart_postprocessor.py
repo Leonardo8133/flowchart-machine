@@ -142,9 +142,10 @@ class FlowchartPostProcessor:
 		node_count = metadata["node_count"]
 		subgraph_name = metadata["subgraph_name"]
 		
+		collapsed_node_id = f"collapsed_nodes__{scope}_{node_count}"
 		# Generate collapsed subgraph with Mermaid's collapsible syntax
 		lines.append(f'{indent}subgraph "{subgraph_name}"')
-		lines.append(f'{indent}    collapsed_nodes["Collapsed nodes ({node_count})"]')
+		lines.append(f'{indent}    {collapsed_node_id}["Collapsed nodes ({node_count})"]')
 		lines.append(f'{indent}end')
 
 	def _redirect_connections_to_subgraphs(self):
@@ -254,12 +255,13 @@ class FlowchartPostProcessor:
 			# Get all nodes from nested subgraphs as well
 			all_nodes_to_remove = set(scope_nodes)
 			self._collect_nested_nodes(scope, all_nodes_to_remove)
-			
+			collapsed_node_id = f"collapsed_nodes__{scope}_{node_count}"
+
 			FlowchartPostProcessor.collapsed_subgraphs[scope] = {
 				"node_count": node_count,
 				"original_scope": scope,
 				"subgraph_name": subgraph_name,
-				"collapsed_node_id": "collapsed_nodes",
+				"collapsed_node_id": collapsed_node_id,
 				"scope_nodes": list(all_nodes_to_remove)
 			}
 			

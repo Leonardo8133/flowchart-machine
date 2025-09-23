@@ -33,13 +33,13 @@ def validate_data(data: List[Dict]) -> tuple[bool, List[str]]:
             is_valid = False
             continue
             
-        if 'id' not in item:
-            errors.append(f"Item {i} missing 'id' field")
-            is_valid = False
+        # if 'id' not in item:
+        #     errors.append(f"Item {i} missing 'id' field")
+        #     is_valid = False
             
-        if 'name' not in item:
-            errors.append(f"Item {i} missing 'name' field")
-            is_valid = False
+        # if 'name' not in item:
+        #     errors.append(f"Item {i} missing 'name' field")
+        #     is_valid = False
     
     return is_valid, errors
 
@@ -53,14 +53,14 @@ def process_items(items: List[Dict], config: Dict) -> List[Dict]:
             if item.get('status') == 'inactive':
                 continue
                 
-        # Transform data
-        processed_item = item.copy()
-        if config.get('uppercase_names', False):
-            processed_item['name'] = item['name'].upper()
+        # # Transform data
+        # processed_item = item.copy()
+        # if config.get('uppercase_names', False):
+        #     processed_item['name'] = item['name'].upper()
             
-        if config.get('add_timestamp', False):
-            import datetime
-            processed_item['processed_at'] = datetime.datetime.now().isoformat()
+        # if config.get('add_timestamp', False):
+        #     import datetime
+        #     processed_item['processed_at'] = datetime.datetime.now().isoformat()
             
         processed.append(processed_item)
     
@@ -74,10 +74,10 @@ def calculate_statistics(data: List[Dict]) -> Dict[str, any]:
     total_score = sum(item.get('score', 0) for item in data)
     avg_score = total_score / len(data)
     
-    status_counts = {}
-    for item in data:
-        status = item.get('status', 'unknown')
-        status_counts[status] = status_counts.get(status, 0) + 1
+    # status_counts = {}
+    # for item in data:
+    #     status = item.get('status', 'unknown')
+    #     status_counts[status] = status_counts.get(status, 0) + 1
     
     return {
         'count': len(data),
@@ -113,13 +113,13 @@ def main2():
         {'id': 5, 'name': 'Eve', 'score': 88, 'status': 'active'}
     ]
     
-    # Validate data
-    is_valid, errors = validate_data(sample_data)
-    if not is_valid:
-        print("Data validation failed:")
-        for error in errors:
-            print(f"  - {error}")
-        sys.exit(1)
+    # # Validate data
+    # is_valid, errors = validate_data(sample_data)
+    # if not is_valid:
+    #     print("Data validation failed:")
+    #     for error in errors:
+    #         print(f"  - {error}")
+    #     sys.exit(1)
     
     print("Data validation passed")
     
@@ -128,24 +128,24 @@ def main2():
     print(f"Processed {len(processed_data)} items")
     
     # Calculate statistics
-    stats = calculate_statistics(processed_data)
+    # stats = calculate_statistics(processed_data)
     print(f"Statistics: {stats}")
     
-    # Save results
-    output_file = 'output_results.json'
-    try:
-        with open(output_file, 'w') as f:
-            json.dump({
-                'processed_data': processed_data,
-                'statistics': stats,
-                'config_used': config
-            }, f, indent=2)
-        print(f"Results saved to {output_file}")
-    except Exception as e:
-        print(f"Failed to save results: {e}")
-        sys.exit(1)
+    # # Save results
+    # output_file = 'output_results.json'
+    # try:
+    #     with open(output_file, 'w') as f:
+    #         json.dump({
+    #             'processed_data': processed_data,
+    #             'statistics': stats,
+    #             'config_used': config
+    #         }, f, indent=2)
+    #     print(f"Results saved to {output_file}")
+    # except Exception as e:
+    #     print(f"Failed to save results: {e}")
+    #     sys.exit(1)
     
-    print("Processing completed successfully")
+    # print("Processing completed successfully")
 
 if __name__ == "__main__":
     main2()

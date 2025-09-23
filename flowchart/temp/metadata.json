@@ -1,84 +1,67 @@
 {
     "collapsed_subgraphs": {
-        "calculate_statistics": {
+        "main2": {
             "node_count": 9,
-            "original_scope": "calculate_statistics",
-            "subgraph_name": "Function: calculate_statistics() (9 nodes)",
-            "collapsed_node_id": "collapsed_nodes",
+            "original_scope": "main2",
+            "subgraph_name": "Function: main2() (9 nodes)",
+            "collapsed_node_id": "collapsed_nodes__main2_9",
             "scope_nodes": [
-                "if_cond64",
-                "return65",
-                "assign72",
-                "for_loop69",
-                "assign67",
-                "assign68",
-                "assign66",
-                "assign71",
-                "return73"
+                "return18",
+                "print24",
+                "if_cond23",
+                "except19",
+                "print34",
+                "if_cond31",
+                "print9",
+                "try14",
+                "return22",
+                "for_loop28",
+                "except21",
+                "if_cond30",
+                "method_call32",
+                "assign27",
+                "assign11",
+                "return33",
+                "assign12",
+                "if_cond8",
+                "assign17",
+                "with16",
+                "assign25",
+                "exit_function10",
+                "return20"
+            ]
+        },
+        "process_items": {
+            "node_count": 6,
+            "original_scope": "process_items",
+            "subgraph_name": "Function: process_items() (6 nodes)",
+            "collapsed_node_id": "collapsed_nodes__process_items_6",
+            "scope_nodes": [
+                "if_cond30",
+                "method_call32",
+                "assign27",
+                "if_cond31",
+                "return33",
+                "for_loop28"
             ]
         },
         "read_config_file": {
             "node_count": 8,
             "original_scope": "read_config_file",
             "subgraph_name": "Function: read_config_file() (8 nodes)",
-            "collapsed_node_id": "collapsed_nodes",
+            "collapsed_node_id": "collapsed_nodes__read_config_file_8",
             "scope_nodes": [
-                "except19",
-                "assign17",
-                "return20",
-                "with16",
                 "except21",
+                "assign17",
+                "with16",
                 "return18",
+                "try14",
+                "except19",
                 "return22",
-                "try14"
-            ]
-        },
-        "process_items": {
-            "node_count": 11,
-            "original_scope": "process_items",
-            "subgraph_name": "Function: process_items() (11 nodes)",
-            "collapsed_node_id": "collapsed_nodes",
-            "scope_nodes": [
-                "if_cond57",
-                "return60",
-                "assign49",
-                "method_call59",
-                "if_cond52",
-                "for_loop50",
-                "if_cond53",
-                "if_cond55",
-                "assign56",
-                "assign58",
-                "assign54"
-            ]
-        },
-        "validate_data": {
-            "node_count": 12,
-            "original_scope": "validate_data",
-            "subgraph_name": "Function: validate_data() (12 nodes)",
-            "collapsed_node_id": "collapsed_nodes",
-            "scope_nodes": [
-                "for_loop28",
-                "if_cond33",
-                "assign27",
-                "assign35",
-                "method_call34",
-                "method_call31",
-                "if_cond30",
-                "method_call37",
-                "assign38",
-                "return39",
-                "if_cond36",
-                "assign32"
+                "return20"
             ]
         }
     },
-    "subgraph_whitelist": [
-        "main2"
-    ],
-    "force_collapse_list": [
-        "calculate_statistics",
-        "read_config_file",
-        "process_items"
-    ]
+    "subgraph_whitelist": [],
+    "force_collapse_list": []
 }

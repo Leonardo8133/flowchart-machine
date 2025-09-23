@@ -14,6 +14,8 @@ export class WebviewMessageHandler {
   private extensionContext: vscode.ExtensionContext;
   private fileService: FileService;
   private whitelistService: WhitelistService | null = null;
+  private processor: any = null;
+  private currentMetadata: any = null;
 
   constructor() {
     // Initialize storage service when needed
@@ -25,8 +27,9 @@ export class WebviewMessageHandler {
   /**
    * Set up message handling for a webview panel
    */
-  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string, extensionContext?: vscode.ExtensionContext, whitelistService?: WhitelistService): void {
+  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string, extensionContext?: vscode.ExtensionContext, whitelistService?: WhitelistService, processor?: any): void {
     this.originalFilePath = originalFilePath;
+    this.processor = processor;
     if (extensionContext) {
       this.extensionContext = extensionContext;
       this.fileService = new FileService(extensionContext);
@@ -99,13 +102,21 @@ export class WebviewMessageHandler {
         await this.handleCollapseSubgraph(message, panel);
         break;
 
+      case 'expandAllSubgraphs':
+        await this.handleExpandAllSubgraphs(message, panel);
+        break;
+
+      case 'collapseAllSubgraphs':
+        await this.handleCollapseAllSubgraphs(message, panel);
+        break;
+
       case 'updateMetadata':
         await this.handleUpdateMetadata(message, panel);
         break;
       
       default:
         console.log('❓ Unknown message command:', message.command);
-        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, saveDiagram, getSavedDiagrams, loadSavedDiagram, expandSubgraph, collapseSubgraph, updateMetadata');
+        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, saveDiagram, getSavedDiagrams, loadSavedDiagram, expandSubgraph, collapseSubgraph, unfoldAllSubgraphs, collapseAllSubgraphs, updateMetadata');
         break;
     }
   }
@@ -149,20 +160,90 @@ export class WebviewMessageHandler {
   private async handleCollapseSubgraph(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
       const { scopeName } = message;
-      
+
       if (!scopeName) {
         return;
       }
-      
+
+      // Process scope name consistently with how they're processed in updateSubgraphStates
+      const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+
       // Remove from whitelist and add to force collapse list
       const whitelistService = this.getWhitelistService();
-      whitelistService.removeFromWhitelist(scopeName);
-      whitelistService.addToForceCollapseList(scopeName);
+      whitelistService.removeFromWhitelist(processedScopeName);
+      whitelistService.addToForceCollapseList(processedScopeName);
       // Regenerate flowchart with updated lists
       await this.handleRegeneration(panel);
     } catch (error) {
       panel.webview.postMessage({
         command: 'collapseError',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  private async handleExpandAllSubgraphs(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      console.log('🔄 Handling expand all subgraphs request');
+
+      // Get the whitelist service
+      const whitelistService = this.getWhitelistService();
+
+      // Get all subgraphs from the current metadata
+      console.log('🔄 Current metadata:', this.currentMetadata);
+      const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
+      const allSubgraphs = Object.keys(collapsedSubgraphs);
+
+      console.log('🔄 Found subgraphs to expand:', allSubgraphs);
+
+      // Add all subgraphs to the whitelist
+      for (const scopeName of allSubgraphs) {
+        const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+        console.log(`🔄 Adding to whitelist: "${scopeName}" -> "${processedScopeName}"`);
+        whitelistService.addToWhitelist(processedScopeName);
+      }
+
+      // Get the updated whitelist to pass to regeneration
+      const currentWhitelist = whitelistService.getWhitelist();
+      console.log('🔄 Final whitelist for regeneration:', currentWhitelist);
+
+      // Regenerate flowchart with updated lists
+      await this.handleRegeneration(panel, currentWhitelist);
+    } catch (error) {
+      console.error('❌ Error in handleExpandAllSubgraphs:', error);
+      panel.webview.postMessage({
+        command: 'expandAllError',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Handle collapse all subgraphs request
+   */
+  private async handleCollapseAllSubgraphs(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      // Get the whitelist service
+      const whitelistService = this.getWhitelistService();
+
+      // Get all collapsed subgraphs from the stored metadata
+      const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
+
+      // Clear the whitelist
+      whitelistService.clearWhitelist();
+
+      // Add all subgraphs to the force collapse list
+      // Process scope names consistently with how they're processed in updateSubgraphStates
+      for (const scopeName of Object.keys(collapsedSubgraphs)) {
+        const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+        whitelistService.addToForceCollapseList(processedScopeName);
+      }
+
+      // Regenerate flowchart with updated lists
+      await this.handleRegeneration(panel);
+    } catch (error) {
+      panel.webview.postMessage({
+        command: 'collapseAllError',
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -174,7 +255,10 @@ export class WebviewMessageHandler {
   private async handleUpdateMetadata(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
       const { metadata } = message;
-      
+
+      // Store the metadata for use in other methods
+      this.currentMetadata = metadata;
+
       if (metadata && metadata.collapsed_subgraphs) {
         // Send collapsed subgraphs metadata to the webview
         panel.webview.postMessage({
@@ -301,16 +385,22 @@ export class WebviewMessageHandler {
       const currentWhitelist = whitelist || whitelistService.getWhitelist();
       const forceCollapseList = whitelistService.getForceCollapseList();
 
+      console.log('🔄 Regeneration - provided whitelist:', whitelist);
+      console.log('🔄 Regeneration - service whitelist:', whitelistService.getWhitelist());
+      console.log('🔄 Regeneration - service force collapse list:', whitelistService.getForceCollapseList());
+      console.log('🔄 Regeneration - final whitelist:', currentWhitelist);
+      console.log('🔄 Regeneration - final force collapse list:', forceCollapseList);
+
       // Add whitelist to environment variables if provided
       if (currentWhitelist && currentWhitelist.length > 0) {
         (env as any).SUBGRAPH_WHITELIST = currentWhitelist.join(',');
-        console.log('Using whitelist for regeneration:', currentWhitelist);
+        console.log('🔄 Setting SUBGRAPH_WHITELIST env var:', currentWhitelist.join(','));
       }
-      
+
       // Add force collapse list to environment variables if provided
       if (forceCollapseList && forceCollapseList.length > 0) {
         (env as any).FORCE_COLLAPSE_LIST = forceCollapseList.join(',');
-        console.log('Using force collapse list for regeneration:', forceCollapseList);
+        console.log('🔄 Setting FORCE_COLLAPSE_LIST env var:', forceCollapseList.join(','));
       }
 
       console.log('Environment variables:', env);
@@ -355,6 +445,9 @@ export class WebviewMessageHandler {
         // Read the updated files
         const output = this.fileService.readFlowchartOutput(this.originalFilePath);
         const cleanDiagram = FileService.cleanMermaidCode(output.mermaidCode);
+        // Store the metadata for use in other methods
+        this.currentMetadata = output.metadata;
+
         // Send the updated diagram to the webview with current state
         panel.webview.postMessage({
           command: 'updateFlowchart',
