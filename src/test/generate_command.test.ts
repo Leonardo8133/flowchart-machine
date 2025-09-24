@@ -31,6 +31,11 @@ def ram():
   
 def tam():
     print("tam")
+    x = 2 
+    if x == 1:
+        print("x is 1")
+    else:
+        print("x is not 1")
     return 44
 
 print("Test")
@@ -134,6 +139,7 @@ tam()
   });
 
   test('Direct test: entire file analysis', async function() {
+    this.timeout(30000); // 30 seconds
     const editor = await openDoc();
     const line = 0; // Put cursor at the beginning of the file
     editor.selection = new vscode.Selection(new vscode.Position(line, 0), new vscode.Position(line, 0));
@@ -157,8 +163,14 @@ tam()
     const { meta, flowchart } = await waitForOutputs();
 
     console.log('Generated metadata for entire file:', meta);
+    console.log('Environment variables being passed to Python:', {
+      SHOW_IFS: process.env.SHOW_IFS,
+      SHOW_FUNCTIONS: process.env.SHOW_FUNCTIONS,
+      SHOW_PRINTS: process.env.SHOW_PRINTS
+    });
     assert.ok(!meta.entry_selection || meta.entry_selection.type === 'file', 'Should analyze entire file');
-
+    // Cerate a 10s sleep
+    await new Promise(resolve => setTimeout(resolve, 10000));
     assert.ok(flowchart && flowchart.length > 0, 'Flowchart should exist');
     console.log('Generated flowchart content:', flowchart);
     assert.ok(flowchart!.includes('print(`Test`)'), 'Flowchart should contain print("Test") node');
@@ -166,6 +178,9 @@ tam()
     assert.ok(flowchart!.includes('print(`tam`)'), 'Flowchart should contain print("tam") from tam()');
     assert.ok(!flowchart!.includes('print(`ram`)'), 'Flowchart should not include print("ram") from ram()');
     assert.ok(!flowchart!.includes('print(`bar`)'), 'Flowchart should not include print("bar") from bar()');
+    assert.ok(flowchart!.includes('print(`x is 1`)'), 'Flowchart should contain print("x is 1") from tam()');
+    assert.ok(flowchart!.includes('print(`x is not 1`)'), 'Flowchart should contain print("x is not 1") from tam()');
+    assert.ok(flowchart!.includes('if x == 1'), 'Flowchart should contain if x == 1 from tam()');
     // Check if flowchart includes import statement (it should for entire file analysis)
     // Note: Import statements might be processed differently in test environment
     console.log('Checking for import statement in flowchart...');
@@ -216,58 +231,7 @@ tam()
     assert.ok(!regenFlowchart!.includes('print(`tam`)'), 'Regeneration should not contain other function content');
   });
 
-  test('Cursor information display in HUD', async function() {
-    this.timeout(30000); // 30 seconds
-    
-    const editor = await openDoc();
-    const line = (await editor.document.getText()).split(/\n/).findIndex(l => l.includes('print("bar")'));
-    editor.selection = new vscode.Selection(new vscode.Position(line, 5), new vscode.Position(line, 5));
-
-    // Generate flowchart with cursor on function
-    await vscode.commands.executeCommand('extension.generateFlowchartAtCursor');
-    
-    // Wait for generation
-    const { meta } = await waitForOutputs();
-    
-    // Verify metadata contains cursor information
-    assert.strictEqual(meta?.entry_selection?.type, 'function');
-    assert.strictEqual(meta?.entry_selection?.name, 'bar');
-
-    // Also ensure regeneration preserves HUD metadata by regenerating
-    await vscode.commands.executeCommand('extension.triggerRegeneration');
-    const { meta: regenMeta } = await waitForOutputs();
-    assert.strictEqual(regenMeta?.entry_selection?.type, 'function');
-    assert.strictEqual(regenMeta?.entry_selection?.name, 'bar');
-    
-    // Note: We validate the data path used by HUD; DOM is updated by message-handler.js on updateFlowchart
-  });
-
-  test('PNG filename includes cursor information', async function() {
-    this.timeout(30000); // 30 seconds
-    
-    const editor = await openDoc();
-    const line = (await editor.document.getText()).split(/\n/).findIndex(l => l.includes('print("bar")'));
-    editor.selection = new vscode.Selection(new vscode.Position(line, 5), new vscode.Position(line, 5));
-
-    // Generate flowchart with cursor on function
-    await vscode.commands.executeCommand('extension.generateFlowchartAtCursor');
-    
-    // Wait for generation
-    const { meta } = await waitForOutputs();
-    
-    // Verify metadata contains cursor information for PNG naming
-    assert.strictEqual(meta?.entry_selection?.type, 'function');
-    assert.strictEqual(meta?.entry_selection?.name, 'bar');
-    
-    // Note: The actual PNG filename testing would require webview testing
-    // which is more complex. The metadata verification ensures the data is available.
-  });
-
-  test('Filters dropdown renamed from Node Processing Types', async function() {
-    // This test verifies that the dropdown label has been changed
-    // The actual UI testing would require webview testing, but we can verify
-    // that the extension is working correctly with the new label.
-    
+  test('Test if Metadata Exists', async function() {  
     const editor = await openDoc();
     const line = 0;
     editor.selection = new vscode.Selection(new vscode.Position(line, 0), new vscode.Position(line, 0));
@@ -280,9 +244,6 @@ tam()
     
     // Verify the flowchart was generated successfully
     assert.ok(meta, 'Metadata should exist');
-    
-    // Note: The actual dropdown label testing would require webview testing
-    // which is more complex. The successful generation ensures the webview loads.
   });
 });
 

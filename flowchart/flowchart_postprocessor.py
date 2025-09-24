@@ -121,6 +121,10 @@ class FlowchartPostProcessor:
 		if scope in FlowchartPostProcessor.subgraph_whitelist:
 			return False
 		
+		# Don't collapse entry function/class when generating from cursor position
+		if hasattr(self, 'entry_name') and self.entry_name and scope == self.entry_name:
+			return False
+		
 		# Force collapse if in force collapse list
 		if scope in FlowchartPostProcessor.force_collapse_list:
 			return True
@@ -432,11 +436,54 @@ class FlowchartPostProcessor:
 		# Clean the Mermaid diagram before returning
 		cleaned_mermaid = self.clean_mermaid_diagram(mermaid_string)
 		
+		# Build unified name-to-line mapping from all definitions
+		name_to_line_map = {}
+		entry_line_offset = getattr(self.processor, 'entry_line_offset', 0)
+		try:
+			# Add functions
+			for fname, fnode in getattr(self.processor, 'function_defs', {}).items():
+				lineno = getattr(fnode, 'lineno', None)
+				if lineno is not None:
+					name_to_line_map[fname] = int(lineno) + entry_line_offset
+			# Add methods (with class.method format)
+			for mkey, mnode in getattr(self.processor, 'method_defs', {}).items():
+				lineno = getattr(mnode, 'lineno', None)
+				if lineno is not None:
+					name_to_line_map[mkey] = int(lineno) + entry_line_offset
+		except Exception:
+			# Best-effort only
+			pass
+		
+		# Get all available subgraphs from node_scopes
+		all_subgraphs = list(set(self.processor.node_scopes.values()))
+		# Filter out None, empty strings, and main scope
+		all_subgraphs = [scope for scope in all_subgraphs if scope and scope != "main"]
+		
 		# Return collapsed subgraphs metadata and configuration data
 		# Convert sets to lists for JSON serialization
 		metadata = {
 			"collapsed_subgraphs": FlowchartPostProcessor.collapsed_subgraphs,
 			"subgraph_whitelist": list(FlowchartPostProcessor.subgraph_whitelist),
-			"force_collapse_list": list(FlowchartPostProcessor.force_collapse_list)
+			"force_collapse_list": list(FlowchartPostProcessor.force_collapse_list),
+			"all_subgraphs": all_subgraphs,  # Add all available subgraphs
+			# Include node to source line mapping when available (adjusted for entry offset)
+			"node_line_map": self._adjust_node_line_map(getattr(self.processor, 'node_line_map', {}), entry_line_offset),
+			# Include file path to help consumers locate the file
+			"file_path": getattr(self.processor, 'file_path', None),
+			# Unified mapping for all definitions
+			"name_to_line_map": name_to_line_map
 		}
 		return cleaned_mermaid, metadata
+
+	def _adjust_node_line_map(self, node_line_map, entry_line_offset):
+		"""Adjust node line map to account for entry line offset."""
+		if not entry_line_offset:
+			return node_line_map
+		
+		adjusted_map = {}
+		for node_id, line_info in node_line_map.items():
+			adjusted_map[node_id] = {
+				'start_line': line_info.get('start_line', 0) + entry_line_offset,
+				'end_line': line_info.get('end_line', 0) + entry_line_offset
+			}
+		return adjusted_map

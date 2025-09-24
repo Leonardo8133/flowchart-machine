@@ -113,6 +113,11 @@ export class GenerateFlowchartCommand {
         env.ENTRY_TYPE = entryType || '';
         if (entryName) {
           env.ENTRY_NAME = entryName;
+          // Calculate line offset for function/class entries
+          if (entryType === 'function' || entryType === 'class') {
+            const lineOffset = this.getLineOffsetForEntry(editor, entryType, entryName);
+            env.ENTRY_LINE_OFFSET = lineOffset.toString();
+          }
         }
 
         // Get breakpoints for the current file
@@ -123,6 +128,8 @@ export class GenerateFlowchartCommand {
         // Add breakpoint info to environment variables
         (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
         (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
+
+        console.log('Environment variables being passed to Python:', env);
 
         const result = await PythonService.executeScript(scriptPath, [filePath], env);
 
@@ -299,5 +306,27 @@ export class GenerateFlowchartCommand {
     const parentDir = path.basename(path.dirname(filePath));
     const fileName = path.basename(filePath, path.extname(filePath));
     return `(${parentDir})/(${fileName})`;
+  }
+
+  /**
+   * Get the line offset for a function or class entry
+   */
+  private getLineOffsetForEntry(editor: vscode.TextEditor, entryType: 'function' | 'class', entryName: string): number {
+    const document = editor.document;
+    
+    for (let i = 0; i < document.lineCount; i++) {
+      const line = document.lineAt(i);
+      const lineText = line.text;
+      
+      if (entryType === 'function' && lineText.includes(`def ${entryName}(`)) {
+        return i; // Return 0-based line number
+      }
+      
+      if (entryType === 'class' && lineText.includes(`class ${entryName}(`)) {
+        return i; // Return 0-based line number
+      }
+    }
+    
+    return 0; // Fallback to 0 if not found
   }
 }

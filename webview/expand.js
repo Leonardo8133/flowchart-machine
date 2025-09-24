@@ -77,6 +77,23 @@ function expandSubgraph(scopeName) {
     requestExpandSubgraph(scopeName);
 }
 
+// Function to create expand/collapse button for individual subgraphs
+function createSubgraphToggleButton(scopeName, isCollapsed) {
+    const button = document.createElement('button');
+    button.className = 'subgraph-toggle-button';
+    button.title = isCollapsed ? 'Expand subgraph' : 'Collapse subgraph';
+    
+    if (isCollapsed) {
+        button.innerHTML = '<img src="{{maximizeIcon}}" width="14" height="14" alt="Expand">';
+        button.onclick = () => expandSubgraph(scopeName);
+    } else {
+        button.innerHTML = '<img src="{{minusIcon}}" width="14" height="14" alt="Collapse">';
+        button.onclick = () => collapseSubgraph(scopeName);
+    }
+    
+    return button;
+}
+
 // Function to collapse an expanded subgraph by removing it from whitelist
 function collapseSubgraph(scopeName) {
     console.log('Collapsing subgraph', scopeName);
@@ -139,3 +156,4 @@ window.expandSubgraph = expandSubgraph;
 window.collapseSubgraph = collapseSubgraph;
 window.isSubgraphCollapsed = isSubgraphCollapsed;
 window.resetSubgraphStates = resetSubgraphStates;
+window.createSubgraphToggleButton = createSubgraphToggleButton;

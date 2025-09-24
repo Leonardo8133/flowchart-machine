@@ -10,15 +10,19 @@
     <div id="content">
         <div class="header-row">
             <div class="filename-display">
-                <h3 class="file-path">{{filePath}}</h3>
+                <h3 class="file-path">
+                    <img class="file-icon" src="{{codeFileIcon}}" width="20" height="20" alt="File" title="Current file">
+                    {{filePath}}
+                </h3>
                 <div class="cursor-info" id="cursorInfo">
-                    <span class="cursor-label">Cursor:</span>
+                    <img class="cursor-icon" src="{{cursorIcon}}" width="18" height="18" alt="Cursor" title="Current cursor scope">
                     <span class="cursor-value" id="cursorValue">Entire File</span>
                 </div>
             </div>
             
             <div class="checkbox-dropdown">
               <button type="button" class="dropdown-toggle" id="dropdownToggle">
+                <img class="filter-icon" src="{{filterIcon}}" width="18" height="18" alt="Filter" title="Filters for the diagram">
                 Filters
                 <span class="dropdown-icon">▼</span>
               </button>
@@ -74,16 +78,20 @@
         <div class="controls-row">
             <div class="button-group">
                 <button id="regenerateBtn" class="control-button">
-                    🔄 Regenerate
+                    <img class="button-icon" src="{{restartIcon}}" width="25" height="25" alt="Regenerate" title="Regenerate the diagram">
+                    Regenerate
                 </button>
                 <button id="savePngBtn" class="control-button">
-                    ⬇️ Download (PNG)
+                    <img class="button-icon" src="{{downloadIcon}}" width="15" height="15" alt="Download" title="Download the diagram as a PNG">
+                    Download
                 </button>
                 <button id="saveDiagramBtn" class="control-button">
-                    💾 Save
+                    <img class="button-icon" src="{{starIcon}}" width="20" height="20" alt="Save" title="Save the diagram">
+                    Save
                 </button>
                 <button id="showSavedBtn" class="control-button">
-                    📁 Diagrams
+                    <img class="button-icon" src="{{bookmarkIcon}}" width="20" height="20" alt="Diagrams" title="Show saved diagrams">
+                    Diagrams
                 </button>
             </div>
         </div>
@@ -104,11 +112,11 @@
             <!-- Unfold/Collapse Controls -->
             <div class="unfold-collapse-controls">
                 <button class="unfold-collapse-button" id="unfoldAllBtn" title="Expand All Subgraphs">
-                    <span class="button-icon">⤢</span>
+                    <img class="button-icon" src="{{maximizeIcon}}" width="20" height="20" alt="Expand All" title="Expand all subgraphs">
                     <span class="button-text">Expand All</span>
                 </button>
                 <button class="unfold-collapse-button" id="collapseAllBtn" title="Collapse All Subgraphs">
-                    <span class="button-icon">⧉</span>
+                    <img class="button-icon" src="{{collapseIcon}}" width="20" height="20" alt="Collapse All" title="Collapse all subgraphs">
                     <span class="button-text">Collapse All</span>
                 </button>
             </div>
@@ -132,7 +140,13 @@
 
         <div id="mermaidCode">
             <!-- Show code Button -->
-            <button id="showCodeBtn">⬇️ Show MermaidCode</button>
+            <div class="code-controls">
+                <button id="showCodeBtn">▼ Show MermaidCode
+                </button>
+                <button id="copyCodeBtn" class="copy-button" title="Copy to clipboard">
+                    <img class="button-icon" src="{{copyIcon}}" width="15" height="15" alt="Copy" title="Copy the code to clipboard">
+                </button>
+            </div>
             <pre id="mermaidCodeText" class="hidden"><!-- DIAGRAM_PLACEHOLDER --></pre>
         </div>
         

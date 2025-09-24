@@ -141,6 +141,22 @@ export class WebviewManager {
       '{{exportUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'export.js')).toString(),
       '{{messageHandlerUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'message-handler.js')).toString(),
       '{{mainUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'main.js')).toString(),
+      // Icon resources
+      '{{codeFileIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'code-file-svgrepo-com.svg')).toString(),
+      '{{cursorIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'cursor-square-svgrepo-com.svg')).toString(),
+      '{{filterIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'filter-svgrepo-com.svg')).toString(),
+      '{{restartIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'refresh-square-svgrepo-com.svg')).toString(),
+      '{{downloadIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'download-square-svgrepo-com.svg')).toString(),
+      '{{starIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'star-svgrepo-com.svg')).toString(),
+      '{{bookmarkIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'folder-2-svgrepo-com.svg')).toString(),
+      '{{codeIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'code-svgrepo-com.svg')).toString(),
+      '{{maximizeIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'maximize-square-svgrepo-com.svg')).toString(),
+      '{{collapseIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'square-bottom-down-svgrepo-com.svg')).toString(),
+      '{{arrowDownIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'arrow-down-svgrepo-com.svg')).toString(),
+      '{{copyIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'copy-svgrepo-com.svg')).toString(),
+      '{{checkIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'check-circle-svgrepo-com.svg')).toString(),
+      '{{trashIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'trash-bin-minimalistic-svgrepo-com.svg')).toString(),
+      '{{minusIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'minus-square-svgrepo-com.svg')).toString(),
     };
     
     let result = htmlContent;

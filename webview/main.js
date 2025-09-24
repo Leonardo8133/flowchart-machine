@@ -15,11 +15,28 @@ function storeDiagramCode(diagramCode) {
 // Make the function globally available
 window.storeDiagramCode = storeDiagramCode;
 
+// Copy code functionality
+function handleCopyCodeClick() {
+    const mermaidCodeText = document.getElementById('mermaidCodeText');
+    if (mermaidCodeText && mermaidCodeText.textContent) {
+        navigator.clipboard.writeText(mermaidCodeText.textContent).then(() => {
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     // Initialize controls first
     if (typeof initializeControls === "function") {
         initializeControls();
         initializeSavedDiagrams();
+    }
+    
+    // Add copy button event listener
+    const copyCodeBtn = document.getElementById('copyCodeBtn');
+    if (copyCodeBtn) {
+        copyCodeBtn.addEventListener('click', handleCopyCodeClick);
     }
     
     // Set up message handling
@@ -104,13 +121,12 @@ function handleShowSavedDiagrams() {
     const showSavedBtn = document.getElementById('showSavedBtn');
     
     if (savedDiagramsList && showSavedBtn) {
-        const isHidden = savedDiagramsList.classList.contains('hidden');
+        const isVisible = savedDiagramsList.classList.contains('show');
         
-        if (isHidden) {
+        if (!isVisible) {
             // Show the list
+            savedDiagramsList.classList.add('show');
             savedDiagramsList.classList.remove('hidden');
-            savedDiagramsList.classList.remove('fade');
-            showSavedBtn.textContent = '📁 Diagrams';
             
             // Request saved diagrams from extension
             if (window.vscode) {
@@ -120,8 +136,8 @@ function handleShowSavedDiagrams() {
             }
         } else {
             // Hide the list
+            savedDiagramsList.classList.remove('show');
             savedDiagramsList.classList.add('hidden');
-            showSavedBtn.textContent = '📁 Diagrams';
         }
     }
 }
@@ -151,7 +167,9 @@ function displaySavedDiagrams(flowcharts) {
         <div class="saved-diagram-item" data-id="${flowchart.id}">
             <div class="saved-diagram-name">${flowchart.name}</div>
             <div class="saved-diagram-date">${new Date(flowchart.savedAt).toLocaleString()}</div>
-            <button class="saved-diagram-delete" title="Delete diagram">🗑️</button>
+            <button class="saved-diagram-delete" title="Delete diagram">
+                <img src="{{trashIcon}}" width="14" height="14" alt="Delete">
+            </button>
         </div>
     `).join('');
     

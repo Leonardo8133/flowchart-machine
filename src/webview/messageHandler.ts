@@ -113,6 +113,10 @@ export class WebviewMessageHandler {
       case 'updateMetadata':
         await this.handleUpdateMetadata(message, panel);
         break;
+
+      case 'goToDefinition':
+        await this.handleGoToDefinition(message, panel);
+        break;
       
       default:
         console.log('❓ Unknown message command:', message.command);
@@ -226,17 +230,23 @@ export class WebviewMessageHandler {
       // Get the whitelist service
       const whitelistService = this.getWhitelistService();
 
-      // Get all collapsed subgraphs from the stored metadata
-      const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
-
-      // Clear the whitelist
+      // Clear both whitelist and force collapse list
       whitelistService.clearWhitelist();
+      whitelistService.clearForceCollapseList();
 
-      // Add all subgraphs to the force collapse list
-      // Process scope names consistently with how they're processed in updateSubgraphStates
-      for (const scopeName of Object.keys(collapsedSubgraphs)) {
-        const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-        whitelistService.addToForceCollapseList(processedScopeName);
+      // Get all available subgraphs from metadata
+      const allSubgraphs = this.currentMetadata?.all_subgraphs || [];
+      
+      if (allSubgraphs.length === 0) {
+        // Fallback: if all_subgraphs is not available, use the collapseAllSubgraphs method
+        console.warn('all_subgraphs not available in metadata, using fallback method');
+        whitelistService.collapseAllSubgraphs();
+      } else {
+        // Add all available subgraphs to the force collapse list
+        for (const scopeName of allSubgraphs) {
+          const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+          whitelistService.addToForceCollapseList(processedScopeName);
+        }
       }
 
       // Regenerate flowchart with updated lists
@@ -268,6 +278,93 @@ export class WebviewMessageHandler {
       }
     } catch (error) {
       console.error('Error updating metadata:', error);
+    }
+  }
+
+  /**
+   * Handle go-to-definition request from the webview
+   */
+  private async handleGoToDefinition(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      const fnNameRaw: string | undefined = message?.functionName;
+      if (!fnNameRaw || !this.currentMetadata) {
+        vscode.window.showWarningMessage('Go to Definition: no function or metadata available');
+        return;
+      }
+
+      // Determine line from metadata
+      const fnName = String(fnNameRaw).trim();
+      const nameToLineMap = this.currentMetadata.name_to_line_map || {};
+
+      // Try direct lookup first
+      let line: number | undefined = nameToLineMap[fnName];
+
+      // Try with class.method format if not found
+      if (line === undefined) {
+        for (const [key, value] of Object.entries(nameToLineMap)) {
+          if (key.endsWith(`.${fnName}`) || key === fnName) {
+            line = value as number;
+            break;
+          }
+        }
+      }
+
+      // Try matching subgraph scope naming (class_Class_method)
+      if (line === undefined) {
+        for (const [key, value] of Object.entries(nameToLineMap)) {
+          const simplified = key.replace(/^class_/, '').replace(/_/g, '.');
+          if (simplified.endsWith(`.${fnName}`)) {
+            line = value as number;
+            break;
+          }
+        }
+      }
+
+      if (line === undefined) {
+        vscode.window.showInformationMessage(`Could not find line for ${fnName}.`);
+        return;
+      }
+
+      // Open original file and move cursor
+      const filePath = this.currentMetadata.file_path || this.originalFilePath;
+      if (!filePath) {
+        vscode.window.showInformationMessage('Original file path not available.');
+        return;
+      }
+
+      const fileUri = vscode.Uri.file(filePath);
+
+      // If already active, just move the cursor
+      const active = vscode.window.activeTextEditor;
+      if (active && active.document.uri.fsPath === filePath) {
+        const l = Math.max(0, (line as number) - 1);
+        const pos = new vscode.Position(l, 0);
+        active.selection = new vscode.Selection(pos, pos);
+        active.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+        return;
+      }
+
+      // If the document is visible in any editor group, reveal that one (no duplicate tab)
+      const visible = vscode.window.visibleTextEditors.find(ed => ed.document.uri.fsPath === filePath);
+      if (visible) {
+        const l = Math.max(0, (line as number) - 1);
+        const pos = new vscode.Position(l, 0);
+        await vscode.window.showTextDocument(visible.document, { viewColumn: visible.viewColumn, preview: false, preserveFocus: false });
+        visible.selection = new vscode.Selection(pos, pos);
+        visible.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+        return;
+      }
+
+      // Otherwise open (or reuse) the document in the active group
+      const doc = await vscode.workspace.openTextDocument(fileUri);
+      const editor = await vscode.window.showTextDocument(doc, { preview: false });
+      const l = Math.max(0, (line as number) - 1);
+      const pos = new vscode.Position(l, 0);
+      editor.selection = new vscode.Selection(pos, pos);
+      editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+    } catch (error) {
+      vscode.window.showInformationMessage('Failed to go to definition.');
+      console.error('goToDefinition failed:', error);
     }
   }
 

@@ -29,7 +29,7 @@ class FlowchartConfig:
     
     MAX_NODES = 100
     MAX_NESTING_DEPTH = 6  # Maximum number of nested function call layers
-    MAX_SUBGRAPH_NODES = 5  # Maximum nodes before subgraph becomes collapsible
+    MAX_SUBGRAPH_NODES = 25  # Maximum nodes before subgraph becomes collapsible
     
     EXIT_FUNCTIONS = ['sys.exit', 'os._exit', 'exit', 'quit']
 
@@ -57,6 +57,10 @@ class NodeHandler:
         
         # Check if previous node is in same scope
         if prev_scope != scope:
+            return False
+        
+        # Don't consolidate with control flow nodes (if, for, while, etc.)
+        if any(keyword in prev_node_def for keyword in ['If:', 'For Loop:', 'While', 'Call:', 'return']):
             return False
         
         # Check if previous node is a print statement
@@ -1252,6 +1256,19 @@ class FlowchartProcessor:
         sanitized_text = text.replace('<', '&lt').replace('>', '&gt').replace('"', "'")
         self.nodes[node_id] = f'{node_id}{shape[0]}{sanitized_text}{shape[1]}'
         self.node_scopes[node_id] = scope
+        # Record the original source line for this node if available
+        try:
+            if hasattr(self, 'last_added_node') and self.last_added_node is not None:
+                lineno = getattr(self.last_added_node, 'lineno', None)
+                if not hasattr(self, 'node_line_map'):
+                    self.node_line_map = {}
+                if lineno is not None:
+                    self.node_line_map[node_id] = {
+                        'start_line': int(lineno),
+                    }
+        except Exception:
+            # Best-effort only; do not break generation on mapping errors
+            pass
         return True
 
     def _add_connection(self, from_id, to_id, label=""):

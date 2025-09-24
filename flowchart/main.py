@@ -26,11 +26,7 @@ class FlowchartGenerator:
             # Step 1: Process the code and create initial structure
             if not self.processor.process_code(python_code):
                 return f"graph TD\n    error[\"Error processing code\"]", {}
-            
-            print("--------------------------------")
-            print("Before post-processing:")
-            print(set(self.post_processor.processor.node_scopes.values()))
-            print("--------------------------------")
+
             # Step 2: Post-process the graph (optimize and redirect connections)
             self.post_processor.post_process()
 
@@ -69,11 +65,18 @@ def main():
     # Read entry selection from environment
     entry_type = os.environ.get('ENTRY_TYPE') or None
     entry_name = os.environ.get('ENTRY_NAME') or None
-    print(f"Python received: ENTRY_TYPE={entry_type}, ENTRY_NAME={entry_name}")
+    entry_line_offset = int(os.environ.get('ENTRY_LINE_OFFSET', '0'))
+    print(f"Python received: ENTRY_TYPE={entry_type}, ENTRY_NAME={entry_name}, ENTRY_LINE_OFFSET={entry_line_offset}")
 
     code = process_entry(code, entry_type, entry_name)
 
     builder = FlowchartGenerator()
+    # Expose the file path to the processor for metadata context
+    try:
+        builder.processor.file_path = file_path
+        builder.processor.entry_line_offset = entry_line_offset
+    except Exception:
+        pass
     mermaid_output, metadata = builder.generate(code, breakpoint_lines, entry_type, entry_name)
 
     # Save the Mermaid flowchart

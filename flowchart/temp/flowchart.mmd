@@ -1,11 +1,15 @@
 graph TD
 	start1[Start]
 	end2[End]
-	call_helper_function3[["Call: helper_function()"]]
-    call_helper_function3[["Call: helper_function()"]]
-    subgraph "Function: helper_function() (1 nodes)"
-        collapsed_nodes__helper_function_1["Collapsed nodes (1)"]
+	call_level23[["Call: level2()"]]
+	print5["print(f`Level 2: {x}`)\nresult = level3(x + 1)\nresult = test_function(result)"]
+	return6["return result + 10"]
+    call_level23[["Call: level2()"]]
+    subgraph "Function: level2()"
+        print5["print(f`Level 2: {x}`)\nresult = level3(x + 1)\nresult = test_function(result)"]
+        return6["return result + 10"]
     end
-        start1 --> call_helper_function3
-        call_helper_function3 --> collapsed_nodes__helper_function_1
-        collapsed_nodes__helper_function_1 --> end2
+    	start1 --> call_level23
+    	call_level23 --> print5
+    	print5 --> return6
+    	return6 --> end2

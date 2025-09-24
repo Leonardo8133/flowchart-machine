@@ -128,7 +128,7 @@ function initializeControls() {
 
 function handleShowCodeClick() {
     mermaidCodeText.classList.toggle('hidden');
-    showCodeBtn.textContent = mermaidCodeText.classList.contains('hidden') ?  '⬇️ Show MermaidCode': '⬆️ Hide MermaidCode';
+    showCodeBtn.textContent = mermaidCodeText.classList.contains('hidden') ?  '▼ Show MermaidCode': '▲ Hide MermaidCode';
 }
 
 function handleDropdownToggle(event) {
@@ -178,7 +178,8 @@ function handleRegenerateClick() {
 
         // Disable button during regeneration
         regenerateBtn.disabled = true;
-        regenerateBtn.textContent = "⏳ Regenerating...";
+        const currentHtml = regenerateBtn.innerHTML;
+        regenerateBtn.innerHTML = currentHtml.replace('Regenerate', '⏳ Regenerating...');
 
         vscode.postMessage({
             command: 'updateFlowchart'
@@ -188,20 +189,23 @@ function handleRegenerateClick() {
     }
 }
 
-function handleSavePngClick() {
+async function handleSavePngClick() {
     console.log('Save PNG button clicked');
-    
+    const currentHtml = savePngBtn.innerHTML;
     // Disable button during save
     savePngBtn.disabled = true;
-    savePngBtn.textContent = "⏳ Converting...";
+    
+    // Update text while preserving icon structure
+    savePngBtn.innerHTML = currentHtml.replace('Download', '⏳ Converting...');
     
     try {
-        convertSvgToPng();
+        await convertSvgToPng();
+        savePngBtn.innerHTML = currentHtml;
+        savePngBtn.disabled = false;
     } catch (error) {
         console.error('PNG conversion failed:', error);
-        // Re-enable button on error
         savePngBtn.disabled = false;
-        savePngBtn.textContent = "⬇️ Download (PNG)";
+        savePngBtn.innerHTML = currentHtml;
     }
 }
 
@@ -228,14 +232,16 @@ function updateControlStates(message) {
         case 'regenerationComplete':
             if (regenerateBtn) {
                 regenerateBtn.disabled = false;
-                regenerateBtn.textContent = "🔄 Regenerate";
+                const currentHtml = regenerateBtn.innerHTML;
+                regenerateBtn.innerHTML = currentHtml.replace('⏳ Regenerating...', 'Regenerate');
             }
             break;
             
         case 'regenerationError':
             if (regenerateBtn) {
                 regenerateBtn.disabled = false;
-                regenerateBtn.textContent = "🔄 Regenerate";
+                const currentHtml = regenerateBtn.innerHTML;
+                regenerateBtn.innerHTML = currentHtml.replace('⏳ Regenerating...', 'Regenerate');
             }
             break;
             
@@ -243,7 +249,6 @@ function updateControlStates(message) {
         case 'pngSaveError':
             if (savePngBtn) {
                 savePngBtn.disabled = false;
-                savePngBtn.textContent = "⬇️ Download (PNG)";
             }
             break;
     }

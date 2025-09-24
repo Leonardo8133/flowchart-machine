@@ -27,6 +27,15 @@ body {
     margin: 0;
     padding: 0;
     font-family: var(--vscode-font-family);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.file-icon {
+    flex-shrink: 0;
+    vertical-align: middle;
+    display: inline-block;
 }
 
 /* Header Row Layout */
@@ -43,7 +52,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
     gap: 10px;
 }
 
@@ -67,15 +75,14 @@ body {
     background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
     color: var(--vscode-button-secondaryForeground, #ffffff);
     border: 1px solid var(--vscode-button-border, #3c3c3c);
-    padding: 8px 16px;
+    padding: 5px;
     border-radius: 4px;
     cursor: pointer;
     font-family: var(--vscode-font-family);
-    font-size: 14px;
+    font-size: 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    transition: background-color 0.2s;
+    gap: 6px;
 }
 
 .dropdown-toggle:hover {
@@ -92,10 +99,8 @@ body {
 }
 
 .dropdown-content {
-    display: none;
     position: absolute;
     top: 100%;
-    left: 0;
     right: 0;
     background-color: var(--vscode-dropdown-background, #2d2d30);
     border: 1px solid var(--vscode-dropdown-border, #3c3c3c);
@@ -105,10 +110,16 @@ body {
     min-width: 200px;
     padding: 8px 0;
     margin-top: 4px;
+    opacity: 0;
+    transform: translateY(-10px);
+    visibility: hidden;
+    transition: opacity 0.3s ease, transform 0.5s ease, visibility 0.3s ease;
 }
 
 .dropdown-content.show {
-    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
 }
 
 .dropdown-content .checkbox-item {
@@ -139,12 +150,15 @@ body {
     background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
     color: var(--vscode-button-secondaryForeground, #ffffff);
     border: 1px solid var(--vscode-button-border, #444444);
-    padding: 6px 10px;
     border-radius: 4px;
     cursor: pointer;
+    padding: 2px 10px;
     font-family: var(--vscode-font-family);
     font-size: 12px;
     transition: background-color 0.2s, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .control-button:hover {
@@ -295,8 +309,8 @@ body {
 
 /* Zoom and Pan Controls */
 .zoom-controls {
-    top: 0;
-    right: 0;
+    top: 15px;
+    right: 5px;
     display: flex;
     position: absolute;
     flex-direction: column;
@@ -304,21 +318,22 @@ body {
     z-index: 200;
     pointer-events: auto;
     background-color: rgba(30, 30, 30, 0.8);
-    padding: 8px;
+    padding: 4px;
     border-radius: 6px;
     border: 1px solid var(--vscode-panel-border, #3c3c3c);
 }
 
 .zoom-button {
-    width: 32px;
-    height: 32px;
+    width: 25px;
+    height: 25px;
     border: 1px solid var(--vscode-panel-border, #3c3c3c);
     background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
     color: var(--vscode-button-secondaryForeground, #ffffff);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     display: flex;
+    margin: auto;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
@@ -462,12 +477,22 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 1000;
-    transition: opacity 0.3s ease;
+    opacity: 0;
+    transform: translateY(-10px);
+    visibility: hidden;
+    transition: opacity 0.3s ease, transform 0.5s ease, visibility 0.3s ease;
+}
+
+.saved-diagrams-list.show {
     opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
 }
 
 .saved-diagrams-list.hidden {
-    display: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    visibility: hidden;
 }
 
 .saved-diagrams-header {
@@ -575,6 +600,95 @@ body {
 .control-button:active {
     transform: scale(0.95);
 }
+
+/* Cursor info styles */
+.cursor-info {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cursor-icon {
+    flex-shrink: 0;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.cursor-value {
+    color: #ccc;
+    padding: 4px;
+    font-family: var(--vscode-editor-font-family);
+}
+
+/* Button icon styles */
+.button-icon {
+    flex-shrink: 0;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.filter-icon {
+    margin-right: 6px;
+    filter: brightness(0) saturate(100%) invert(100%);
+}
+
+/* Code controls */
+.code-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.copy-button {
+    background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
+    color: var(--vscode-button-secondaryForeground, #ffffff);
+    border: 1px solid var(--vscode-button-border, #444444);
+    padding: 4px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--vscode-font-family);
+    font-size: 12px;
+    transition: background-color 0.2s, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 35px;
+}
+
+.copy-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, #4c4c4c);
+}
+
+/* Subgraph toggle button styles */
+.subgraph-toggle-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 3px;
+    color: var(--vscode-textLink-foreground, #3794ff);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.subgraph-toggle-button:hover {
+    background-color: var(--vscode-button-hoverBackground, #2a2a2a);
+    color: var(--vscode-textLink-activeForeground, #4fc3f7);
+}
+
+.subgraph-toggle-button img {
+    display: block;
+}
+
+/* Subgraph buttons */
+.subgraph-buttons {
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+/* Node labels moved up via JavaScript */
 
 /* Hidden class */
 .hidden {

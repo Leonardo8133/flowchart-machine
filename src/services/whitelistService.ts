@@ -113,4 +113,11 @@ export class WhitelistService {
         this.forceCollapseList.clear();
         console.log('WhitelistService: Force collapse list cleared');
     }
+
+    public collapseAllSubgraphs(): void {
+        // Clear both lists to ensure all subgraphs are collapsed
+        this.forceCollapseList.clear();
+        this.whitelist.clear();
+        console.log('WhitelistService: All subgraphs will be collapsed');
+    }
 }

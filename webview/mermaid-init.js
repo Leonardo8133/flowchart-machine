@@ -69,7 +69,7 @@ async function initializeAndRender() {
         attachContainerEventListeners(mermaidContainer);
         
         // Add expand/collapse buttons to subgraphs
-        setTimeout(addSubgraphButtons, 200);
+        addSubgraphButtons();
 
     } catch (error) {
         hideLoadingContainer();
@@ -156,8 +156,7 @@ function updateFlowchart(diagram) {
                 updateZoomLevel();
             }, 100);
             
-            // Add expand/collapse buttons to subgraphs
-            setTimeout(addSubgraphButtons, 150);
+            addSubgraphButtons();
             
         }).catch(error => {
             console.error('Mermaid rendering failed:', error);
@@ -199,6 +198,31 @@ function addSubgraphButtons() {
         const scopeName = extractScopeName(labelEl.textContent || '');
         if (!scopeName) continue;
 
+        // Resize the subgraph rectangle
+        const rect = subgraph.querySelector('rect');
+        if (rect) {
+            const currentWidth = parseFloat(rect.getAttribute('width')) || 0;
+            const currentHeight = parseFloat(rect.getAttribute('height')) || 0;
+            const currentX = parseFloat(rect.getAttribute('x')) || 0;
+            const currentY = parseFloat(rect.getAttribute('y')) || 0;
+            
+            // Increase size by 20px and adjust position to center
+            rect.setAttribute('width', currentWidth + 40);
+            rect.setAttribute('height', currentHeight + 30);
+            rect.setAttribute('x', currentX - 20);
+            rect.setAttribute('y', currentY - 15);
+        }
+
+        // Move node labels up by 10px
+        const nodeLabels = subgraph.querySelectorAll('.cluster-label');
+        nodeLabels.forEach(label => {
+            const currentTransform = label.getAttribute('transform') || '';
+            const newTransform = currentTransform ? 
+                currentTransform + ' translate(0, -10)' : 
+                'translate(0, -10)';
+            label.setAttribute('transform', newTransform);
+        });
+
         const bbox = subgraph.getBBox();
         if (!bbox) continue;
 
@@ -207,6 +231,7 @@ function addSubgraphButtons() {
         group.setAttribute('transform', `translate(${bbox.x + bbox.width - 33}, ${bbox.y + 3})`);
         group.setAttribute('opacity', '0');
         group.setAttribute('pointer-events', 'none');
+        group.style.zIndex = '1000';
         const isCollapsed = window.isSubgraphCollapsed && window.isSubgraphCollapsed(scopeName);
         const btn = createSVGButton(isCollapsed ? '+' : '-', isCollapsed ? 'Expand subgraph' : 'Collapse subgraph', 0, 0);
         btn.addEventListener('click', (e) => {
@@ -215,6 +240,25 @@ function addSubgraphButtons() {
             if (typeof fn === 'function') fn(scopeName);
         });
 
+        const goToDefBtn = createSVGButton('</>', 'Go to Definition', -35, 0);
+        goToDefBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            try {
+                const fnName = (scopeName || '').replace(/^class_/, '').replace(/_call_.*$/, '');
+                if (window.vscode && window.vscode.postMessage) {
+                    window.vscode.postMessage({
+                        command: 'goToDefinition',
+                        functionName: fnName
+                    });
+                } else if (typeof window.goToDefinition === 'function') {
+                    window.goToDefinition(fnName);
+                }
+            } catch (err) {
+                console.error('goToDefinition click failed', err);
+            }
+        });
+
+        group.appendChild(goToDefBtn);
         group.appendChild(btn);
 
         subgraph.addEventListener('mouseenter', () => {
