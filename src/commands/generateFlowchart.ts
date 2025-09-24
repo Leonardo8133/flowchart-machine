@@ -18,7 +18,7 @@ export class GenerateFlowchartCommand {
   /**
    * Execute the generate flowchart command
    */
-  async execute(): Promise<void> {
+  async execute(fromContextMenu: boolean = false): Promise<void> {
     console.log('Command executed: extension.generateFlowchart');
 
     const editor = vscode.window.activeTextEditor;
@@ -40,6 +40,19 @@ export class GenerateFlowchartCommand {
 
     const filePath = editor.document.fileName;
     console.log('Processing file:', filePath);
+
+    let entryType: 'file' | 'function' | 'class' | undefined;
+    let entryName: string | undefined;
+
+    if (fromContextMenu) {
+      // Auto-detect from cursor without prompting
+      const detected = this.detectEntryFromCursor(editor);
+      entryType = detected.type;
+      entryName = detected.name;
+    } else {
+        entryType = 'file';
+        entryName = undefined;
+    }
 
     // Check if Python is available
     const pythonCheck = await PythonService.checkAvailability();
@@ -77,20 +90,30 @@ export class GenerateFlowchartCommand {
         const imports = config.get('nodes.processTypes.imports', true);
         const exceptions = config.get('nodes.processTypes.exceptions', true);
         const returns = config.get('nodes.processTypes.returns', true);
+        const classes = config.get('nodes.processTypes.classes', true);
+        const mergeCommonNodes = config.get('nodes.processTypes.mergeCommonNodes', true);
 
         // Set environment variables for Python script
         const env = {
           ...process.env,
           SHOW_PRINTS: showPrints ? '1' : '0',
-          DETAIL_FUNCTIONS: detailFunctions ? '1' : '0',
+          SHOW_FUNCTIONS: detailFunctions ? '1' : '0',
           SHOW_FOR_LOOPS: forLoops ? '1' : '0',
           SHOW_WHILE_LOOPS: whileLoops ? '1' : '0',
           SHOW_VARIABLES: variables ? '1' : '0',
           SHOW_IFS: ifs ? '1' : '0',
           SHOW_IMPORTS: imports ? '1' : '0',
           SHOW_EXCEPTIONS: exceptions ? '1' : '0',
-          SHOW_RETURNS: returns ? '1' : '0'
-        };
+          SHOW_RETURNS: returns ? '1' : '0',
+          SHOW_CLASSES: classes ? '1' : '0',
+          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0'
+        } as Record<string, string>;
+
+        // Pass entry selection to Python
+        env.ENTRY_TYPE = entryType || '';
+        if (entryName) {
+          env.ENTRY_NAME = entryName;
+        }
 
         // Get breakpoints for the current file
         const breakpoints = vscode.debug.breakpoints.filter(bp =>
@@ -156,13 +179,119 @@ export class GenerateFlowchartCommand {
   }
 
   /**
+   * Command entry to trigger regeneration programmatically (used by tests).
+   */
+  async triggerRegeneration(): Promise<void> {
+    await this.webviewManager.triggerRegeneration();
+  }
+
+  /**
+   * Get the function or class name at current cursor position.
+   */
+  private getSymbolAtCursor(editor: vscode.TextEditor, type: 'function' | 'class'): string | undefined {
+    const position = editor.selection.active;
+    const document = editor.document;
+    const cursorLine = position.line;
+
+    const funcRegex = /\bdef\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+    const classRegex = /\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\(|:)/g;
+    
+    let match: RegExpExecArray | null;
+
+    const search = (regex: RegExp) => {
+      // Reset regex lastIndex to ensure we search from the beginning
+      regex.lastIndex = 0;
+      
+      while ((match = regex.exec(document.getText()))) {
+        const start = match.index;
+        const name = match[1];
+        const defLine = document.positionAt(start).line;
+        
+        // Find the end of this function/class by looking at indentation
+        const defLineText = document.lineAt(defLine).text;
+        const defIndent = defLineText.match(/^(\s*)/)?.[1].length || 0;
+        
+        // Find the next line with same or less indentation (function end)
+        let endLine = defLine + 1;
+        while (endLine < document.lineCount) {
+          const lineText = document.lineAt(endLine).text;
+          const lineIndent = lineText.match(/^(\s*)/)?.[1].length || 0;
+          
+          // If line is empty, continue
+          if (lineText.trim() === '') {
+            endLine++;
+            continue;
+          }
+          
+          // If indentation is same or less than def line, function has ended
+          if (lineIndent <= defIndent) {
+            break;
+          }
+          endLine++;
+        }
+        
+        // Check if cursor is inside this function/class
+        if (cursorLine >= defLine && cursorLine < endLine) {
+          return name;
+        }
+      }
+      return undefined;
+    };
+
+    if (type === 'function') {
+      return search(funcRegex);
+    }
+    return search(classRegex);
+  }
+
+  /**
    * Register the command with VS Code
    */
   static register(context: vscode.ExtensionContext): vscode.Disposable {
     const command = new GenerateFlowchartCommand(context);
-    return vscode.commands.registerCommand('extension.generateFlowchart', () => {
-      return command.execute();
-    });
+    const d1 = vscode.commands.registerCommand('extension.generateFlowchart', () => command.execute(false));
+    const d2 = vscode.commands.registerCommand('extension.generateFlowchartAtCursor', () => command.execute(true));
+    const d3 = vscode.commands.registerCommand('extension.triggerRegeneration', () => command.triggerRegeneration());
+    return { dispose: () => { d1.dispose(); d2.dispose(); d3.dispose(); } } as vscode.Disposable;
+  }
+
+  /** Auto-detect entry from cursor.
+   *  - If cursor on class or __init__, return class
+   *  - If cursor in function, return function
+   *  - Else file
+   */
+  private detectEntryFromCursor(editor: vscode.TextEditor): { type: 'file' | 'function' | 'class', name?: string } {
+    const className = this.getSymbolAtCursor(editor, 'class');
+    if (className) {
+      return { type: 'class', name: className };
+    }
+    const funcName = this.getSymbolAtCursor(editor, 'function');
+    if (funcName) {
+      if (funcName === '__init__') {
+        // Try to grab enclosing class name
+        const enclosingClass = this.getEnclosingClass(editor);
+        if (enclosingClass) {
+          return { type: 'class', name: enclosingClass };
+        }
+      }
+      return { type: 'function', name: funcName };
+    }
+    return { type: 'file' };
+  }
+
+  private getEnclosingClass(editor: vscode.TextEditor): string | undefined {
+    const doc = editor.document;
+    const pos = editor.selection.active;
+    const text = doc.getText(new vscode.Range(0, 0, pos.line, pos.character));
+    const classRegex = /\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\(|:)\s*$/m;
+    const all = text.match(new RegExp("class\\s+([A-Za-z_][A-Za-z0-9_]*)", 'g'));
+    // Simple backward scan: iterate lines up
+    for (let line = pos.line; line >= 0; line--) {
+      const t = doc.lineAt(line).text;
+      const m = t.match(/\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\(|:)/);
+      if (m) return m[1];
+    }
+    return undefined;
   }
 
   private createFileKey(filePath: string): string {

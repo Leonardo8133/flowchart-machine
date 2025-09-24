@@ -11,6 +11,7 @@
   ],
   "activationEvents": [
     "onCommand:extension.generateFlowchart",
+    "onCommand:extension.generateFlowchartAtCursor",
     "onLanguage:python"
   ],
   "main": "./out/extension.js",
@@ -19,6 +20,11 @@
       {
         "command": "extension.generateFlowchart",
         "title": "Generate Python Flowchart",
+        "category": "Flowchart"
+      },
+      {
+        "command": "extension.generateFlowchartAtCursor",
+        "title": "Generate Flowchart at the Cursor",
         "category": "Flowchart"
       },
       {
@@ -32,11 +38,15 @@
         {
           "command": "extension.generateFlowchart",
           "when": "editorLangId == python"
+        },
+        {
+          "command": "extension.generateFlowchartAtCursor",
+          "when": "editorLangId == python"
         }
       ],
       "editor/context": [
         {
-          "command": "extension.generateFlowchart",
+          "command": "extension.generateFlowchartAtCursor",
           "when": "editorLangId == python",
           "group": "navigation"
         }
@@ -138,7 +148,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
-    "test:unit": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index",
+    "test:unit": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index --no-exit",
     "test:watch": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index --watch",
     "test:coverage": "npm run compile && npm run test:unit",
     "test:clean": "rimraf test-workspace*",

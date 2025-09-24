@@ -5,3 +5,4 @@ def test_recursion(x):
         return test_recursion(x + 1)
 
 a = test_recursion(1)
+print(a)

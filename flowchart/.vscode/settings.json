@@ -1,13 +1,3 @@
 {
-    "flowchartMachine.nodes.processTypes.prints": true,
-    "flowchartMachine.nodes.processTypes.functions": true,
-    "flowchartMachine.nodes.processTypes.forLoops": true,
-    "flowchartMachine.nodes.processTypes.whileLoops": true,
-    "flowchartMachine.nodes.processTypes.variables": true,
-    "flowchartMachine.nodes.processTypes.ifs": true,
-    "flowchartMachine.nodes.processTypes.imports": true,
-    "flowchartMachine.nodes.processTypes.exceptions": true,
-    "flowchartMachine.nodes.processTypes.returns": true,
-    "flowchartMachine.nodes.processTypes.classes": true,
-    "flowchartMachine.nodes.processTypes.mergeCommonNodes": true
+    "flowchartMachine.nodes.processTypes.functions": true
 }

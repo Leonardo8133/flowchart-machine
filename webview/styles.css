@@ -11,6 +11,7 @@ body {
 #content {
     max-width: 1200px;
     margin: 0 auto;
+    padding-top: 10px;
 }
 
 /* Filename Display */
@@ -135,19 +136,19 @@ body {
 }
 
 .control-button {
-    background-color: var(--vscode-button-background, #007acc);
-    color: var(--vscode-button-foreground, #ffffff);
-    border: none;
-    padding: 8px 16px;
+    background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
+    color: var(--vscode-button-secondaryForeground, #ffffff);
+    border: 1px solid var(--vscode-button-border, #444444);
+    padding: 6px 10px;
     border-radius: 4px;
     cursor: pointer;
     font-family: var(--vscode-font-family);
-    font-size: 14px;
-    transition: background-color 0.2s;
+    font-size: 12px;
+    transition: background-color 0.2s, transform 0.1s ease;
 }
 
 .control-button:hover {
-    background-color: var(--vscode-button-hoverBackground, #005a9e);
+    background-color: var(--vscode-button-secondaryHoverBackground, #4c4c4c);
 }
 
 .control-button:disabled {
@@ -176,8 +177,8 @@ body {
 .mermaid {
     border: 1px solid var(--vscode-panel-border, #3c3c3c);
     border-radius: 6px;
-    padding: 20px;
-    margin: 20px 0;
+    padding: 12px;
+    margin: 10px 0;
     background-color: var(--vscode-editor-background);
     overflow: hidden;
     position: relative;

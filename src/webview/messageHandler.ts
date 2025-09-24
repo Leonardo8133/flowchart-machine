@@ -121,6 +121,13 @@ export class WebviewMessageHandler {
     }
   }
 
+  /**
+   * Public wrapper to trigger regeneration from extension code or tests.
+   */
+  public async regenerate(panel: vscode.WebviewPanel): Promise<void> {
+    await this.handleRegeneration(panel);
+  }
+
   private async handleGetCurrentCheckboxStatesValues(message: any, panel: vscode.WebviewPanel): Promise<void> {
     const checkboxStates = this.getCurrentCheckboxStates();
     panel.webview.postMessage({
@@ -184,33 +191,26 @@ export class WebviewMessageHandler {
 
   private async handleExpandAllSubgraphs(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
-      console.log('🔄 Handling expand all subgraphs request');
-
       // Get the whitelist service
       const whitelistService = this.getWhitelistService();
 
       // Get all subgraphs from the current metadata
-      console.log('🔄 Current metadata:', this.currentMetadata);
       const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
       const allSubgraphs = Object.keys(collapsedSubgraphs);
 
-      console.log('🔄 Found subgraphs to expand:', allSubgraphs);
 
       // Add all subgraphs to the whitelist
       for (const scopeName of allSubgraphs) {
         const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-        console.log(`🔄 Adding to whitelist: "${scopeName}" -> "${processedScopeName}"`);
         whitelistService.addToWhitelist(processedScopeName);
       }
 
       // Get the updated whitelist to pass to regeneration
       const currentWhitelist = whitelistService.getWhitelist();
-      console.log('🔄 Final whitelist for regeneration:', currentWhitelist);
 
       // Regenerate flowchart with updated lists
       await this.handleRegeneration(panel, currentWhitelist);
     } catch (error) {
-      console.error('❌ Error in handleExpandAllSubgraphs:', error);
       panel.webview.postMessage({
         command: 'expandAllError',
         error: error instanceof Error ? error.message : String(error)
@@ -352,12 +352,12 @@ export class WebviewMessageHandler {
 
       // Execute the Python script again
       const checkboxStates = this.getCurrentCheckboxStates();
-      console.log('Retrieved checkbox states for Python execution:', checkboxStates);
       
       // Create file key from current file path
       const fileKey = this.createFileKey(this.originalFilePath);
       
       const env = {
+        ...process.env,
         SHOW_PRINTS: checkboxStates.showPrints ? '1' : '0',
         SHOW_FUNCTIONS: checkboxStates.showFunctions ? '1' : '0',
         SHOW_FOR_LOOPS: checkboxStates.showForLoops ? '1' : '0',
@@ -370,7 +370,7 @@ export class WebviewMessageHandler {
         SHOW_CLASSES: checkboxStates.showClasses ? '1' : '0',
         MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0',
         FILE_KEY: fileKey,
-      };
+      } as Record<string, string>;
 
       const breakpoints = vscode.debug.breakpoints.filter(bp => 
         (bp as any).location?.uri?.fsPath === this.originalFilePath
@@ -379,15 +379,25 @@ export class WebviewMessageHandler {
       // Add breakpoint info to environment variables
       (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
       (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
-        
+      // Preserve entry selection from current metadata
+      console.log('🔄 Current metadata:', this.currentMetadata);
+      if (this.currentMetadata?.entry_selection) {
+        const entrySelection = this.currentMetadata.entry_selection;
+        (env as any).ENTRY_TYPE = entrySelection.type;
+        (env as any).ENTRY_NAME = entrySelection.name || null;
+      }
       // Get whitelist and force collapse list from WhitelistService
       const whitelistService = this.getWhitelistService();
       const currentWhitelist = whitelist || whitelistService.getWhitelist();
       const forceCollapseList = whitelistService.getForceCollapseList();
 
-      console.log('🔄 Regeneration - provided whitelist:', whitelist);
-      console.log('🔄 Regeneration - service whitelist:', whitelistService.getWhitelist());
-      console.log('🔄 Regeneration - service force collapse list:', whitelistService.getForceCollapseList());
+      // // Add Entry type to the whitelist:
+      // if (this.currentMetadata?.entry_selection) {
+      //   const entrySelection = this.currentMetadata.entry_selection;
+      //   currentWhitelist.push(entrySelection.name);
+      //   console.log('🔄 Adding entry type to whitelist:', entrySelection.type);
+      // }
+
       console.log('🔄 Regeneration - final whitelist:', currentWhitelist);
       console.log('🔄 Regeneration - final force collapse list:', forceCollapseList);
 
@@ -402,8 +412,6 @@ export class WebviewMessageHandler {
         (env as any).FORCE_COLLAPSE_LIST = forceCollapseList.join(',');
         console.log('🔄 Setting FORCE_COLLAPSE_LIST env var:', forceCollapseList.join(','));
       }
-
-      console.log('Environment variables:', env);
 
       const result = await PythonService.executeScript(scriptPath, [this.originalFilePath], env);
       

@@ -1,24 +1,11 @@
 graph TD
 	start1[Start]
 	end2[End]
-	expr3["'\nComplex test file for flowchart generation testing.\nContains various Pyth..."]
-	import4[/"import os
-..."\]
-	if_cond5{"If: __name__ == '__main__'"}
-	call_main26[["Call: main2()"]]
-	end35[End]
-    expr3["'\nComplex test file for flowchart generation testing.\nContains various Pyth..."]
-    import4[/"import os
-..."\]
-    if_cond5{"If: __name__ == '__main__'"}
-    call_main26[["Call: main2()"]]
-    subgraph "Function: main2() (9 nodes)"
-        collapsed_nodes__main2_9["Collapsed nodes (9)"]
+	call_helper_function3[["Call: helper_function()"]]
+    call_helper_function3[["Call: helper_function()"]]
+    subgraph "Function: helper_function() (1 nodes)"
+        collapsed_nodes__helper_function_1["Collapsed nodes (1)"]
     end
-        start1 --> expr3
-        expr3 --> import4
-        import4 --> if_cond5
-        if_cond5 --> call_main26
-        if_cond5 -->|False| end2
-        call_main26 --> collapsed_nodes__main2_9
-        collapsed_nodes__main2_9 --> end35
+        start1 --> call_helper_function3
+        call_helper_function3 --> collapsed_nodes__helper_function_1
+        collapsed_nodes__helper_function_1 --> end2

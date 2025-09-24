@@ -13,6 +13,23 @@ function handleExtensionMessage(event) {
                     window.storeDiagramCode(message.diagram);
                 }
 
+                // Minimal HUD cursor update
+                try {
+                    const info = document.getElementById('cursorInfo');
+                    const valueEl = document.getElementById('cursorValue');
+                    if (info && valueEl) {
+                        const es = message?.metadata?.entry_selection;
+                        if (es && es.type && es.type !== 'file') {
+                            valueEl.textContent = es.name || 'Unknown';
+                        } else {
+                            valueEl.textContent = 'Entire File';
+                        }
+                        info.style.display = '';
+                    }
+                } catch (e) {
+                    console.warn('Cursor HUD update failed:', e);
+                }
+
                 // Update subgraph states if provided, otherwise reset
                 if (message.whitelist || message.forceCollapse || message.metadata) {
                     if (typeof window.updateSubgraphStates === 'function') {

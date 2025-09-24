@@ -1,67 +1,21 @@
 {
     "collapsed_subgraphs": {
-        "main2": {
-            "node_count": 9,
-            "original_scope": "main2",
-            "subgraph_name": "Function: main2() (9 nodes)",
-            "collapsed_node_id": "collapsed_nodes__main2_9",
+        "helper_function": {
+            "node_count": 1,
+            "original_scope": "helper_function",
+            "subgraph_name": "Function: helper_function() (1 nodes)",
+            "collapsed_node_id": "collapsed_nodes__helper_function_1",
             "scope_nodes": [
-                "return18",
-                "print24",
-                "if_cond23",
-                "except19",
-                "print34",
-                "if_cond31",
-                "print9",
-                "try14",
-                "return22",
-                "for_loop28",
-                "except21",
-                "if_cond30",
-                "method_call32",
-                "assign27",
-                "assign11",
-                "return33",
-                "assign12",
-                "if_cond8",
-                "assign17",
-                "with16",
-                "assign25",
-                "exit_function10",
-                "return20"
-            ]
-        },
-        "process_items": {
-            "node_count": 6,
-            "original_scope": "process_items",
-            "subgraph_name": "Function: process_items() (6 nodes)",
-            "collapsed_node_id": "collapsed_nodes__process_items_6",
-            "scope_nodes": [
-                "if_cond30",
-                "method_call32",
-                "assign27",
-                "if_cond31",
-                "return33",
-                "for_loop28"
-            ]
-        },
-        "read_config_file": {
-            "node_count": 8,
-            "original_scope": "read_config_file",
-            "subgraph_name": "Function: read_config_file() (8 nodes)",
-            "collapsed_node_id": "collapsed_nodes__read_config_file_8",
-            "scope_nodes": [
-                "except21",
-                "assign17",
-                "with16",
-                "return18",
-                "try14",
-                "except19",
-                "return22",
-                "return20"
+                "return5"
             ]
         }
     },
     "subgraph_whitelist": [],
-    "force_collapse_list": []
+    "force_collapse_list": [
+        "helper_function"
+    ],
+    "entry_selection": {
+        "type": "function",
+        "name": "helper_function"
+    }
 }

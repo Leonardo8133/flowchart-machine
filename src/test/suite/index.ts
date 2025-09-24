@@ -6,15 +6,14 @@ export function run(): Promise<void> {
   const mocha = new Mocha({
     ui: 'tdd',
     color: true,
-    timeout: 10000
+    timeout: 30000 // 30 seconds for longer-running tests
   });
 
   const testsRoot = path.resolve(__dirname, '..');
 
   return new Promise((resolve, reject) => {
     try {
-      // Only run the focused workflow test
-      mocha.addFile(path.resolve(testsRoot, 'workflow.test.ts'));
+      mocha.addFile(path.resolve(testsRoot, 'generate_command.test.ts'));
 
       // Run the mocha test
       mocha.run((failures: any) => {

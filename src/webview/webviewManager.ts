@@ -7,6 +7,7 @@ export class WebviewManager {
   private context: vscode.ExtensionContext;
   private messageHandler: WebviewMessageHandler;
   private originalFilePath: string | undefined;
+  private currentPanel: vscode.WebviewPanel | undefined;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -19,7 +20,7 @@ export class WebviewManager {
   createFlowchartWebview(
     mermaidCode: string,
     metadata: any,
-    fileName: string,
+    fileName: string, 
     originalFilePath?: string,
     whitelistService?: any,
     processor?: any
@@ -63,6 +64,9 @@ export class WebviewManager {
     // Set the webview HTML
     panel.webview.html = htmlContent;
 
+    // Keep reference for later regeneration
+    this.currentPanel = panel;
+
     // Set up message handling
     this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context, whitelistService, processor);
 
@@ -92,6 +96,16 @@ export class WebviewManager {
     }
 
     return panel;
+  }
+
+  /**
+   * Programmatically trigger regeneration as if clicking the Regenerate button.
+   */
+  public async triggerRegeneration(): Promise<void> {
+    if (!this.currentPanel) {
+      return;
+    }
+    await (this.messageHandler as any).regenerate(this.currentPanel);
   }
 
   /**

@@ -15,6 +15,7 @@ def read_config_file(config_path: str) -> Dict[str, any]:
         with open(config_path, 'r') as f:
             config = json.load(f)
         return config
+
     except FileNotFoundError:
         # print(f"Config file not found: {config_path}")
         return {}

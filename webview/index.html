@@ -11,11 +11,15 @@
         <div class="header-row">
             <div class="filename-display">
                 <h3 class="file-path">{{filePath}}</h3>
+                <div class="cursor-info" id="cursorInfo">
+                    <span class="cursor-label">Cursor:</span>
+                    <span class="cursor-value" id="cursorValue">Entire File</span>
+                </div>
             </div>
             
             <div class="checkbox-dropdown">
               <button type="button" class="dropdown-toggle" id="dropdownToggle">
-                Node Processing Types
+                Filters
                 <span class="dropdown-icon">▼</span>
               </button>
               <div class="dropdown-content" id="dropdownContent">

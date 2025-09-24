@@ -223,7 +223,7 @@ class FlowchartPostProcessor:
 		# Find all scopes that should be collapsed
 		scopes_to_collapse = []
 		for scope in set(self.processor.node_scopes.values()):
-			if scope and self._is_subgraph_too_large(scope):
+			if scope and scope != "main" and self._is_subgraph_too_large(scope):
 				scopes_to_collapse.append(scope)
 		
 		# Collapse each large subgraph
@@ -303,7 +303,8 @@ class FlowchartPostProcessor:
 				return
 			
 			# Check if subgraph is too large and should be collapsed
-			if self._is_subgraph_too_large(scope):
+			# Don't collapse the main scope - it should always be visible
+			if scope != "main" and self._is_subgraph_too_large(scope):
 				self._build_collapsed_subgraph(scope, indent, lines)
 				return
 			

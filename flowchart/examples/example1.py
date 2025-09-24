@@ -4,6 +4,9 @@ import math
 import random
 from datetime import datetime
 
+abc = 123132
+print(abc)
+
 def helper_function(x):
     """A simple helper function that returns the square of x."""
     return x * x
