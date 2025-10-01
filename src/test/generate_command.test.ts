@@ -12,7 +12,7 @@ suite('Generate Command (Cursor vs Palette)', () => {
 
   suiteSetup(async () => {
     testWorkspace = path.join(__dirname, 'test-generate');
-    if (!fs.existsSync(testWorkspace)) fs.mkdirSync(testWorkspace, { recursive: true });
+    if (!fs.existsSync(testWorkspace)) { fs.mkdirSync(testWorkspace, { recursive: true }); }
 
     const filePath = path.join(testWorkspace, 'test_generate_command.py');
     const content = `
@@ -53,8 +53,8 @@ tam()
 
   setup(() => {
     // Clean previous outputs to avoid stale-file assertions
-    try { if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath); } catch {}
-    try { if (fs.existsSync(flowchartPath)) fs.unlinkSync(flowchartPath); } catch {}
+    try { if (fs.existsSync(metaPath)) { fs.unlinkSync(metaPath); } } catch {}
+    try { if (fs.existsSync(flowchartPath)) { fs.unlinkSync(flowchartPath); } } catch {}
   });
 
   async function openDoc(): Promise<vscode.TextEditor> {
@@ -162,12 +162,12 @@ tam()
     // Wait and read outputs
     const { meta, flowchart } = await waitForOutputs();
 
-    console.log('Generated metadata for entire file:', meta);
-    console.log('Environment variables being passed to Python:', {
-      SHOW_IFS: process.env.SHOW_IFS,
-      SHOW_FUNCTIONS: process.env.SHOW_FUNCTIONS,
-      SHOW_PRINTS: process.env.SHOW_PRINTS
-    });
+    // console.log('Generated metadata for entire file:', meta);
+    // console.log('Environment variables being passed to Python:', {
+    //   SHOW_IFS: process.env.SHOW_IFS,
+    //   SHOW_FUNCTIONS: process.env.SHOW_FUNCTIONS,
+    //   SHOW_PRINTS: process.env.SHOW_PRINTS
+    // });
     assert.ok(!meta.entry_selection || meta.entry_selection.type === 'file', 'Should analyze entire file');
     // Cerate a 10s sleep
     await new Promise(resolve => setTimeout(resolve, 10000));
@@ -244,6 +244,101 @@ tam()
     
     // Verify the flowchart was generated successfully
     assert.ok(meta, 'Metadata should exist');
+  });
+
+  test('Context menu: cursor on class definition -> ENTRY_TYPE=class with no method', async function() {
+    // Create a test file with a class
+    const testClassFile = path.join(testWorkspace, 'test_class.py');
+    const classContent = `
+class TestClass:
+    def __init__(self):
+        self.value = 0
+    
+    def test_method(self):
+        print("test method")
+        return self.value
+    
+    def other_method(self):
+        print("other method")
+        return 42
+
+def standalone_function():
+    print("standalone")
+    return 1
+`;
+    fs.writeFileSync(testClassFile, classContent, 'utf8');
+    const classFileUri = vscode.Uri.file(testClassFile);
+    
+    const editor = await vscode.workspace.openTextDocument(classFileUri);
+    const doc = await vscode.window.showTextDocument(editor, vscode.ViewColumn.One);
+    
+    // Place cursor on the class definition line
+    const line = classContent.split(/\n/).findIndex(l => l.includes('class TestClass:'));
+    doc.selection = new vscode.Selection(new vscode.Position(line, 5), new vscode.Position(line, 5));
+
+    await vscode.commands.executeCommand('extension.generateFlowchartAtCursor');
+
+    // Wait for newly created outputs
+    const { meta, flowchart } = await waitForOutputs();
+    assert.strictEqual(meta?.entry_selection?.type, 'class');
+    assert.strictEqual(meta?.entry_selection?.name, undefined);
+    assert.strictEqual(meta?.entry_selection?.class, 'TestClass');
+
+    // Optional sanity check on flowchart content
+    if (flowchart) {
+      assert.ok(flowchart.includes('TestClass'), 'Flowchart should include TestClass');
+      // Should include the entire class structure
+      assert.ok(flowchart.includes('print(`test method`)'), 'Flowchart should include print("test method") from test_method()');
+      assert.ok(flowchart.includes('print(`other method`)'), 'Flowchart should include print("other method") from other_method()');
+      assert.ok(!flowchart.includes('print(`standalone`)'), 'Flowchart should not include print("standalone") from standalone_function()');
+    }
+  });
+
+  test('Context menu: cursor in method -> ENTRY_TYPE=class with method', async function() {
+    // Create a test file with a class and method
+    const testMethodFile = path.join(testWorkspace, 'test_method.py');
+    const methodContent = `
+class TestClass:
+    def __init__(self):
+        self.value = 0
+    
+    def test_method(self):
+        print("test method")
+        return self.value
+    
+    def other_method(self):
+        print("other method")
+        return 42
+
+def standalone_function():
+    print("standalone")
+    return 1
+`;
+    fs.writeFileSync(testMethodFile, methodContent, 'utf8');
+    const methodFileUri = vscode.Uri.file(testMethodFile);
+    
+    const editor = await vscode.workspace.openTextDocument(methodFileUri);
+    const doc = await vscode.window.showTextDocument(editor, vscode.ViewColumn.One);
+    
+    // Place cursor inside the test_method
+    const line = methodContent.split(/\n/).findIndex(l => l.includes('print("test method")'));
+    doc.selection = new vscode.Selection(new vscode.Position(line, 5), new vscode.Position(line, 5));
+
+    await vscode.commands.executeCommand('extension.generateFlowchartAtCursor');
+
+    // Wait for newly created outputs
+    const { meta, flowchart } = await waitForOutputs();
+    assert.strictEqual(meta?.entry_selection?.type, 'class');
+    assert.strictEqual(meta?.entry_selection?.name, 'test_method');
+    assert.strictEqual(meta?.entry_selection?.class, 'TestClass');
+
+    // Optional sanity check on flowchart content
+    if (flowchart) {
+      assert.ok(flowchart.includes('print(`test method`)'), 'Flowchart should include print("test method") from test_method()');
+      // Check if other methods are not included
+      assert.ok(!flowchart.includes('print(`other method`)'), 'Flowchart should not include print("other method") from other_method()');
+      assert.ok(!flowchart.includes('print(`standalone`)'), 'Flowchart should not include print("standalone") from standalone_function()');
+    }
   });
 });
 

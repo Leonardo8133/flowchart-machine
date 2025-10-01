@@ -17,14 +17,25 @@ function handleExtensionMessage(event) {
                 try {
                     const info = document.getElementById('cursorInfo');
                     const valueEl = document.getElementById('cursorValue');
-                    if (info && valueEl) {
-                        const es = message?.metadata?.entry_selection;
-                        if (es && es.type && es.type !== 'file') {
-                            valueEl.textContent = es.name || 'Unknown';
-                        } else {
-                            valueEl.textContent = 'Entire File';
+                    if (message.savedDiagram) {
+                        valueEl.textContent = "Saved Diagram: " + message.savedDiagram.name;
+                    } else {
+                        if (info && valueEl) {
+                            const es = message?.metadata?.entry_selection;
+                            if (es && es.type && es.type !== 'file') {
+                                let text = '';
+                                if (es.class) {
+                                    text += es.class + '.';
+                                }
+                                if (es.name) {
+                                    text += es.name;
+                                }
+                                valueEl.textContent = text || 'Unknown';
+                            } else {
+                                valueEl.textContent = 'Entire File';
+                            }
+                                info.style.display = '';
                         }
-                        info.style.display = '';
                     }
                 } catch (e) {
                     console.warn('Cursor HUD update failed:', e);
@@ -144,7 +155,7 @@ function handleExtensionMessage(event) {
                 showNotification(`Failed to delete diagram: ${message.error}`, 'error');
             }
             break;
-    
+
         case 'updateCheckboxStates':
             updateCheckboxStates(message.checkboxStates);
             break;

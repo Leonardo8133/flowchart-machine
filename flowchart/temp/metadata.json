@@ -1,34 +1,60 @@
 {
     "collapsed_subgraphs": {},
-    "subgraph_whitelist": [
-        "level2"
-    ],
-    "force_collapse_list": [
-        "level2"
-    ],
+    "subgraph_whitelist": [],
+    "force_collapse_list": [],
     "all_subgraphs": [
-        "level2"
+        "class_SimpleClass_set_value",
+        "class_SimpleClass_get_name",
+        "class_SimpleClass___init__",
+        "class_SimpleClass"
     ],
     "node_line_map": {
-        "call_level23": {
-            "start_line": 9
+        "class3": {
+            "start_line": 1
         },
-        "end_call4": {
-            "start_line": 9
+        "method_call4": {
+            "start_line": 21
         },
-        "print5": {
-            "start_line": 3
+        "method___init__5": {
+            "start_line": 21
         },
-        "return6": {
-            "start_line": 6
+        "assign6": {
+            "start_line": 5
+        },
+        "method_call7": {
+            "start_line": 8
+        },
+        "method_set_value8": {
+            "start_line": 8
+        },
+        "assign9": {
+            "start_line": 14
+        },
+        "assign10": {
+            "start_line": 16
+        },
+        "method_get_name11": {
+            "start_line": 16
+        },
+        "return12": {
+            "start_line": 11
+        },
+        "method_call13": {
+            "start_line": 17
+        },
+        "return14": {
+            "start_line": 18
         }
     },
-    "file_path": "c:\\Users\\Arthu\\flowchart-machine\\flowchart\\examples\\nested_functions_example.py",
+    "file_path": "c:\\Users\\Arthu\\flowchart-machine\\flowchart\\tests\\test_class_subgraphs_fixed.py",
     "name_to_line_map": {
-        "level2": 1
+        "SimpleClass.__init__": 4,
+        "SimpleClass.get_name": 10,
+        "SimpleClass.set_value": 13
     },
     "entry_selection": {
-        "type": "function",
-        "name": "level2"
+        "type": "class",
+        "name": "__init__",
+        "class": "SimpleClass"
     }
 }

@@ -6,4 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-- Initial release
+## [0.0.1] - 2025-10-01
+### Added
+- Initial release of Flowchart Machine
+- Generate flowcharts from Python using built-in `flowchart/main.py`
+- Webview with Mermaid diagrams and collapsible subgraphs
+- Settings for node processing, storage, and appearance
+- Context menu and command palette integration

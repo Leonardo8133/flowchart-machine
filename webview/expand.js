@@ -4,6 +4,7 @@ let subgraphStates = {}; // UI state hint (expanded/collapsed), optional
 let whitelistSet = new Set();
 let forceCollapseSet = new Set();
 let collapsedSubgraphsMetadata = {}; // Track automatically collapsed subgraphs
+let allSubgraphsList = []; // Canonical subgraph identifiers from Python
 
 // Receive current lists from the extension and update local caches
 function updateSubgraphStates(payload) {
@@ -15,6 +16,7 @@ function updateSubgraphStates(payload) {
     whitelistSet = new Set(whitelist.map(name => name.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim()));
     forceCollapseSet = new Set(forceList.map(name => name.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim()));
     collapsedSubgraphsMetadata = metadata.collapsed_subgraphs || {};
+    allSubgraphsList = Array.isArray(metadata.all_subgraphs) ? metadata.all_subgraphs : [];
 }
 
 // Function to check if a subgraph is collapsed
@@ -53,6 +55,23 @@ function isSubgraphCollapsed(scopeName) {
     }
 
     console.log('Returning false: not collapsed');
+    return false;
+}
+
+// Context-aware collapsed-state check using canonical resolution
+function isSubgraphCollapsedWithContext(displayLabel, context) {
+    const canonical = resolveCanonicalScope(displayLabel, context);
+    const processed = canonical.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+
+    const isWhitelisted = whitelistSet.has(processed);
+    if (isWhitelisted) { return false; }
+
+    const isAutoCollapsed = !!collapsedSubgraphsMetadata[canonical];
+    if (isAutoCollapsed) { return true; }
+
+    const isForceCollapsed = forceCollapseSet.has(processed);
+    if (isForceCollapsed) { return true; }
+
     return false;
 }
 
@@ -140,6 +159,94 @@ function requestCollapseSubgraph(scopeName) {
     }
 }
 
+// ============================
+// Canonical resolution helpers
+// ============================
+
+function stripExtra(label) {
+    // Remove trailing count e.g. " (12 nodes)" and parentheses arguments like ()
+    return (label || '')
+        .replace(/\s*\([^)]*nodes\)\s*$/i, '')
+        .replace(/\(\)/g, '')
+        .trim();
+}
+
+function resolveCanonicalScope(displayLabel, context) {
+    // If already looks canonical and present, return as-is
+    if (displayLabel && allSubgraphsList.includes(displayLabel)) { return displayLabel; }
+
+    const raw = stripExtra(displayLabel);
+    // Class label
+    if (/^Class:\s*/i.test(raw)) {
+        const className = raw.replace(/^Class:\s*/i, '').trim();
+        const candidate = `class_${className}`;
+        if (allSubgraphsList.includes(candidate)) { return candidate; }
+        return candidate; // best-effort
+    }
+    // Function label (may be "Function: foo" or "Function: foo - Call X")
+    if (/^Function:\s*/i.test(raw)) {
+        const funcPart = raw.replace(/^Function:\s*/i, '').replace(/\s*-\s*Call.*$/i, '').trim();
+        const funcName = funcPart.replace(/\(\)$/, '').trim();
+        // Prefer exact function scope
+        if (allSubgraphsList.includes(funcName)) { return funcName; }
+        // Otherwise if a single call-instance exists, pick that
+        const callMatches = allSubgraphsList.filter(s => s === funcName || s.startsWith(`${funcName}_call_`));
+        if (callMatches.length === 1) { return callMatches[0]; }
+        return funcName; // best-effort
+    }
+    // Method label
+    if (/^Method:\s*/i.test(raw)) {
+        const methodName = raw.replace(/^Method:\s*/i, '').trim();
+        const className = (context && context.className) ? context.className : undefined;
+        if (className) {
+            const candidate = `class_${className}_${methodName}`;
+            if (allSubgraphsList.includes(candidate)) { return candidate; }
+            return candidate; // best-effort
+        }
+        // Try to uniquely resolve by suffix if no class context
+        const matches = allSubgraphsList.filter(s => /^class_/.test(s) && s.endsWith(`_${methodName}`));
+        if (matches.length === 1) { return matches[0]; }
+        return matches[0] || methodName; // fallback to first if ambiguous
+    }
+
+    // Fallback: return as-is
+    return raw;
+}
+
+function expandSubgraphWithContext(displayLabel, context) {
+    const canonical = resolveCanonicalScope(displayLabel, context);
+    console.log('expandSubgraphWithContext', { displayLabel, context, canonical });
+    // Update state
+    subgraphStates[displayLabel] = 'expanded';
+    // Keep local sets in sync (use canonical for stable matching)
+    const processed = canonical.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+    if (forceCollapseSet.has(processed)) { forceCollapseSet.delete(processed); }
+    whitelistSet.add(processed);
+    // Send message to extension with canonical scope name
+    if (window.vscode && window.vscode.postMessage) {
+        window.vscode.postMessage({ command: 'expandSubgraph', scopeName: canonical });
+    } else {
+        console.error('❌ VS Code API not available for expansion');
+    }
+}
+
+function collapseSubgraphWithContext(displayLabel, context) {
+    const canonical = resolveCanonicalScope(displayLabel, context);
+    console.log('collapseSubgraphWithContext', { displayLabel, context, canonical });
+    // Update state
+    subgraphStates[displayLabel] = 'collapsed';
+    // Keep local sets in sync (use canonical for stable matching)
+    const processed = canonical.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+    if (whitelistSet.has(processed)) { whitelistSet.delete(processed); }
+    forceCollapseSet.add(processed);
+    // Send message to extension with canonical scope name
+    if (window.vscode && window.vscode.postMessage) {
+        window.vscode.postMessage({ command: 'collapseSubgraph', scopeName: canonical });
+    } else {
+        console.error('VS Code API not available for collapse');
+    }
+}
+
 // Backwards compat noop (metadata no longer used)
 function createExpandFunctions() {}
 
@@ -155,5 +262,8 @@ window.createExpandFunctions = createExpandFunctions;
 window.expandSubgraph = expandSubgraph;
 window.collapseSubgraph = collapseSubgraph;
 window.isSubgraphCollapsed = isSubgraphCollapsed;
+window.isSubgraphCollapsedWithContext = isSubgraphCollapsedWithContext;
 window.resetSubgraphStates = resetSubgraphStates;
 window.createSubgraphToggleButton = createSubgraphToggleButton;
+window.expandSubgraphWithContext = expandSubgraphWithContext;
+window.collapseSubgraphWithContext = collapseSubgraphWithContext;

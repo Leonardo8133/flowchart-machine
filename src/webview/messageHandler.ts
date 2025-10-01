@@ -482,6 +482,7 @@ export class WebviewMessageHandler {
         const entrySelection = this.currentMetadata.entry_selection;
         (env as any).ENTRY_TYPE = entrySelection.type;
         (env as any).ENTRY_NAME = entrySelection.name || null;
+        (env as any).ENTRY_CLASS = entrySelection.class || null;
       }
       // Get whitelist and force collapse list from WhitelistService
       const whitelistService = this.getWhitelistService();
@@ -855,7 +856,8 @@ export class WebviewMessageHandler {
           command: 'updateFlowchart',
           diagram: result.flowchart.mermaidCode,
           whitelist: currentWhitelist,
-          forceCollapse: forceCollapseList
+          forceCollapse: forceCollapseList,
+          savedDiagram: result.flowchart
         });
 
         // Show success notification

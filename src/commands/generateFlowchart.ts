@@ -42,15 +42,26 @@ export class GenerateFlowchartCommand {
     console.log('Processing file:', filePath);
 
     let entryType: 'file' | 'function' | 'class' | undefined;
+    let entryClass: string | undefined;
     let entryName: string | undefined;
 
     if (fromContextMenu) {
       // Auto-detect from cursor without prompting
       const detected = this.detectEntryFromCursor(editor);
       entryType = detected.type;
+      entryClass = detected.class;
       entryName = detected.name;
+
+      // OUTPUT THE DETECTED ENTRY
+      console.log('Detected entry:', detected);
+      const outputChannel = vscode.window.createOutputChannel('Flowchart Debug');
+      outputChannel.show();
+      outputChannel.appendLine(`Detected entry: ${JSON.stringify(detected, null, 2)}`);
+
+
     } else {
         entryType = 'file';
+        entryClass = undefined;
         entryName = undefined;
     }
 
@@ -119,6 +130,9 @@ export class GenerateFlowchartCommand {
             env.ENTRY_LINE_OFFSET = lineOffset.toString();
           }
         }
+        if (entryClass) {
+          env.ENTRY_CLASS = entryClass;
+        }
 
         // Get breakpoints for the current file
         const breakpoints = vscode.debug.breakpoints.filter(bp =>
@@ -128,8 +142,6 @@ export class GenerateFlowchartCommand {
         // Add breakpoint info to environment variables
         (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
         (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
-
-        console.log('Environment variables being passed to Python:', env);
 
         const result = await PythonService.executeScript(scriptPath, [filePath], env);
 
@@ -262,43 +274,25 @@ export class GenerateFlowchartCommand {
     return { dispose: () => { d1.dispose(); d2.dispose(); d3.dispose(); } } as vscode.Disposable;
   }
 
-  /** Auto-detect entry from cursor.
-   *  - If cursor on class or __init__, return class
-   *  - If cursor in function, return function
-   *  - Else file
-   */
-  private detectEntryFromCursor(editor: vscode.TextEditor): { type: 'file' | 'function' | 'class', name?: string } {
+  private detectEntryFromCursor(editor: vscode.TextEditor): { type: 'file' | 'function' | 'class', name?: string, class?: string } {
     const className = this.getSymbolAtCursor(editor, 'class');
-    if (className) {
-      return { type: 'class', name: className };
-    }
     const funcName = this.getSymbolAtCursor(editor, 'function');
-    if (funcName) {
-      if (funcName === '__init__') {
-        // Try to grab enclosing class name
-        const enclosingClass = this.getEnclosingClass(editor);
-        if (enclosingClass) {
-          return { type: 'class', name: enclosingClass };
-        }
+    
+    if (className) {
+      // We're inside a class
+      if (funcName) {
+        // We're in a method within the class
+        return { type: 'class', name: funcName, class: className };
+      } else {
+        // We're on the class definition itself (not inside any method)
+        return { type: 'class', name: "__init__", class: className };
       }
+    }
+    
+    if (funcName) {
       return { type: 'function', name: funcName };
     }
     return { type: 'file' };
-  }
-
-  private getEnclosingClass(editor: vscode.TextEditor): string | undefined {
-    const doc = editor.document;
-    const pos = editor.selection.active;
-    const text = doc.getText(new vscode.Range(0, 0, pos.line, pos.character));
-    const classRegex = /\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\(|:)\s*$/m;
-    const all = text.match(new RegExp("class\\s+([A-Za-z_][A-Za-z0-9_]*)", 'g'));
-    // Simple backward scan: iterate lines up
-    for (let line = pos.line; line >= 0; line--) {
-      const t = doc.lineAt(line).text;
-      const m = t.match(/\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\(|:)/);
-      if (m) return m[1];
-    }
-    return undefined;
   }
 
   private createFileKey(filePath: string): string {

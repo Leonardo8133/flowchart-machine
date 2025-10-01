@@ -10,6 +10,7 @@ class SimpleClass:
         self.name = name
         self.value = 0
         print(f"Created {name}")
+        self.set_value(10)
     
     def get_name(self):
         return self.name
@@ -17,6 +18,8 @@ class SimpleClass:
     def set_value(self, value):
         self.value = value
         print(f"Set value to {value}")
+        name = self.get_name()
+        ComplexClass.process_data()
         return self.value
 
 class ComplexClass:
@@ -32,8 +35,6 @@ class ComplexClass:
         if not self.processed:
             self.data = self.data.upper()
             self.processed = True
-            print("Data processed")
-            print(f"Data: {self.data}")
     
     def get_result(self):
         return self.data

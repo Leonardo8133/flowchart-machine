@@ -2,13 +2,30 @@
   "name": "flowchart-machine",
   "displayName": "Flowchart Machine",
   "description": "An extension that helps you to build your code flowchart",
+  "publisher": "arthu",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.101.0"
   },
-  "categories": [
-    "Other"
+  "license": "MIT",
+  "keywords": [
+    "python",
+    "flowchart",
+    "mermaid",
+    "visualization",
+    "diagram",
+    "code analysis"
   ],
+  "categories": [
+    "Other",
+    "Programming Languages",
+    "Visualization"
+  ],
+  "icon": "media/icon.svg",
+  "galleryBanner": {
+    "color": "#0B1220",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onCommand:extension.generateFlowchart",
     "onCommand:extension.generateFlowchartAtCursor",
@@ -68,37 +85,37 @@
         "flowchartMachine.nodes.processTypes.functions": {
           "type": "boolean",
           "default": true,
-          "description": "Process function Calls"
+          "description": "Process function definitions"
         },
         "flowchartMachine.nodes.processTypes.forLoops": {
           "type": "boolean",
           "default": true,
-          "description": "Process For Loops"
+          "description": "Process for loops"
         },
         "flowchartMachine.nodes.processTypes.whileLoops": {
           "type": "boolean",
           "default": true,
-          "description": "Process While Loops"
+          "description": "Process while loops"
         },
         "flowchartMachine.nodes.processTypes.variables": {
           "type": "boolean",
           "default": true,
-          "description": "Process Variables"
+          "description": "Process variable assignments"
         },
         "flowchartMachine.nodes.processTypes.ifs": {
           "type": "boolean",
           "default": true,  
-          "description": "Process If Statements"
+          "description": "Process if/elif/else statements"
         },
         "flowchartMachine.nodes.processTypes.returns": {
           "type": "boolean",
           "default": true,
-          "description": "Process Return Statements"
+          "description": "Process return statements"
         },
         "flowchartMachine.nodes.processTypes.imports": {
           "type": "boolean",
           "default": false,
-          "description": "Process Imports"
+          "description": "Process import statements"
         },
         "flowchartMachine.nodes.processTypes.classes": {
           "type": "boolean",
@@ -113,7 +130,7 @@
         "flowchartMachine.nodes.processTypes.exceptions": {
           "type": "boolean",
           "default": true,
-          "description": "Process exception handling"
+          "description": "Process try/except/finally blocks"
         },
         "flowchartMachine.storage.maxSavedFlowcharts": {
           "type": "number",
@@ -141,6 +158,14 @@
       }
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arthu/flowchart-machine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arthu/flowchart-machine/issues"
+  },
+  "homepage": "https://github.com/arthu/flowchart-machine#readme",
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -157,7 +182,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.99.0",
+    "@types/vscode": "^1.101.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vscode/test-cli": "^0.0.10",

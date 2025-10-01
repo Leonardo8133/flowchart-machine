@@ -176,7 +176,7 @@ function updateFlowchart(diagram) {
 
 // Function to add expand/collapse buttons to subgraphs
 function addSubgraphButtons() {
-    if (!mermaidContainer) return;
+    if (!mermaidContainer) { return; }
 
     const subgraphs = mermaidContainer.querySelectorAll('g.cluster');
     if (subgraphs.length === 0) {
@@ -185,18 +185,19 @@ function addSubgraphButtons() {
     }
 
     const extractScopeName = (labelText) => {
-        const m = (labelText || '').match(/^(?:Function:|Class:)\s*([^()]+)/);
-        return (m ? m[1] : (labelText || '')).trim();
+        const m = (labelText || '').match(/^(?:Function:|Class:|Method:)\s*([^()]+)/);
+        return (m ? (m[0] || labelText) : (labelText || '')).trim();
     };
 
     for (const subgraph of subgraphs) {
         subgraph.querySelector('.subgraph-buttons')?.remove();
 
         const labelEl = subgraph.querySelector('.cluster-label');
-        if (!labelEl) continue;
+        if (!labelEl) { continue; }
 
-        const scopeName = extractScopeName(labelEl.textContent || '');
-        if (!scopeName) continue;
+        const rawLabelText = labelEl.textContent || '';
+        const scopeName = extractScopeName(rawLabelText);
+        if (!scopeName) { continue; }
 
         // Resize the subgraph rectangle
         const rect = subgraph.querySelector('rect');
@@ -205,26 +206,32 @@ function addSubgraphButtons() {
             const currentHeight = parseFloat(rect.getAttribute('height')) || 0;
             const currentX = parseFloat(rect.getAttribute('x')) || 0;
             const currentY = parseFloat(rect.getAttribute('y')) || 0;
-            
-            // Increase size by 20px and adjust position to center
-            rect.setAttribute('width', currentWidth + 40);
-            rect.setAttribute('height', currentHeight + 30);
-            rect.setAttribute('x', currentX - 20);
-            rect.setAttribute('y', currentY - 15);
+
+            console.log('currentWidth', currentWidth);
+            console.log('currentHeight', currentHeight);
+
+
+            if (currentWidth < 300) {
+                // Increase size by 20px and adjust position to center
+                rect.setAttribute('width', currentWidth + 40);
+                rect.setAttribute('x', currentX - 20);
+
+                // Move node labels up by 10px and add width to label (DEBUGGING)
+                const nodeLabels = subgraph.querySelectorAll('.cluster-label');
+                nodeLabels.forEach(label => {
+                    const currentTransform = label.getAttribute('transform') || '';
+                    const newTransform = currentTransform ? 
+                        currentTransform + ' translate(0, 0)' : 
+                        'translate(0, )';
+                    label.setAttribute('transform', newTransform);
+                });
+            }
         }
 
-        // Move node labels up by 10px
-        const nodeLabels = subgraph.querySelectorAll('.cluster-label');
-        nodeLabels.forEach(label => {
-            const currentTransform = label.getAttribute('transform') || '';
-            const newTransform = currentTransform ? 
-                currentTransform + ' translate(0, -10)' : 
-                'translate(0, -10)';
-            label.setAttribute('transform', newTransform);
-        });
+        
 
         const bbox = subgraph.getBBox();
-        if (!bbox) continue;
+        if (!bbox) { continue; }
 
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'subgraph-buttons');
@@ -232,12 +239,27 @@ function addSubgraphButtons() {
         group.setAttribute('opacity', '0');
         group.setAttribute('pointer-events', 'none');
         group.style.zIndex = '1000';
-        const isCollapsed = window.isSubgraphCollapsed && window.isSubgraphCollapsed(scopeName);
+        const classContext = (() => {
+            // Try to find nearest ancestor cluster label that starts with "Class:"
+            let p = subgraph.parentElement;
+            while (p) {
+                const cl = p.querySelector && p.querySelector('.cluster-label');
+                const t = cl && cl.textContent ? cl.textContent : '';
+                const m = t.match(/^Class:\s*([^()]+)/);
+                if (m && m[1]) { return { className: m[1].trim() }; }
+                p = p.parentElement;
+            }
+            return undefined;
+        })();
+
+        const isCollapsed = (window.isSubgraphCollapsedWithContext && window.isSubgraphCollapsedWithContext(scopeName, classContext))
+            || (window.isSubgraphCollapsed && window.isSubgraphCollapsed(scopeName));
         const btn = createSVGButton(isCollapsed ? '+' : '-', isCollapsed ? 'Expand subgraph' : 'Collapse subgraph', 0, 0);
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const fn = isCollapsed ? window.expandSubgraph : window.collapseSubgraph;
-            if (typeof fn === 'function') fn(scopeName);
+            // reuse classContext defined above
+            const fn = isCollapsed ? window.expandSubgraphWithContext : window.collapseSubgraphWithContext;
+            if (typeof fn === 'function') { fn(scopeName, classContext); }
         });
 
         const goToDefBtn = createSVGButton('</>', 'Go to Definition', -35, 0);

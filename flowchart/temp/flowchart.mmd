@@ -1,15 +1,46 @@
 graph TD
 	start1[Start]
 	end2[End]
-	call_level23[["Call: level2()"]]
-	print5["print(f`Level 2: {x}`)\nresult = level3(x + 1)\nresult = test_function(result)"]
-	return6["return result + 10"]
-    call_level23[["Call: level2()"]]
-    subgraph "Function: level2()"
-        print5["print(f`Level 2: {x}`)\nresult = level3(x + 1)\nresult = test_function(result)"]
-        return6["return result + 10"]
+	method_call4[["Call: SimpleClass.__init__()"]]
+	method___init__5[["Constructor: __init__(name)"]]
+	assign6["self.name = name\nself.value = 0\nprint(f`Created {name}`)"]
+	method_call7[["Call: self.set_value(10)"]]
+	method_set_value8[["Method: set_value(value)"]]
+	assign9["self.value = value\nprint(f`Set value to {value}`)"]
+	assign10["name = self.get_name()"]
+	method_get_name11[["Method: get_name()"]]
+	return12["return self.name"]
+	method_call13[["Call: ComplexClass.process_data()"]]
+	return14["return self.value"]
+    method_call4[["Call: SimpleClass.__init__()"]]
+subgraph "Class: SimpleClass"
+    subgraph "Method: __init__"
+        method___init__5[["Constructor: __init__(name)"]]
+        assign6["self.name = name\nself.value = 0\nprint(f`Created {name}`)"]
+        method_call7[["Call: self.set_value(10)"]]
     end
-    	start1 --> call_level23
-    	call_level23 --> print5
-    	print5 --> return6
-    	return6 --> end2
+    subgraph "Method: get_name"
+        method_get_name11[["Method: get_name()"]]
+        return12["return self.name"]
+    end
+    subgraph "Method: set_value"
+        method_set_value8[["Method: set_value(value)"]]
+        assign9["self.value = value\nprint(f`Set value to {value}`)"]
+        assign10["name = self.get_name()"]
+        method_call13[["Call: ComplexClass.process_data()"]]
+        return14["return self.value"]
+    end
+end
+    method_call4[["Call: SimpleClass.__init__()"]]
+        start1 --> method_call4
+        method_call4 -->|Call __init__| method___init__5
+        method___init__5 --> assign6
+        assign6 --> method_call7
+        method_call7 -->|Execute| method_set_value8
+        method_set_value8 --> assign9
+        assign9 --> assign10
+        assign10 -->|Execute| method_get_name11
+        method_get_name11 --> return12
+        assign10 --> method_call13
+        method_call13 --> return14
+        method_call4 --> end2
