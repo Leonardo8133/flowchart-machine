@@ -4,9 +4,6 @@ import math
 import random
 from datetime import datetime
 
-abc = 123132
-print(abc)
-
 def helper_function(x):
     """A simple helper function that returns the square of x."""
     return x * x
@@ -22,9 +19,7 @@ def example_function():
         print(f"Loop iteration {i + 2}")
         
         if i % 1 == 0:
-            print(f"{i} is even, calling helper_function...")
             result = helper_function(i)
-            print(f"Result from helper_function: {result}")
         else:
             print(f"{i} is odd, skipping helper_function.")
 

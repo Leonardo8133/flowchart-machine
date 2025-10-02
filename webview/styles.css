@@ -85,6 +85,40 @@ body {
     gap: 6px;
 }
 
+/* Top buttons container */
+.top-buttons {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+/* Help and Bug buttons */
+#helpBtn,
+#bugReportBtn {
+    border: 1px solid var(--vscode-button-border, transparent);
+    border-radius: 4px;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 4px;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    
+}
+
+#helpBtn {
+    margin-left: auto;
+}
+
+#bugReportBtn {
+    background-color: #8b0000;
+    color: #ffffff;
+}
+
+#bugReportBtn:hover {
+    background-color: #a40000;
+}
+
 .dropdown-toggle:hover {
     background-color: var(--vscode-button-secondaryHoverBackground, #4c4c4c);
 }
@@ -693,4 +727,147 @@ body {
 /* Hidden class */
 .hidden {
     display: none !important;
+}
+
+/* Simple modal for download options */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--vscode-editor-background, #1e1e1e);
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    border-radius: 8px;
+    padding: 16px;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Help Modal Styles */
+.help-modal-content {
+    min-width: 500px;
+    max-width: 80vw;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.help-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border, #3c3c3c);
+}
+
+.help-modal-content .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.placeholder-section h4 {
+    margin: 0 0 8px 0;
+    color: var(--vscode-textLink-foreground, #4fc3f7);
+}
+
+.placeholder-section p {
+    margin: 0;
+    color: var(--vscode-descriptionForeground, #cccccc);
+    font-style: italic;
+}
+
+/* Bug Report Modal Styles */
+.bug-report-modal-content {
+    min-width: 400px;
+    max-width: 70vw;
+}
+
+.bug-report-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border, #3c3c3c);
+}
+
+.bug-report-modal-content .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bug-report-options {
+    display: flex;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.bug-report-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background-color 0.2s, border-color 0.2s;
+    border: 1px solid var(--vscode-button-border, transparent);
+}
+
+.github-button {
+    background-color: var(--vscode-button-background, #007acc);
+    color: var(--vscode-button-foreground, #ffffff);
+}
+
+.github-button:hover {
+    background-color: var(--vscode-button-hoverBackground, #005a9e);
+}
+
+.email-button {
+    background-color: var(--vscode-button-secondaryBackground, #313244);
+    color: var(--vscode-button-secondaryForeground, #cccccc);
+}
+
+.email-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, #3c3e50);
+}
+
+.bug-report-note {
+    margin: 8px 0 0 0;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground, #cccccc);
+    line-height: 1.4;
 }

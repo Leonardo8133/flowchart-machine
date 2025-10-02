@@ -1,6 +1,11 @@
 // Controls initialization and event handling
 let regenerateBtn;
 let savePngBtn;
+let downloadModal;
+let downloadBackdrop;
+let downloadPngOption;
+let downloadSvgOption;
+let downloadCancel;
 let unfoldAllBtn;
 let collapseAllBtn;
 let showPrintsCheckbox;
@@ -18,6 +23,10 @@ let mermaidCodeText;
 let showCodeBtn;
 let dropdownToggle;
 let dropdownContent;
+let helpBtn;
+let bugReportBtn;
+let helpModal;
+let bugReportModal;
 
 // Acquire VS Code API once
 let vscode;
@@ -31,6 +40,11 @@ function initializeControls() {
     // Get references to control elements
     regenerateBtn = document.getElementById('regenerateBtn');
     savePngBtn = document.getElementById('savePngBtn');
+    downloadModal = document.getElementById('downloadModal');
+    downloadBackdrop = document.getElementById('downloadModalBackdrop');
+    downloadPngOption = document.getElementById('downloadPngOption');
+    downloadSvgOption = document.getElementById('downloadSvgOption');
+    downloadCancel = document.getElementById('downloadCancel');
     unfoldAllBtn = document.getElementById('unfoldAllBtn');
     collapseAllBtn = document.getElementById('collapseAllBtn');
     showPrintsCheckbox = document.getElementById('showPrints');
@@ -48,6 +62,10 @@ function initializeControls() {
     showCodeBtn = document.getElementById('showCodeBtn');
     dropdownToggle = document.getElementById('dropdownToggle');
     dropdownContent = document.getElementById('dropdownContent');
+    helpBtn = document.getElementById('helpBtn');
+    bugReportBtn = document.getElementById('bugReportBtn');
+    helpModal = document.getElementById('helpModal');
+    bugReportModal = document.getElementById('bugReportModal');
 
     // Add event listeners
     if (unfoldAllBtn) {
@@ -64,6 +82,39 @@ function initializeControls() {
 
     if (savePngBtn) {
         savePngBtn.addEventListener('click', handleSavePngClick);
+    }
+    
+    if (downloadPngOption) {
+        downloadPngOption.addEventListener('click', handleSavePngFromModal);
+    }
+    if (downloadSvgOption) {
+        downloadSvgOption.addEventListener('click', handleSaveSvgFromModal);
+    }
+    if (downloadCancel) {
+        downloadCancel.addEventListener('click', closeDownloadModal);
+    }
+    if (downloadBackdrop) {
+        downloadBackdrop.addEventListener('click', closeDownloadModal);
+    }
+
+    // Help modal event listeners
+    const helpModalClose = document.getElementById('helpModalClose');
+    const helpModalBackdrop = helpModal ? helpModal.querySelector('.modal-backdrop') : null;
+    if (helpModalClose) {
+        helpModalClose.addEventListener('click', closeHelpModal);
+    }
+    if (helpModalBackdrop) {
+        helpModalBackdrop.addEventListener('click', closeHelpModal);
+    }
+
+    // Bug report modal event listeners
+    const bugReportModalClose = document.getElementById('bugReportModalClose');
+    const bugReportModalBackdrop = bugReportModal ? bugReportModal.querySelector('.modal-backdrop') : null;
+    if (bugReportModalClose) {
+        bugReportModalClose.addEventListener('click', closeBugReportModal);
+    }
+    if (bugReportModalBackdrop) {
+        bugReportModalBackdrop.addEventListener('click', closeBugReportModal);
     }
     
     if (showPrintsCheckbox) {
@@ -118,6 +169,14 @@ function initializeControls() {
         dropdownToggle.addEventListener('click', handleDropdownToggle);
     }
 
+    if (helpBtn) {
+        helpBtn.addEventListener('click', handleHelpClick);
+    }
+
+    if (bugReportBtn) {
+        bugReportBtn.addEventListener('click', handleBugReportClick);
+    }
+
     // Close dropdown when clicking outside
     document.addEventListener('click', handleOutsideClick);
 
@@ -145,36 +204,28 @@ function handleOutsideClick(event) {
 }
 
 function handleExpandAllClick() {
-    console.log('Expand All button clicked');
 
     if (vscode) {
-        console.log('VS Code API available, sending expand all command');
         vscode.postMessage({
             command: 'expandAllSubgraphs'
         });
     } else {
-        console.log('VS Code API not available');
     }
 }
 
 function handleCollapseAllClick() {
-    console.log('Collapse All button clicked');
 
     if (vscode) {
-        console.log('VS Code API available, sending collapse all command');
         vscode.postMessage({
             command: 'collapseAllSubgraphs'
         });
     } else {
-        console.log('VS Code API not available');
     }
 }
 
 function handleRegenerateClick() {
-    console.log('Regenerate button clicked');
 
     if (vscode) {
-        console.log('VS Code API available, sending regenerate command');
 
         // Disable button during regeneration
         regenerateBtn.disabled = true;
@@ -185,27 +236,96 @@ function handleRegenerateClick() {
             command: 'updateFlowchart'
         });
     } else {
-        console.log('VS Code API not available');
     }
 }
 
 async function handleSavePngClick() {
-    console.log('Save PNG button clicked');
+    openDownloadModal();
+}
+
+function openDownloadModal() {
+    if (downloadModal) {
+        downloadModal.classList.remove('hidden');
+    }
+}
+
+function closeDownloadModal() {
+    if (downloadModal) {
+        downloadModal.classList.add('hidden');
+    }
+}
+
+function closeHelpModal() {
+    if (helpModal) {
+        helpModal.classList.add('hidden');
+    }
+}
+
+function closeBugReportModal() {
+    if (bugReportModal) {
+        bugReportModal.classList.add('hidden');
+    }
+}
+
+// Update help data in modals
+function updateHelpData(data) {   
+    // Update bug report links
+    const githubLink = document.getElementById('githubIssuesLink');
+    const emailLink = document.getElementById('emailContactLink');
+    
+    if (githubLink) {
+        const issuesUrl = data.repository.replace('.git', '') + '/issues';
+        githubLink.href = issuesUrl;
+    }
+    
+    if (emailLink) {
+        emailLink.href = 'mailto:' + data.email;
+    }
+}
+
+async function handleSavePngFromModal() {
     const currentHtml = savePngBtn.innerHTML;
-    // Disable button during save
     savePngBtn.disabled = true;
-    
-    // Update text while preserving icon structure
     savePngBtn.innerHTML = currentHtml.replace('Download', '⏳ Converting...');
-    
     try {
         await convertSvgToPng();
+    } finally {
         savePngBtn.innerHTML = currentHtml;
         savePngBtn.disabled = false;
-    } catch (error) {
-        console.error('PNG conversion failed:', error);
-        savePngBtn.disabled = false;
+        closeDownloadModal();
+    }
+}
+
+async function handleSaveSvgFromModal() {
+    const currentHtml = savePngBtn.innerHTML;
+    savePngBtn.disabled = true;
+    savePngBtn.innerHTML = currentHtml.replace('Download', '⏳ Exporting...');
+    try {
+        await exportCurrentSvg();
+    } finally {
         savePngBtn.innerHTML = currentHtml;
+        savePngBtn.disabled = false;
+        closeDownloadModal();
+    }
+}
+
+function handleHelpClick() {
+    if (helpModal) {
+        helpModal.classList.remove('hidden');
+        // Request help data from extension
+        if (vscode) {
+            vscode.postMessage({ command: 'getHelpData' });
+        }
+    }
+}
+
+function handleBugReportClick() {
+    if (bugReportModal) {
+        bugReportModal.classList.remove('hidden');
+        // Request help data from extension for repository info
+        if (vscode) {
+            vscode.postMessage({ command: 'getHelpData' });
+        }
     }
 }
 
@@ -213,14 +333,12 @@ function handleConfigChange(event) {
     // Checkboxes IDS need to match the configuration keys
     const value = event.target.checked;
     const configName = event.target.id;
-    console.log('🔧 Configuration changed:', value, 'Key:', configName);
     if (vscode) {
         const message = {
             command: 'updateConfig',
             key: configName,
             value: value
         };
-        console.log('🔧 Sending message to extension:', message);
         vscode.postMessage(message);
     } else {
         console.error('🔧 VS Code API not available');

@@ -102,17 +102,28 @@ function handleExtensionMessage(event) {
             
         case 'pngResult':
             if (message.success) {
-                console.log('PNG saved successfully:', message.filename);
                 updateControlStates({ command: 'pngSaved' });
             } else {
                 console.error('PNG failed:', message.error);
                 updateControlStates({ command: 'pngSaveError' });
             }
             break;
+        
+        case 'svgResult':
+            if (message.success) {
+            } else {
+                console.error('SVG failed:', message.error);
+            }
+            break;
+        
+        case 'helpData':
+            if (typeof updateHelpData === 'function') {
+                updateHelpData(message);
+            }
+            break;
             
         case 'saveDiagramResult':
             if (message.success) {
-                console.log('Diagram saved successfully:', message.savedFlowchart);
                 showNotification('Diagram saved successfully!', 'success');
             } else {
                 console.error('Diagram save failed:', message.error);
@@ -122,7 +133,6 @@ function handleExtensionMessage(event) {
             
         case 'savedDiagramsList':
             if (message.success) {
-                console.log('Retrieved saved diagrams:', message.flowcharts);
                 displaySavedDiagrams(message.flowcharts);
             } else {
                 console.error('Failed to get saved diagrams:', message.error);
@@ -132,7 +142,6 @@ function handleExtensionMessage(event) {
             
         case 'loadSavedDiagramResult':
             if (message.success) {
-                console.log('Loaded saved diagram successfully');
                 showNotification('Diagram loaded successfully!', 'success');
             } else {
                 console.error('Failed to load saved diagram:', message.error);
@@ -142,7 +151,6 @@ function handleExtensionMessage(event) {
             
         case 'deleteSavedDiagramResult':
             if (message.success) {
-                console.log('Diagram deleted successfully');
                 showNotification('Diagram deleted successfully!', 'success');
                 // Refresh the saved diagrams list
                 if (window.vscode) {

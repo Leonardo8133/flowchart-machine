@@ -830,6 +830,8 @@ class ClassHandler(NodeHandler):
         
         # Create method node with arguments
         method_id = self.processor._generate_id(f"method_{method_name}")
+        # Ensure node_line_map captures the method definition line
+        self.processor.last_added_node = method_node
         args_text = self._get_method_arguments(method_node)
         if method_name == '__init__':
             text = f"Constructor: __init__({args_text})"

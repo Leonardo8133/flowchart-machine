@@ -8,8 +8,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Flowchart Machine extension is now active!');
-  console.log('Extension context:', context.extensionPath);
 
   try {
     // Register the generate flowchart command
@@ -36,10 +34,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Test if the commands are available
     vscode.commands.getCommands().then(commands => {
       const flowchartCommands = commands.filter(cmd => cmd.includes('flowchart'));
-      console.log('Available flowchart commands:', flowchartCommands);
       
       const configCommands = commands.filter(cmd => cmd.includes('flowchartMachine'));
-      console.log('Available configuration commands:', configCommands);
     });
 
   } catch (error) {
@@ -50,5 +46,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  console.log('Flowchart Machine extension is now deactivated!');
 }

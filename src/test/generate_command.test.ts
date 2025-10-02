@@ -132,7 +132,7 @@ tam()
     // Note: Import statements might be processed differently in test environment
     const hasImport = flowchart!.includes('import') || flowchart!.includes('sys');
     if (!hasImport) {
-      console.log('Import statement not found in flowchart. This might be expected in test environment.');
+      ;
     }
     // For now, just log this instead of failing the test
     // assert.ok(hasImport, 'Flowchart should include import statement for entire file analysis');
@@ -162,17 +162,13 @@ tam()
     // Wait and read outputs
     const { meta, flowchart } = await waitForOutputs();
 
-    // console.log('Generated metadata for entire file:', meta);
-    // console.log('Environment variables being passed to Python:', {
-    //   SHOW_IFS: process.env.SHOW_IFS,
-    //   SHOW_FUNCTIONS: process.env.SHOW_FUNCTIONS,
-    //   SHOW_PRINTS: process.env.SHOW_PRINTS
-    // });
+    // ;
+    // ;
     assert.ok(!meta.entry_selection || meta.entry_selection.type === 'file', 'Should analyze entire file');
     // Cerate a 10s sleep
     await new Promise(resolve => setTimeout(resolve, 10000));
     assert.ok(flowchart && flowchart.length > 0, 'Flowchart should exist');
-    console.log('Generated flowchart content:', flowchart);
+    ;
     assert.ok(flowchart!.includes('print(`Test`)'), 'Flowchart should contain print("Test") node');
     assert.ok(flowchart!.includes('start1[Start]'), 'Flowchart should contain Start node');
     assert.ok(flowchart!.includes('print(`tam`)'), 'Flowchart should contain print("tam") from tam()');
@@ -183,11 +179,11 @@ tam()
     assert.ok(flowchart!.includes('if x == 1'), 'Flowchart should contain if x == 1 from tam()');
     // Check if flowchart includes import statement (it should for entire file analysis)
     // Note: Import statements might be processed differently in test environment
-    console.log('Checking for import statement in flowchart...');
+    ;
     const hasImport = flowchart!.includes('import') || flowchart!.includes('sys');
     if (!hasImport) {
-      console.log('Import statement not found in flowchart. This might be expected in test environment.');
-      console.log('Flowchart content:', flowchart);
+      ;
+      ;
     }
     // For now, just log this instead of failing the test
     // assert.ok(hasImport, 'Flowchart should include import statement for entire file analysis');

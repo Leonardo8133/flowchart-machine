@@ -63,7 +63,6 @@ function initializeSavedDiagrams() {
     const saveDiagramBtn = document.getElementById('saveDiagramBtn');
     const showSavedBtn = document.getElementById('showSavedBtn');
 
-    console.log("initializeSavedDiagrams");
     
     if (saveDiagramBtn) {
         saveDiagramBtn.addEventListener('click', handleSaveDiagram);
@@ -78,7 +77,7 @@ function initializeSavedDiagrams() {
 function handleSaveDiagram() {
     // Try to get mermaid code from global variable first, then from element
 
-    console.log("handleSaveDiagram")
+    
     let mermaidCode = currentDiagramCode;
     
     if (!mermaidCode || !mermaidCode.trim()) {
@@ -88,25 +87,18 @@ function handleSaveDiagram() {
         }
     }
     
-    console.log('Current diagram code length:', currentDiagramCode.length);
-    console.log('Using mermaid code length:', mermaidCode.length);
-    console.log('Mermaid code content preview:', mermaidCode.substring(0, 100));
-    
     if (!mermaidCode || !mermaidCode.trim()) {
         showNotification('Please generate a flowchart first', 'warning');
         return;
     }
     
-    console.log('Saving diagram');
     // Send message to extension to save the diagram
     if (window.vscode) {
-        console.log('📤 Sending message to extension to save the diagram');        
         try {
             window.vscode.postMessage({
                 command: 'saveDiagram',
                 mermaidCode: mermaidCode
             });
-            console.log('📤 Message sent successfully');
         } catch (error) {
             console.error('📤 Error sending message:', error);
         }
@@ -215,7 +207,6 @@ function displaySavedDiagrams(flowcharts) {
 // Show notification
 function showNotification(message, type = 'info') {
     // Simple notification - you can enhance this with a proper notification system
-    console.log(`[${type.toUpperCase()}] ${message}`);
     
     // Create a temporary notification element
     const notification = document.createElement('div');

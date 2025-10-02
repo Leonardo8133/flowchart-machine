@@ -440,6 +440,11 @@ class FlowchartPostProcessor:
 		name_to_line_map = {}
 		entry_line_offset = getattr(self.processor, 'entry_line_offset', 0)
 		try:
+			# Add classes
+			for cname, cnode in getattr(self.processor, 'class_defs', {}).items():
+				lineno = getattr(cnode, 'lineno', None)
+				if lineno is not None:
+					name_to_line_map[cname] = int(lineno) + entry_line_offset
 			# Add functions
 			for fname, fnode in getattr(self.processor, 'function_defs', {}).items():
 				lineno = getattr(fnode, 'lineno', None)

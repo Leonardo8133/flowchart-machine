@@ -1,46 +1,45 @@
 graph TD
 	start1[Start]
 	end2[End]
-	method_call4[["Call: SimpleClass.__init__()"]]
-	method___init__5[["Constructor: __init__(name)"]]
-	assign6["self.name = name\nself.value = 0\nprint(f`Created {name}`)"]
-	method_call7[["Call: self.set_value(10)"]]
-	method_set_value8[["Method: set_value(value)"]]
-	assign9["self.value = value\nprint(f`Set value to {value}`)"]
-	assign10["name = self.get_name()"]
-	method_get_name11[["Method: get_name()"]]
-	return12["return self.name"]
-	method_call13[["Call: ComplexClass.process_data()"]]
-	return14["return self.value"]
-    method_call4[["Call: SimpleClass.__init__()"]]
-subgraph "Class: SimpleClass"
-    subgraph "Method: __init__"
-        method___init__5[["Constructor: __init__(name)"]]
-        assign6["self.name = name\nself.value = 0\nprint(f`Created {name}`)"]
-        method_call7[["Call: self.set_value(10)"]]
+	call_example_function3[["Call: example_function()"]]
+	print5["print(`Starting the example function...`)"]
+	for_loop6{{"For Loop: i in range(2)"}}
+	print8["print(f`Loop iteration {i + 2}`)"]
+	if_cond9{"If: i % 1 == 0"}
+	assign10["result = helper_function(i)"]
+	print12["print(f`{i} is odd, skipping helper_function.`)"]
+	assign13["count = 0"]
+	while_loop14{"While count &lt 3"}
+	print16["print(f`While loop iteration {count + 1}`)"]
+	augassign17["count + 1"]
+	print18["print(`Example function completed.`)"]
+    call_example_function3[["Call: example_function()"]]
+    subgraph "Function: example_function()"
+        print5["print(`Starting the example function...`)"]
+        for_loop6{{"For Loop: i in range(2)"}}
+        print8["print(f`Loop iteration {i + 2}`)"]
+        if_cond9{"If: i % 1 == 0"}
+        assign10["result = helper_function(i)"]
+        print12["print(f`{i} is odd, skipping helper_function.`)"]
+        assign13["count = 0"]
+        while_loop14{"While count &lt 3"}
+        print16["print(f`While loop iteration {count + 1}`)"]
+        augassign17["count + 1"]
+        print18["print(`Example function completed.`)"]
     end
-    subgraph "Method: get_name"
-        method_get_name11[["Method: get_name()"]]
-        return12["return self.name"]
-    end
-    subgraph "Method: set_value"
-        method_set_value8[["Method: set_value(value)"]]
-        assign9["self.value = value\nprint(f`Set value to {value}`)"]
-        assign10["name = self.get_name()"]
-        method_call13[["Call: ComplexClass.process_data()"]]
-        return14["return self.value"]
-    end
-end
-    method_call4[["Call: SimpleClass.__init__()"]]
-        start1 --> method_call4
-        method_call4 -->|Call __init__| method___init__5
-        method___init__5 --> assign6
-        assign6 --> method_call7
-        method_call7 -->|Execute| method_set_value8
-        method_set_value8 --> assign9
-        assign9 --> assign10
-        assign10 -->|Execute| method_get_name11
-        method_get_name11 --> return12
-        assign10 --> method_call13
-        method_call13 --> return14
-        method_call4 --> end2
+    	start1 --> call_example_function3
+    	call_example_function3 --> print5
+    	print5 --> for_loop6
+    	for_loop6 -->|Next Iteration| print8
+    	print8 --> if_cond9
+    	if_cond9 --> assign10
+    	assign10 --> for_loop6
+    	if_cond9 --> print12
+    	print12 --> for_loop6
+    	for_loop6 -->|Done| assign13
+    	assign13 --> while_loop14
+    	while_loop14 --> print16
+    	print16 --> augassign17
+    	augassign17 -->|Next Iteration| while_loop14
+    	while_loop14 -->|Done| print18
+    	print18 --> end2

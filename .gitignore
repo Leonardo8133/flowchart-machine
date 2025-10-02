@@ -5,6 +5,7 @@ node_modules
 *.vsix
 */__pycache__/
 */__pycache__/*
+*flowchart/temp/*
 flowchart/temp/tooltip_data.json
 flowchart/temp/flowchart.mmd
 flowchart/__pycache__/flowchart_postprocessor.cpython-311.pyc

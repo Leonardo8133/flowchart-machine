@@ -24,37 +24,28 @@ function isSubgraphCollapsed(scopeName) {
     // Clean the scope name by removing the parentheses and arguments
     const originalScopeName = scopeName;
     scopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-    console.log('isSubgraphCollapsed called with:', originalScopeName, '-> processed:', scopeName);
-    console.log('whitelistSet', whitelistSet);
-    console.log('forceCollapseSet', forceCollapseSet);
-    console.log('collapsedSubgraphsMetadata', collapsedSubgraphsMetadata);
 
     // Check if the processed scope name matches any of the sets
     const isWhitelisted = whitelistSet.has(scopeName);
     const isForceCollapsed = forceCollapseSet.has(scopeName);
     const isAutoCollapsed = collapsedSubgraphsMetadata[originalScopeName] || collapsedSubgraphsMetadata[scopeName];
 
-    console.log('Results:', { isWhitelisted, isForceCollapsed, isAutoCollapsed });
 
     // Not collapsed if whitelisted
     if (isWhitelisted) {
-        console.log('Returning false: whitelisted');
         return false;
     }
 
     // Check if automatically collapsed by Python
     if (isAutoCollapsed) {
-        console.log('Returning true: auto collapsed');
         return true;
     }
 
     // Collapsed if explicitly in force list
     if (isForceCollapsed) {
-        console.log('Returning true: force collapsed');
         return true;
     }
 
-    console.log('Returning false: not collapsed');
     return false;
 }
 
@@ -77,7 +68,6 @@ function isSubgraphCollapsedWithContext(displayLabel, context) {
 
 // Function to expand a collapsed subgraph by adding it to whitelist
 function expandSubgraph(scopeName) {
-    console.log('Expanding subgraph', scopeName);
     // Update state to expanded
     subgraphStates[scopeName] = 'expanded';
 
@@ -115,7 +105,6 @@ function createSubgraphToggleButton(scopeName, isCollapsed) {
 
 // Function to collapse an expanded subgraph by removing it from whitelist
 function collapseSubgraph(scopeName) {
-    console.log('Collapsing subgraph', scopeName);
     // Update state to collapsed
     subgraphStates[scopeName] = 'collapsed';
 
@@ -215,7 +204,6 @@ function resolveCanonicalScope(displayLabel, context) {
 
 function expandSubgraphWithContext(displayLabel, context) {
     const canonical = resolveCanonicalScope(displayLabel, context);
-    console.log('expandSubgraphWithContext', { displayLabel, context, canonical });
     // Update state
     subgraphStates[displayLabel] = 'expanded';
     // Keep local sets in sync (use canonical for stable matching)
@@ -232,7 +220,6 @@ function expandSubgraphWithContext(displayLabel, context) {
 
 function collapseSubgraphWithContext(displayLabel, context) {
     const canonical = resolveCanonicalScope(displayLabel, context);
-    console.log('collapseSubgraphWithContext', { displayLabel, context, canonical });
     // Update state
     subgraphStates[displayLabel] = 'collapsed';
     // Keep local sets in sync (use canonical for stable matching)

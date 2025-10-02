@@ -37,8 +37,6 @@ export class WhitelistService {
         }
         
         this.whitelist.add(scopeName);
-        console.log(`WhitelistService: Added '${scopeName}' to whitelist`);
-        console.log('WhitelistService: Current whitelist:', Array.from(this.whitelist));
     }
 
     /**
@@ -46,7 +44,6 @@ export class WhitelistService {
      */
     public removeFromWhitelist(scopeName: string): void {
         this.whitelist.delete(scopeName);
-        console.log(`WhitelistService: Removed '${scopeName}' from whitelist`);
     }
 
     /**
@@ -80,8 +77,6 @@ export class WhitelistService {
         }
         
         this.forceCollapseList.add(scopeName);
-        console.log(`WhitelistService: Added '${scopeName}' to force collapse list`);
-        console.log('WhitelistService: Current force collapse list:', Array.from(this.forceCollapseList));
     }
 
     /**
@@ -89,7 +84,6 @@ export class WhitelistService {
      */
     public removeFromForceCollapseList(scopeName: string): void {
         this.forceCollapseList.delete(scopeName);
-        console.log(`WhitelistService: Removed '${scopeName}' from force collapse list`);
     }
 
     /**
@@ -111,13 +105,11 @@ export class WhitelistService {
      */
     public clearForceCollapseList(): void {
         this.forceCollapseList.clear();
-        console.log('WhitelistService: Force collapse list cleared');
     }
 
     public collapseAllSubgraphs(): void {
         // Clear both lists to ensure all subgraphs are collapsed
         this.forceCollapseList.clear();
         this.whitelist.clear();
-        console.log('WhitelistService: All subgraphs will be collapsed');
     }
 }

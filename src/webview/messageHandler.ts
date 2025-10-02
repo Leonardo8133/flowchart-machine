@@ -38,7 +38,6 @@ export class WebviewMessageHandler {
       this.whitelistService = whitelistService;
     }
 
-    console.log('Setting up message handling for panel');
     
     panel.webview.onDidReceiveMessage(
       async (message) => {        
@@ -54,7 +53,7 @@ export class WebviewMessageHandler {
       }
     );
     
-    console.log('Message handler setup completed');
+
   }
 
   /**
@@ -68,6 +67,10 @@ export class WebviewMessageHandler {
         
       case 'createPng':
         await this.handleCreatePng(message, panel);
+        break;
+      
+      case 'createSvg':
+        await this.handleCreateSvg(message, panel);
         break;
         
       case 'updateConfig':
@@ -119,8 +122,7 @@ export class WebviewMessageHandler {
         break;
       
       default:
-        console.log('❓ Unknown message command:', message.command);
-        console.log('❓ Available commands: updateFlowchart, createPng, updateConfig, saveDiagram, getSavedDiagrams, loadSavedDiagram, expandSubgraph, collapseSubgraph, unfoldAllSubgraphs, collapseAllSubgraphs, updateMetadata');
+
         break;
     }
   }
@@ -296,8 +298,13 @@ export class WebviewMessageHandler {
       const fnName = String(fnNameRaw).trim();
       const nameToLineMap = this.currentMetadata.name_to_line_map || {};
 
+      console.log('🔄 Go to Definition - nameToLineMap:', nameToLineMap);
+      console.log('🔄 Go to Definition - fnName:', fnName);
+
       // Try direct lookup first
       let line: number | undefined = nameToLineMap[fnName];
+
+      console.log('🔄 Go to Definition - line:', line);
 
       // Try with class.method format if not found
       if (line === undefined) {
@@ -417,7 +424,6 @@ export class WebviewMessageHandler {
    */
   private async handleRegeneration(panel: vscode.WebviewPanel, whitelist?: string[]): Promise<void> {
     try {
-      console.log('Regenerating complete flowchart...');
       
       if (!this.originalFilePath) {
         panel.webview.postMessage({ 
@@ -477,7 +483,6 @@ export class WebviewMessageHandler {
       (env as any).BREAKPOINT_LINES = breakpointLines.join(',');
       (env as any).HAS_BREAKPOINTS = breakpointLines.length > 0 ? '1' : '0';
       // Preserve entry selection from current metadata
-      console.log('🔄 Current metadata:', this.currentMetadata);
       if (this.currentMetadata?.entry_selection) {
         const entrySelection = this.currentMetadata.entry_selection;
         (env as any).ENTRY_TYPE = entrySelection.type;
@@ -493,22 +498,17 @@ export class WebviewMessageHandler {
       // if (this.currentMetadata?.entry_selection) {
       //   const entrySelection = this.currentMetadata.entry_selection;
       //   currentWhitelist.push(entrySelection.name);
-      //   console.log('🔄 Adding entry type to whitelist:', entrySelection.type);
       // }
 
-      console.log('🔄 Regeneration - final whitelist:', currentWhitelist);
-      console.log('🔄 Regeneration - final force collapse list:', forceCollapseList);
 
       // Add whitelist to environment variables if provided
       if (currentWhitelist && currentWhitelist.length > 0) {
         (env as any).SUBGRAPH_WHITELIST = currentWhitelist.join(',');
-        console.log('🔄 Setting SUBGRAPH_WHITELIST env var:', currentWhitelist.join(','));
       }
 
       // Add force collapse list to environment variables if provided
       if (forceCollapseList && forceCollapseList.length > 0) {
         (env as any).FORCE_COLLAPSE_LIST = forceCollapseList.join(',');
-        console.log('🔄 Setting FORCE_COLLAPSE_LIST env var:', forceCollapseList.join(','));
       }
 
       const result = await PythonService.executeScript(scriptPath, [this.originalFilePath], env);
@@ -527,19 +527,16 @@ export class WebviewMessageHandler {
         outputChannel.show();
         
         if (result.stdout) {
-          console.log('Adding stdout to output panel:', result.stdout);
           outputChannel.appendLine('=== Python Script Output ===');
           outputChannel.appendLine(result.stdout);
         }
         
         if (result.stderr) {
-          console.log('Adding stderr to output panel:', result.stderr);
           outputChannel.appendLine('=== Python Script Errors ===');
           outputChannel.appendLine(result.stderr);
         }
         
         outputChannel.appendLine('=== End Python Output ===\n');
-        console.log('Output panel created and populated');
         
         // Show notification to help user find the output
         vscode.window.showInformationMessage(
@@ -572,7 +569,6 @@ export class WebviewMessageHandler {
         // Notify completion
         panel.webview.postMessage({ command: 'regenerationComplete' });
         
-        console.log('Flowchart regenerated successfully');
       } catch (readError) {
         console.error('Error reading regenerated files:', readError);
         panel.webview.postMessage({ 
@@ -651,6 +647,82 @@ export class WebviewMessageHandler {
   }
 
   /**
+   * Handle SVG creation request from webview
+   */
+  private async handleCreateSvg(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+      if (message.error) {
+        panel.webview.postMessage({ command: 'svgResult', success: false, error: message.error });
+        return;
+      }
+
+      const { svgData } = message;
+      if (!svgData) {
+        throw new Error('No SVG data provided');
+      }
+
+      if (!this.originalFilePath) {
+        throw new Error('Original file path not found');
+      }
+
+      const targetDir = await this.getDefaultDownloadDirectory(path.dirname(this.originalFilePath));
+      const pythonBase = path.basename(this.originalFilePath, path.extname(this.originalFilePath));
+      const filename = await this.getNextVersionedSvgFilename(targetDir, pythonBase);
+      const fullPath = path.join(targetDir, filename);
+
+      await this.saveSvgToFile(svgData, fullPath);
+
+      panel.webview.postMessage({ command: 'svgResult', success: true, filename, directory: targetDir });
+
+      vscode.window.showInformationMessage(
+        `Flowchart saved as SVG: ${filename} in ${targetDir}`,
+        'Open File',
+        'Open Folder'
+      ).then(selection => {
+        if (selection === 'Open File') {
+          vscode.commands.executeCommand('vscode.open', vscode.Uri.file(path.join(targetDir, filename)));
+        } else if (selection === 'Open Folder') {
+          vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(targetDir, filename)));
+        }
+      });
+    } catch (error) {
+      console.error('SVG save failed:', error);
+      panel.webview.postMessage({ command: 'svgResult', success: false, error: `SVG save failed: ${error}` });
+    }
+  }
+
+  private async saveSvgToFile(svgData: string, fullPath: string): Promise<void> {
+    try {
+      const base64Data = svgData.replace(/^data:image\/svg\+xml;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.promises.writeFile(fullPath, buffer, { encoding: 'binary' });
+      ;
+    } catch (error) {
+      console.error('Error saving SVG file:', error);
+      throw new Error(`Failed to save SVG file: ${error}`);
+    }
+  }
+
+  private async getNextVersionedSvgFilename(targetDir: string, baseName: string): Promise<string> {
+    const files = await fs.promises.readdir(targetDir).catch(() => [] as string[]);
+    const escaped = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^${escaped}_(\\d+)\\.svg$`, 'i');
+    let maxVersion = 0;
+    for (const file of files) {
+      const match = file.match(regex);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!Number.isNaN(n) && n > maxVersion) {
+          maxVersion = n;
+        }
+      }
+    }
+    const next = maxVersion + 1;
+    return `${baseName}_${next}.svg`;
+  }
+
+  /**
    * Save PNG data to file
    */
   private async savePngToFile(pngData: string, fullPath: string): Promise<void> {
@@ -664,8 +736,7 @@ export class WebviewMessageHandler {
 
       // Write the PNG file
       await fs.promises.writeFile(fullPath, buffer);
-      
-      console.log(`PNG saved to: ${fullPath}`);
+
     } catch (error) {
       console.error('Error saving PNG file:', error);
       throw new Error(`Failed to save PNG file: ${error}`);
@@ -754,7 +825,6 @@ export class WebviewMessageHandler {
       }
 
       const result = await this.storageService.saveFlowchart(mermaidCode, originalFilePath);
-      console.log('Result:', result);
       if (result.success) {
         panel.webview.postMessage({
           command: 'saveDiagramResult',
@@ -884,7 +954,6 @@ export class WebviewMessageHandler {
    */
   private async handleDeleteSavedDiagram(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
-      console.log('🗑️ Deleting saved diagram:', message);
       
       if (!this.storageService) {
         this.storageService = new StorageService(this.extensionContext!);
@@ -943,7 +1012,6 @@ export class WebviewMessageHandler {
    */
   private async handleConfigUpdate(message: any, panel: vscode.WebviewPanel): Promise<void> {
     try {
-      console.log('🔧 Configuration update request received:', message);
       const { key, value } = message;
       
       // Validate message
@@ -999,9 +1067,7 @@ export class WebviewMessageHandler {
       }
       
       // Verify the update by reading it back
-      const updatedValue = vscode.workspace.getConfiguration().get(configKey);
-      console.log('🔧 Configuration updated, new value (full key):', updatedValue);
-      
+      const updatedValue = vscode.workspace.getConfiguration().get(configKey);      
       // Check if either update worked
       if (updatedValue !== value) {
         throw new Error(`Configuration update failed: expected ${value}, got ${updatedValue}.`);

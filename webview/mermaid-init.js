@@ -207,10 +207,6 @@ function addSubgraphButtons() {
             const currentX = parseFloat(rect.getAttribute('x')) || 0;
             const currentY = parseFloat(rect.getAttribute('y')) || 0;
 
-            console.log('currentWidth', currentWidth);
-            console.log('currentHeight', currentHeight);
-
-
             if (currentWidth < 300) {
                 // Increase size by 20px and adjust position to center
                 rect.setAttribute('width', currentWidth + 40);
@@ -266,7 +262,17 @@ function addSubgraphButtons() {
         goToDefBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             try {
-                const fnName = (scopeName || '').replace(/^class_/, '').replace(/_call_.*$/, '');
+                let fnName = (scopeName || '').replace(/^class_/, '').replace(/_call_.*$/, '');
+                // Normalize labels like "Class: X", "Method: Y", or "Function: Z" to map keys
+                if (/^Class:\s*/.test(fnName)) {
+                    fnName = fnName.replace(/^Class:\s*/, '');
+                }
+                if (/^Method:\s*/.test(fnName)) {
+                    fnName = fnName.replace(/^Method:\s*/, '');
+                }
+                if (/^Function:\s*/.test(fnName)) {
+                    fnName = fnName.replace(/^Function:\s*/, '');
+                }
                 if (window.vscode && window.vscode.postMessage) {
                     window.vscode.postMessage({
                         command: 'goToDefinition',

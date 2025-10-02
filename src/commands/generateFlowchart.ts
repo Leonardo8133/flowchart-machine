@@ -19,7 +19,6 @@ export class GenerateFlowchartCommand {
    * Execute the generate flowchart command
    */
   async execute(fromContextMenu: boolean = false): Promise<void> {
-    console.log('Command executed: extension.generateFlowchart');
 
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -39,7 +38,6 @@ export class GenerateFlowchartCommand {
     }
 
     const filePath = editor.document.fileName;
-    console.log('Processing file:', filePath);
 
     let entryType: 'file' | 'function' | 'class' | undefined;
     let entryClass: string | undefined;
@@ -53,7 +51,6 @@ export class GenerateFlowchartCommand {
       entryName = detected.name;
 
       // OUTPUT THE DETECTED ENTRY
-      console.log('Detected entry:', detected);
       const outputChannel = vscode.window.createOutputChannel('Flowchart Debug');
       outputChannel.show();
       outputChannel.appendLine(`Detected entry: ${JSON.stringify(detected, null, 2)}`);
@@ -121,18 +118,13 @@ export class GenerateFlowchartCommand {
         } as Record<string, string>;
 
         // Pass entry selection to Python
-        env.ENTRY_TYPE = entryType || '';
-        if (entryName) {
-          env.ENTRY_NAME = entryName;
-          // Calculate line offset for function/class entries
-          if (entryType === 'function' || entryType === 'class') {
-            const lineOffset = this.getLineOffsetForEntry(editor, entryType, entryName);
-            env.ENTRY_LINE_OFFSET = lineOffset.toString();
-          }
-        }
-        if (entryClass) {
-          env.ENTRY_CLASS = entryClass;
-        }
+        env.ENTRY_TYPE = entryType || 'file';
+        env.ENTRY_CLASS = entryClass || '';
+        env.ENTRY_NAME = entryName || '';
+
+        const lineOffset = this.getLineOffsetForEntry(editor, entryType, entryClass, entryName);
+        env.ENTRY_LINE_OFFSET = lineOffset.toString();
+
 
         // Get breakpoints for the current file
         const breakpoints = vscode.debug.breakpoints.filter(bp =>
@@ -305,19 +297,23 @@ export class GenerateFlowchartCommand {
   /**
    * Get the line offset for a function or class entry
    */
-  private getLineOffsetForEntry(editor: vscode.TextEditor, entryType: 'function' | 'class', entryName: string): number {
+  private getLineOffsetForEntry(editor: vscode.TextEditor, entryType: 'function' | 'class' | 'file', entryClass: string | undefined, entryName: string | undefined): number {
     const document = editor.document;
     
     for (let i = 0; i < document.lineCount; i++) {
       const line = document.lineAt(i);
       const lineText = line.text;
       
-      if (entryType === 'function' && lineText.includes(`def ${entryName}(`)) {
-        return i; // Return 0-based line number
+      if (entryType === 'function') {
+          if (lineText.includes(`def ${entryName}(`)) {
+            return i; // Return 0-based line number
+          }
       }
       
-      if (entryType === 'class' && lineText.includes(`class ${entryName}(`)) {
-        return i; // Return 0-based line number
+      if (entryType === 'class') {
+        if (lineText.includes(`class ${entryClass}(`)) {
+          return i; // Return 0-based line number
+          }
       }
     }
     

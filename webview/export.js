@@ -21,7 +21,9 @@ async function convertSvgToPng() {
         // Get SVG content and convert to PNG
         const svgString = new XMLSerializer().serializeToString(svgElement);
         const dimensions = calculateDimensions(svgElement);
-        const pngDataUrl = await svgToPng(svgString, dimensions.width, dimensions.height);
+        // Render at higher pixel density for long/tall diagrams
+        const scale = getHighResScale(svgElement);
+        const pngDataUrl = await svgToPng(svgString, dimensions.width * scale, dimensions.height * scale, scale);
         
         // Send single message to extension
         if (typeof window.vscode !== 'undefined') {
@@ -58,8 +60,8 @@ function calculateDimensions(svgElement) {
     
     const minWidth = 800;
     const minHeight = 600;
-    const maxWidth = 4000;
-    const maxHeight = 3000;
+    const maxWidth = 8000;
+    const maxHeight = 8000;
     
     // Start from intrinsic aspect ratio and content size
     const aspectRatio = svgWidth / Math.max(1, svgHeight);
@@ -80,7 +82,7 @@ function calculateDimensions(svgElement) {
 /**
  * Convert SVG to PNG data URL
  */
-function svgToPng(svgString, width, height) {
+function svgToPng(svgString, width, height, scale) {
     return new Promise((resolve, reject) => {
         try {
             const fixedSvg = fixSvgForConversion(svgString, width, height);
@@ -98,6 +100,9 @@ function svgToPng(svgString, width, height) {
                     const vscodeBackground = getComputedStyle(document.body).getPropertyValue('--vscode-editor-background') || '#1e1e1e';
                     ctx.fillStyle = vscodeBackground;
                     ctx.fillRect(0, 0, width, height);
+                    // Improve image smoothing for high-DPI export
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
                     ctx.drawImage(img, 0, 0, width, height);
                     
                     resolve(canvas.toDataURL('image/png'));
@@ -166,5 +171,48 @@ function fixSvgForConversion(svgString, width, height) {
     return svg;
 }
 
+/**
+ * Determine high-resolution scale based on SVG size.
+ * Larger diagrams export at higher DPI to avoid pixelation.
+ */
+function getHighResScale(svgElement) {
+    const vb = svgElement.viewBox?.baseVal;
+    const w = vb?.width || svgElement.getBoundingClientRect().width || 800;
+    const h = vb?.height || svgElement.getBoundingClientRect().height || 600;
+    const longest = Math.max(w, h);
+    if (longest > 6000) return 3; // very large
+    if (longest > 3000) return 2; // large
+    return 1.5; // medium/small - still crisp
+}
+
+/**
+ * Export current SVG as SVG text to the extension for saving.
+ */
+async function exportCurrentSvg() {
+    const mermaidElement = document.querySelector('.mermaid');
+    if (!mermaidElement) {
+        throw new Error('No flowchart found. Please generate a flowchart first.');
+    }
+    const svgElement = mermaidElement.querySelector('svg');
+    if (!svgElement) {
+        throw new Error('No SVG found in the flowchart. Please regenerate the flowchart.');
+    }
+    const svgString = new XMLSerializer().serializeToString(svgElement);
+    const vb = svgElement.viewBox?.baseVal;
+    const width = vb?.width || svgElement.getBoundingClientRect().width || 800;
+    const height = vb?.height || svgElement.getBoundingClientRect().height || 600;
+    const fixedSvg = fixSvgForConversion(svgString, width, height);
+    if (typeof window.vscode !== 'undefined') {
+        window.vscode.postMessage({
+            command: 'createSvg',
+            svgData: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(fixedSvg))),
+            filename: 'flowchart.svg'
+        });
+    } else {
+        throw new Error('VS Code API not available');
+    }
+}
+
 // Export the main function
 window.convertSvgToPng = convertSvgToPng;
+window.exportCurrentSvg = exportCurrentSvg;

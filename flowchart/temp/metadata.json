@@ -3,58 +3,81 @@
     "subgraph_whitelist": [],
     "force_collapse_list": [],
     "all_subgraphs": [
-        "class_SimpleClass_set_value",
-        "class_SimpleClass_get_name",
-        "class_SimpleClass___init__",
-        "class_SimpleClass"
+        "example_function"
     ],
     "node_line_map": {
-        "class3": {
-            "start_line": 1
+        "call_example_function3": {
+            "start_line": 34,
+            "end_line": 10
         },
-        "method_call4": {
-            "start_line": 21
+        "end_call4": {
+            "start_line": 34,
+            "end_line": 10
         },
-        "method___init__5": {
-            "start_line": 21
+        "print5": {
+            "start_line": 16,
+            "end_line": 10
         },
-        "assign6": {
-            "start_line": 5
+        "for_loop6": {
+            "start_line": 18,
+            "end_line": 10
         },
-        "method_call7": {
-            "start_line": 8
+        "loop_exit7": {
+            "start_line": 18,
+            "end_line": 10
         },
-        "method_set_value8": {
-            "start_line": 8
+        "print8": {
+            "start_line": 19,
+            "end_line": 10
         },
-        "assign9": {
-            "start_line": 14
+        "if_cond9": {
+            "start_line": 21,
+            "end_line": 10
         },
         "assign10": {
-            "start_line": 16
+            "start_line": 22,
+            "end_line": 10
         },
-        "method_get_name11": {
-            "start_line": 16
+        "merge11": {
+            "start_line": 22,
+            "end_line": 10
         },
-        "return12": {
-            "start_line": 11
+        "print12": {
+            "start_line": 24,
+            "end_line": 10
         },
-        "method_call13": {
-            "start_line": 17
+        "assign13": {
+            "start_line": 26,
+            "end_line": 10
         },
-        "return14": {
-            "start_line": 18
+        "while_loop14": {
+            "start_line": 27,
+            "end_line": 10
+        },
+        "loop_exit15": {
+            "start_line": 27,
+            "end_line": 10
+        },
+        "print16": {
+            "start_line": 28,
+            "end_line": 10
+        },
+        "augassign17": {
+            "start_line": 29,
+            "end_line": 10
+        },
+        "print18": {
+            "start_line": 31,
+            "end_line": 10
         }
     },
-    "file_path": "c:\\Users\\Arthu\\flowchart-machine\\flowchart\\tests\\test_class_subgraphs_fixed.py",
+    "file_path": "c:\\Users\\Arthu\\flowchart-machine\\flowchart\\examples\\example_1.py",
     "name_to_line_map": {
-        "SimpleClass.__init__": 4,
-        "SimpleClass.get_name": 10,
-        "SimpleClass.set_value": 13
+        "example_function": 11
     },
     "entry_selection": {
-        "type": "class",
-        "name": "__init__",
-        "class": "SimpleClass"
+        "type": "function",
+        "name": "example_function",
+        "class": null
     }
 }

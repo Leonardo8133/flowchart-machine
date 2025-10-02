@@ -17,24 +17,17 @@ export class StorageService {
   private metadataFile: string;
 
   constructor(context: vscode.ExtensionContext) {
-    console.log('StorageService constructor called with context:', !!context);
     this.context = context;
     this.storageDir = path.join(context.globalStorageUri.fsPath, 'saved-flowcharts');
     this.metadataFile = path.join(this.storageDir, 'metadata.json');
-    console.log('Storage directory:', this.storageDir);
-    console.log('Metadata file:', this.metadataFile);
     this.ensureStorageDirectory();
   }
 
   private ensureStorageDirectory(): void {
-    console.log('Ensuring storage directory exists:', this.storageDir);
     try {
       if (!fs.existsSync(this.storageDir)) {
-        console.log('Creating storage directory...');
         fs.mkdirSync(this.storageDir, { recursive: true });
-        console.log('Storage directory created successfully');
       } else {
-        console.log('Storage directory already exists');
       }
     } catch (error) {
       console.error('Error ensuring storage directory:', error);
@@ -47,8 +40,6 @@ export class StorageService {
    */
   async saveFlowchart(mermaidCode: string, originalFilePath?: string): Promise<{ success: boolean; error?: string; savedFlowchart?: SavedFlowchart }> {
     try {
-      console.log('saveFlowchart called with mermaidCode length:', mermaidCode.length);
-      console.log('Original file path:', originalFilePath);
       
       const timestamp = new Date().toISOString();
       const id = this.generateId();
@@ -56,9 +47,6 @@ export class StorageService {
       const filename = `${id}.mmd`;
       const filePath = path.join(this.storageDir, filename);
       
-      console.log('Generated ID:', id);
-      console.log('Generated name:', name);
-      console.log('File path:', filePath);
 
       // Save the mermaid code to file
       try {
@@ -79,7 +67,6 @@ export class StorageService {
 
       // Update metadata file
       await this.updateMetadata(savedFlowchart);
-      console.log('Metadata updated successfully');
 
       return { success: true, savedFlowchart };
     } catch (error) {
@@ -164,7 +151,6 @@ export class StorageService {
   }
 
   private async updateMetadata(savedFlowchart: SavedFlowchart): Promise<void> {
-    console.log('updateMetadata called for flowchart:', savedFlowchart.id);
     let metadata: Record<string, SavedFlowchart> = {};
     
     try {
@@ -172,7 +158,6 @@ export class StorageService {
         const content = fs.readFileSync(this.metadataFile, 'utf8');
         metadata = JSON.parse(content);
       } else {
-        console.log('No existing metadata file found, creating new one');
       }
 
       metadata[savedFlowchart.id] = savedFlowchart;
@@ -188,7 +173,6 @@ export class StorageService {
    */
   async deleteFlowchart(id: string): Promise<{ success: boolean; flowchart?: SavedFlowchart; error?: string }> {
     try {
-      console.log('🗑️ Deleting flowchart with ID:', id);
       
       if (!fs.existsSync(this.metadataFile)) {
         return { success: false, error: 'No saved flowcharts found' };
@@ -206,7 +190,6 @@ export class StorageService {
       const mmdFilePath = path.join(this.storageDir, `${id}.mmd`);
       if (fs.existsSync(mmdFilePath)) {
         fs.unlinkSync(mmdFilePath);
-        console.log('🗑️ Deleted .mmd file:', mmdFilePath);
       }
       
       // Remove from metadata
@@ -214,9 +197,7 @@ export class StorageService {
       
       // Write updated metadata
       fs.writeFileSync(this.metadataFile, JSON.stringify(metadata, null, 2));
-      console.log('🗑️ Updated metadata file');
       
-      console.log('✅ Flowchart deleted successfully:', flowchart.name);
       return { success: true, flowchart };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
