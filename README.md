@@ -2,6 +2,16 @@
 
 A VS Code extension that generates flowcharts from Python code using Mermaid diagrams.
 
+## Quick Usage:
+
+![1759369047256](image/README/1759369047256.png)
+
+or
+
+![1759369162985](image/README/1759369162985.png)
+
+![1759369147724](image/README/1759369147724.png)
+
 ## Features
 
 - Generate flowcharts from Python files
@@ -13,6 +23,7 @@ A VS Code extension that generates flowcharts from Python code using Mermaid dia
 ## Installation
 
 ### From VSIX (Recommended)
+
 1. Download the `.vsix` file from the releases
 2. In VS Code, go to Extensions (Ctrl+Shift+X)
 3. Click the "..." menu and select "Install from VSIX..."
@@ -20,6 +31,7 @@ A VS Code extension that generates flowcharts from Python code using Mermaid dia
 5. Reload VS Code
 
 ### From Source
+
 1. Clone this repository
 2. Run `npm install` to install dependencies
 3. Run `npm run compile` to compile TypeScript
@@ -29,11 +41,12 @@ A VS Code extension that generates flowcharts from Python code using Mermaid dia
 
 1. Open a Python file in VS Code
 2. Use one of these methods to generate a flowchart:
+
    - **Command Palette**: Press `Ctrl+Shift+P` and type "Generate Python Flowchart"
    - **Context Menu**: Right-click in the editor and select "Generate Python Flowchart"
    - **Keyboard Shortcut**: The command will appear in the command palette
-
 3. The extension will:
+
    - Check if Python is available on your system
    - Use the built-in `main.py` script from the extension's flowchart directory
    - Execute the Python script to generate flowchart data
@@ -64,44 +77,17 @@ flowchart-machine/
 ## Troubleshooting
 
 ### Extension Not Working
+
 1. **Check Python Installation**: Ensure Python is installed and accessible via `python --version` or `python3 --version`
 2. **Check main.py**: The extension includes its own `main.py` script - no additional files needed
 3. **Check Console**: Open VS Code's Developer Console (Help > Toggle Developer Tools) for error messages
 4. **Reload Extension**: Try reloading VS Code (Ctrl+Shift+P > "Developer: Reload Window")
 
 ### Common Issues
+
 - **"Python is not available"**: Install Python and ensure it's in your system PATH
 - **"main.py not found"**: The extension's built-in main.py script is missing - reinstall the extension
 - **"Flowchart file not generated"**: Check that `main.py` runs successfully and generates `flowchart.mmd` in the `temp/` folder
-
-### PowerShell Execution Policy
-If you encounter PowerShell execution policy errors when running npm commands:
-1. Open PowerShell as Administrator
-2. Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
-3. Or use the `.cmd` versions of commands: `node_modules\.bin\tsc.cmd`
-
-## Development
-
-### Building
-```bash
-# Install dependencies
-npm install
-
-# Compile TypeScript
-npm run compile
-
-# Watch for changes
-npm run watch
-```
-
-### Testing
-```bash
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-```
 
 ## Contributing
 

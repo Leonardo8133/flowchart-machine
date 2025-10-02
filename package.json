@@ -2,7 +2,7 @@
   "name": "flowchart-machine",
   "displayName": "Flowchart Machine",
   "description": "An extension that generates flowcharts from Python code",
-  "publisher": "Leonardo de Souza Chaves",
+  "publisher": "LeonardoSouza",
   "author": { "name": "Leonardo de Souza Chaves", "email": "leonardo2sc@gmail.com"},
   "version": "1.0.0",
   "engines": {
@@ -183,7 +183,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.101.0",
+    "@types/vscode": "^1.99.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vscode/test-cli": "^0.0.10",
