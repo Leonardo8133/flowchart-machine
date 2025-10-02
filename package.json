@@ -4,7 +4,7 @@
   "description": "An extension that generates flowcharts from Python code",
   "publisher": "LeonardoSouza",
   "author": { "name": "Leonardo de Souza Chaves", "email": "leonardo2sc@gmail.com"},
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.99.3"
   },

@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-01-01
+### Fixed
+- Changelog Updated
+
 ## [0.0.1] - 2025-10-01
 ### Added
 - Initial release of Flowchart Machine
