@@ -1,6 +1,98 @@
 // Main initialization file
 // Global variable to store current mermaid diagram code
 let currentDiagramCode = '';
+let activeHelpTooltip = null;
+
+function closeHelpTooltip(tooltip) {
+    if (!tooltip) {
+        return;
+    }
+    const container = tooltip.parentElement;
+    tooltip.classList.remove('visible');
+    if (container) {
+        container.classList.remove('help-open');
+    }
+    if (activeHelpTooltip === tooltip) {
+        activeHelpTooltip = null;
+    }
+}
+
+function enhanceHelpTargets(root = document) {
+    const scope = root instanceof Element ? root : document;
+    const elements = scope.querySelectorAll('[data-help]');
+
+    elements.forEach(element => {
+        if (!(element instanceof HTMLElement)) {
+            return;
+        }
+        if (element.classList.contains('help-enhanced')) {
+            return;
+        }
+
+        const helpText = element.getAttribute('data-help');
+        if (!helpText) {
+            return;
+        }
+
+        element.classList.add('has-help', 'help-enhanced');
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'help-trigger';
+        trigger.setAttribute('aria-label', 'Mostrar detalhes do elemento');
+        trigger.textContent = '?';
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'help-tooltip';
+        tooltip.setAttribute('role', 'tooltip');
+        tooltip.textContent = helpText;
+
+        const openTooltip = () => {
+            if (activeHelpTooltip && activeHelpTooltip !== tooltip) {
+                closeHelpTooltip(activeHelpTooltip);
+            }
+            tooltip.classList.add('visible');
+            element.classList.add('help-open');
+            activeHelpTooltip = tooltip;
+        };
+
+        const hideTooltip = () => {
+            closeHelpTooltip(tooltip);
+        };
+
+        trigger.addEventListener('click', event => {
+            event.stopPropagation();
+            if (tooltip.classList.contains('visible')) {
+                hideTooltip();
+            } else {
+                openTooltip();
+            }
+        });
+
+        trigger.addEventListener('focus', openTooltip);
+        trigger.addEventListener('blur', hideTooltip);
+        tooltip.addEventListener('click', event => event.stopPropagation());
+
+        element.appendChild(trigger);
+        element.appendChild(tooltip);
+    });
+}
+
+window.enhanceHelpTargets = enhanceHelpTargets;
+
+document.addEventListener('click', event => {
+    if (!activeHelpTooltip) {
+        return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+        return;
+    }
+    if (target.closest('.help-tooltip') || target.closest('.help-trigger')) {
+        return;
+    }
+    closeHelpTooltip(activeHelpTooltip);
+});
 
 // Function to store the diagram code (called from message handler)
 function storeDiagramCode(diagramCode) {
@@ -31,6 +123,10 @@ document.addEventListener("DOMContentLoaded", function () {
     if (typeof initializeControls === "function") {
         initializeControls();
         initializeSavedDiagrams();
+    }
+
+    if (typeof enhanceHelpTargets === 'function') {
+        enhanceHelpTargets();
     }
     
     // Add copy button event listener
@@ -141,7 +237,7 @@ function handleShowSavedDiagrams() {
 function displaySavedDiagrams(flowcharts) {
     const content = document.getElementById('savedDiagramsContent');
     const savedDiagramsCount = document.getElementById('savedDiagramsCount');
-    
+
     if (!content) return;
     
     // Update file count
@@ -151,12 +247,15 @@ function displaySavedDiagrams(flowcharts) {
     }
     
     if (!flowcharts || flowcharts.length === 0) {
-        content.innerHTML = '<div class="saved-diagram-item"><div class="saved-diagram-name">No saved diagrams</div></div>';
+        content.innerHTML = '<div class="saved-diagram-item" data-help="Nenhum fluxograma salvo ainda. Gere um diagrama e clique em Save para armazená-lo."><div class="saved-diagram-name">No saved diagrams</div></div>';
+        if (typeof window.enhanceHelpTargets === 'function') {
+            window.enhanceHelpTargets(content);
+        }
         return;
     }
-    
+
     content.innerHTML = flowcharts.map(flowchart => `
-        <div class="saved-diagram-item" data-id="${flowchart.id}">
+        <div class="saved-diagram-item" data-id="${flowchart.id}" data-help="Clique para carregar este fluxograma salvo. Use o ícone de lixeira para remover.">
             <div class="saved-diagram-name">${flowchart.name}</div>
             <div class="saved-diagram-date">${new Date(flowchart.savedAt).toLocaleString()}</div>
             <button class="saved-diagram-delete" title="Delete diagram">
@@ -164,11 +263,15 @@ function displaySavedDiagrams(flowcharts) {
             </button>
         </div>
     `).join('');
+
+    if (typeof window.enhanceHelpTargets === 'function') {
+        window.enhanceHelpTargets(content);
+    }
     
     // Add click listeners to load diagrams and delete buttons
     content.querySelectorAll('.saved-diagram-item').forEach(item => {
         const deleteBtn = item.querySelector('.saved-diagram-delete');
-        
+
         // Add click handler for loading diagram
         item.addEventListener('click', (e) => {
             // Don't load if delete button was clicked

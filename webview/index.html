@@ -9,7 +9,7 @@
 <body>
     <div id="content">
         <div class="header-row">
-            <div class="filename-display">
+            <div class="filename-display" data-help="Mostra o arquivo atualmente analisado e o escopo ativo.">
                 <h3 class="file-path">
                     <img class="file-icon" src="{{codeFileIcon}}" width="20" height="20" alt="File" title="Current file">
                     {{filePath}}
@@ -20,10 +20,11 @@
                 </div>
             </div>
             
-            <div class="checkbox-dropdown">
+            <div class="checkbox-dropdown" data-help="Acesso rápido a ajuda, simulações financeiras e suporte, além de filtros para o diagrama.">
                 <div class="top-buttons">
                     <button id="helpBtn" class="control-button">?</button>
                     <button id="bugReportBtn" class="control-button">!</button>
+                    <button id="financingBtn" class="control-button" title="Abrir aplicativo de financiamento">Finanças</button>
                 </div>
                 <button type="button" class="dropdown-toggle" id="dropdownToggle">
                     <img class="filter-icon" src="{{filterIcon}}" width="18" height="18" alt="Filter" title="Filters for the diagram">
@@ -31,56 +32,56 @@
                     <span class="dropdown-icon">▼</span>
                 </button>
               <div class="dropdown-content" id="dropdownContent">
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Alterna a exibição de instruções print no fluxograma.">
                   <input type="checkbox" id="showPrints" checked>
                   <label for="showPrintsCheckbox">Show Prints</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Mostra blocos de definição de funções.">
                   <input type="checkbox" id="showFunctions" checked>
                   <label for="showFunctionsCheckbox">Show Functions</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Exibe laços for identificados no código.">
                   <input type="checkbox" id="showForLoops" checked>
                   <label for="showForLoopsCheckbox">Show For Loops</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Exibe laços while identificados no código.">
                   <input type="checkbox" id="showWhileLoops" checked>
                   <label for="showWhileLoopsCheckbox">Show While Loops</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Mostra atribuições de variáveis e atualizações de estado.">
                   <input type="checkbox" id="showVariables" checked>
                   <label for="showVariablesCheckbox">Show Variables</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Inclui condições if/elif/else no fluxo.">
                   <input type="checkbox" id="showIfs" checked>
                   <label for="showIfsCheckbox">Show Ifs</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Mostra instruções import e from import com o formato padronizado.">
                   <input type="checkbox" id="showImports" checked>
                   <label for="showImportsCheckbox">Show Imports</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Apresenta retornos explícitos nas funções.">
                   <input type="checkbox" id="showReturns" checked>
                   <label for="showReturnsCheckbox">Show Returns</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Inclui blocos de tratamento de exceções e finalizações.">
                   <input type="checkbox" id="showExceptions" checked>
                   <label for="showExceptionsCheckbox">Show Exceptions</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Mostra classes e seus relacionamentos.">
                   <input type="checkbox" id="showClasses" checked>
                   <label for="showClassesCheckbox">Show Classes</label>
                 </div>
-                <div class="checkbox-item">
+                <div class="checkbox-item" data-help="Agrupa nós consecutivos semelhantes para simplificar o diagrama.">
                   <input type="checkbox" id="mergeCommonNodes" checked>
                   <label for="mergeCommonNodesCheckbox">Merge Common Nodes</label>
                 </div>
               </div>
             </div>
         </div>
-        
+
         <div class="controls-row">
-            <div class="button-group">
+            <div class="button-group" data-help="Ações principais: gerar novamente, baixar como PNG, salvar e abrir diagramas salvos.">
                 <button id="regenerateBtn" class="control-button">
                     <img class="button-icon" src="{{restartIcon}}" width="25" height="25" alt="Regenerate" title="Regenerate the diagram">
                     Regenerate
@@ -101,7 +102,7 @@
         </div>
         
         <!-- Saved Diagrams Floating List -->
-        <div id="savedDiagramsList" class="saved-diagrams-list hidden">
+        <div id="savedDiagramsList" class="saved-diagrams-list hidden" data-help="Galeria flutuante com fluxogramas salvos. Clique em um item para abrir ou use o ícone para excluir.">
             <div class="saved-diagrams-header">
                 <h4>Saved Diagrams</h4>
                 <span id="savedDiagramsCount" class="saved-diagrams-count">0 files</span>
@@ -126,6 +127,7 @@
                         <p>• Add a minimap to the diagram</p>
                         <p>• Add a theme-selection dropdown</p>
                         <p>• Add support to multi file flowchart rendering.</p>
+                        <p>• Fontes podem representar aportes de pessoas diferentes ao usar o simulador de finanças.</p>
                     </div>
                 </div>
             </div>
@@ -155,9 +157,47 @@
                 </div>
             </div>
         </div>
+        <!-- Financing Modal -->
+        <div id="financingModal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content financing-modal-content" data-help="Simule rapidamente parcelas e distribuições de investimento por fonte.">
+                <div class="modal-header">
+                    <h3>Simulador de Financiamento</h3>
+                    <button class="modal-close" id="financingModalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="financing-description">Informe o valor desejado, a taxa mensal e o prazo para estimar parcelas. Utilize as fontes para registrar investimentos de pessoas diferentes e entender a participação de cada uma.</p>
+                    <form id="financingForm" class="financing-form">
+                        <div class="financing-field" data-help="Valor total que será financiado ou investido.">
+                            <label for="financingAmount">Valor total (R$)</label>
+                            <input type="number" id="financingAmount" min="0" step="0.01" placeholder="Ex.: 50000">
+                        </div>
+                        <div class="financing-field" data-help="Taxa de juros mensal aplicada ao financiamento.">
+                            <label for="financingRate">Taxa mensal (%)</label>
+                            <input type="number" id="financingRate" min="0" step="0.01" placeholder="Ex.: 1.2">
+                        </div>
+                        <div class="financing-field" data-help="Quantidade de meses para quitar o valor.">
+                            <label for="financingMonths">Prazo (meses)</label>
+                            <input type="number" id="financingMonths" min="1" step="1" placeholder="Ex.: 36">
+                        </div>
+                        <div class="financing-sources-card" data-help="Adicione fontes para representar aportes de pessoas diferentes.">
+                            <div class="financing-sources-header">
+                                <span>Fontes de investimento</span>
+                                <button type="button" id="addFinancingSourceBtn" class="financing-secondary-button">+ Fonte</button>
+                            </div>
+                            <div id="financingSourcesContainer" class="financing-sources-container"></div>
+                        </div>
+                        <div class="financing-actions">
+                            <button type="button" id="calculateFinancingBtn" class="financing-primary-button">Calcular parcelas</button>
+                        </div>
+                    </form>
+                    <div id="financingResult" class="financing-result" data-help="Resumo com valores estimados e divisão das parcelas por fonte."></div>
+                </div>
+            </div>
+        </div>
         <div class="mermaid-container-wrapper">
-            <div id="mermaidContainer"><!-- DIAGRAM_PLACEHOLDER --></div>
-            
+            <div id="mermaidContainer" data-help="Espaço principal de visualização do fluxograma."><!-- DIAGRAM_PLACEHOLDER --></div>
+
             <!-- Unfold/Collapse Controls -->
             <div class="unfold-collapse-controls">
                 <button class="unfold-collapse-button" id="unfoldAllBtn" title="Expand All Subgraphs">
@@ -187,7 +227,7 @@
             </div>
         </div>
 
-        <div id="mermaidCode">
+        <div id="mermaidCode" data-help="Visualização do código Mermaid correspondente ao fluxograma.">
             <!-- Show code Button -->
             <div class="code-controls">
                 <button id="showCodeBtn">▼ Show MermaidCode

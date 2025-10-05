@@ -626,6 +626,67 @@ body {
     color: white;
 }
 
+.has-help {
+    position: relative;
+}
+
+.has-help .help-trigger {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+    font-weight: 600;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 5;
+}
+
+.has-help:hover .help-trigger,
+.has-help.help-open .help-trigger,
+.has-help .help-trigger:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(-2px);
+}
+
+.help-tooltip {
+    position: absolute;
+    top: 8px;
+    right: 32px;
+    max-width: 280px;
+    background: var(--vscode-editorWidget-background, #252526);
+    color: var(--vscode-editorWidget-foreground, #cccccc);
+    border: 1px solid var(--vscode-editorWidget-border, #454545);
+    border-radius: 6px;
+    padding: 8px 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+}
+
+.has-help .help-tooltip.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
 /* Button transitions */
 .control-button {
     transition: all 0.2s ease;
@@ -827,6 +888,164 @@ body {
     flex-direction: column;
     gap: 16px;
 }
+
+.financing-modal-content {
+    max-width: 540px;
+}
+
+.financing-description {
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--vscode-descriptionForeground, #a0a0a0);
+}
+
+.financing-form {
+    display: grid;
+    gap: 12px;
+}
+
+.financing-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.financing-field label {
+    font-size: 12px;
+    color: var(--vscode-foreground);
+}
+
+.financing-field input,
+.financing-source-row input {
+    background-color: var(--vscode-input-background, #3c3c3c);
+    border: 1px solid var(--vscode-input-border, #4f4f4f);
+    color: var(--vscode-input-foreground, #ffffff);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: var(--vscode-font-family);
+    font-size: 12px;
+}
+
+.financing-field input:focus,
+.financing-source-row input:focus {
+    outline: 1px solid var(--vscode-focusBorder, #007acc);
+}
+
+.financing-sources-card {
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    border-radius: 6px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.financing-sources-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--vscode-foreground);
+}
+
+.financing-secondary-button {
+    background: transparent;
+    border: 1px dashed var(--vscode-button-border, #5a5a5a);
+    color: var(--vscode-button-foreground, #ffffff);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.financing-secondary-button:hover {
+    border-style: solid;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.financing-sources-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.financing-source-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(120px, 160px) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.financing-remove-source {
+    background: transparent;
+    border: 1px solid var(--vscode-errorForeground, #f48771);
+    color: var(--vscode-errorForeground, #f48771);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.financing-remove-source:hover {
+    background: rgba(244, 135, 113, 0.1);
+}
+
+.financing-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.financing-primary-button {
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.financing-primary-button:hover {
+    background: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+.financing-result {
+    margin-top: 12px;
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    border-radius: 6px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--vscode-foreground);
+}
+
+.financing-result.error {
+    border-color: var(--vscode-errorForeground, #f48771);
+    color: var(--vscode-errorForeground, #f48771);
+    background: rgba(244, 135, 113, 0.1);
+}
+
+.financing-result ul {
+    margin: 8px 0 0 0;
+    padding-left: 16px;
+}
+
+.financing-result li {
+    margin-bottom: 4px;
+}
+
+@media (max-width: 520px) {
+    .financing-source-row {
+        grid-template-columns: 1fr;
+    }
+
+    .financing-remove-source {
+        justify-self: flex-start;
+    }
+}
+
 
 .bug-report-options {
     display: flex;

@@ -56,7 +56,7 @@ export class ConfigService {
   set<T>(key: ConfigurationKey, value: T): void {
     const keys = key.split('.');
     const oldValue = this.get(key);
-    
+
     // Update the configuration
     let current: any = this.config;
     for (let i = 0; i < keys.length - 1; i++) {
@@ -65,12 +65,15 @@ export class ConfigService {
       }
       current = current[keys[i]];
     }
-    
+
     current[keys[keys.length - 1]] = value;
-    
+
+    // Re-normalize to keep structure aligned with exports
+    this.config = this.normalizeConfigStructure(this.config);
+
     // Update VS Code configuration
     this.updateVSCodeConfig(key, value);
-    
+
     // Notify listeners
     this.notifyChangeListeners(key, oldValue, value);
   }
@@ -79,7 +82,7 @@ export class ConfigService {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    this.config = { ...DEFAULT_CONFIG };
+    this.config = this.normalizeConfigStructure(DEFAULT_CONFIG);
     this.saveConfiguration();
     vscode.window.showInformationMessage('Configuration reset to defaults');
   }
@@ -95,7 +98,9 @@ export class ConfigService {
       });
       
       if (uri) {
-        const content = JSON.stringify(this.config, null, 2);
+        const normalized = this.normalizeConfigStructure(this.config);
+        this.config = normalized;
+        const content = JSON.stringify(normalized, null, 2);
         await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
         vscode.window.showInformationMessage('Configuration exported successfully');
       }
@@ -119,10 +124,10 @@ export class ConfigService {
       if (uris && uris.length > 0) {
         const content = await vscode.workspace.fs.readFile(uris[0]);
         const importedConfig = JSON.parse(content.toString());
-        
+
         // Validate imported configuration
         if (this.validateConfig(importedConfig)) {
-          this.config = { ...DEFAULT_CONFIG, ...importedConfig };
+          this.config = this.normalizeConfigStructure(importedConfig);
           this.saveConfiguration();
           vscode.window.showInformationMessage('Configuration imported successfully');
         } else {
@@ -207,7 +212,7 @@ export class ConfigService {
       exceptions: config.get('nodes.processTypes.exceptions', DEFAULT_CONFIG.nodes.processTypes.exceptions),
     };
     
-    return loadedConfig;
+    return this.normalizeConfigStructure(loadedConfig);
   }
 
   /**
@@ -273,14 +278,102 @@ export class ConfigService {
    */
   private validateConfig(config: any): boolean {
     try {
-      // Basic structure validation
-      const requiredSections = ['general', 'nodes', 'storage', 'appearance', 'performance'];
-      return requiredSections.every(section => 
-        config[section] && typeof config[section] === 'object'
-      );
+      this.normalizeConfigStructure(config);
+      return true;
     } catch {
       return false;
     }
+  }
+
+  private normalizeConfigStructure(rawConfig: any): FlowchartConfig {
+    if (!rawConfig || typeof rawConfig !== 'object') {
+      throw new Error('Configuration must be an object');
+    }
+
+    const general = rawConfig.general ?? {};
+    const nodes = rawConfig.nodes ?? {};
+    const processTypes = nodes.processTypes ?? {};
+    const storage = rawConfig.storage ?? {};
+    const exportSettings = storage.export ?? {};
+    const appearance = rawConfig.appearance ?? {};
+    const performance = rawConfig.performance ?? {};
+
+    return {
+      general: {
+        autoSave: this.coerceBoolean(general.autoSave, DEFAULT_CONFIG.general.autoSave),
+        showNotifications: this.coerceBoolean(general.showNotifications, DEFAULT_CONFIG.general.showNotifications),
+      },
+      nodes: {
+        processTypes: {
+          prints: this.coerceBoolean(processTypes.prints, DEFAULT_CONFIG.nodes.processTypes.prints),
+          functions: this.coerceBoolean(processTypes.functions, DEFAULT_CONFIG.nodes.processTypes.functions),
+          forLoops: this.coerceBoolean(processTypes.forLoops, DEFAULT_CONFIG.nodes.processTypes.forLoops),
+          whileLoops: this.coerceBoolean(processTypes.whileLoops, DEFAULT_CONFIG.nodes.processTypes.whileLoops),
+          variables: this.coerceBoolean(processTypes.variables, DEFAULT_CONFIG.nodes.processTypes.variables),
+          ifs: this.coerceBoolean(processTypes.ifs, DEFAULT_CONFIG.nodes.processTypes.ifs),
+          imports: this.coerceBoolean(processTypes.imports, DEFAULT_CONFIG.nodes.processTypes.imports),
+          exceptions: this.coerceBoolean(processTypes.exceptions, DEFAULT_CONFIG.nodes.processTypes.exceptions),
+        },
+      },
+      storage: {
+        saveFlowcharts: this.coerceBoolean(storage.saveFlowcharts, DEFAULT_CONFIG.storage.saveFlowcharts),
+        maxSavedFlowcharts: this.coerceNumber(storage.maxSavedFlowcharts, DEFAULT_CONFIG.storage.maxSavedFlowcharts, 1),
+        storageLocation: this.coerceStorageLocation(storage.storageLocation, DEFAULT_CONFIG.storage.storageLocation),
+        includeSourceCode: this.coerceBoolean(storage.includeSourceCode, DEFAULT_CONFIG.storage.includeSourceCode),
+        autoCleanupDays: this.coerceNumber(storage.autoCleanupDays, DEFAULT_CONFIG.storage.autoCleanupDays, 1),
+        export: {
+          defaultPngLocation: typeof exportSettings.defaultPngLocation === 'string'
+            ? exportSettings.defaultPngLocation
+            : DEFAULT_CONFIG.storage.export.defaultPngLocation,
+          useCustomPngLocation: this.coerceBoolean(exportSettings.useCustomPngLocation, DEFAULT_CONFIG.storage.export.useCustomPngLocation),
+          autoIncrementPngVersions: this.coerceBoolean(exportSettings.autoIncrementPngVersions, DEFAULT_CONFIG.storage.export.autoIncrementPngVersions),
+        },
+      },
+      appearance: {
+        theme: this.coerceTheme(appearance.theme, DEFAULT_CONFIG.appearance.theme),
+        fontSize: this.coerceNumber(appearance.fontSize, DEFAULT_CONFIG.appearance.fontSize, 8),
+        lineHeight: this.coerceNumber(appearance.lineHeight, DEFAULT_CONFIG.appearance.lineHeight, 1),
+      },
+      performance: {
+        maxNodes: this.coerceNumber(performance.maxNodes, DEFAULT_CONFIG.performance.maxNodes, 10),
+        timeout: this.coerceNumber(performance.timeout, DEFAULT_CONFIG.performance.timeout, 1000),
+      },
+    };
+  }
+
+  private coerceBoolean(value: unknown, fallback: boolean): boolean {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.toLowerCase();
+      if (normalized === 'true') {
+        return true;
+      }
+      if (normalized === 'false') {
+        return false;
+      }
+    }
+    return fallback;
+  }
+
+  private coerceNumber(value: unknown, fallback: number, min?: number): number {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    if (typeof min === 'number' && parsed < min) {
+      return fallback;
+    }
+    return parsed;
+  }
+
+  private coerceTheme(value: unknown, fallback: 'light' | 'dark' | 'auto'): 'light' | 'dark' | 'auto' {
+    return value === 'light' || value === 'dark' || value === 'auto' ? value : fallback;
+  }
+
+  private coerceStorageLocation(value: unknown, fallback: 'workspace' | 'global'): 'workspace' | 'global' {
+    return value === 'workspace' || value === 'global' ? value : fallback;
   }
 
   /**

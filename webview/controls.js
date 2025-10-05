@@ -27,6 +27,13 @@ let helpBtn;
 let bugReportBtn;
 let helpModal;
 let bugReportModal;
+let financingBtn;
+let financingModal;
+let financingSourcesContainer;
+let addFinancingSourceBtn;
+let calculateFinancingBtn;
+let financingResult;
+let financingForm;
 
 // Acquire VS Code API once
 let vscode;
@@ -66,6 +73,13 @@ function initializeControls() {
     bugReportBtn = document.getElementById('bugReportBtn');
     helpModal = document.getElementById('helpModal');
     bugReportModal = document.getElementById('bugReportModal');
+    financingBtn = document.getElementById('financingBtn');
+    financingModal = document.getElementById('financingModal');
+    financingSourcesContainer = document.getElementById('financingSourcesContainer');
+    addFinancingSourceBtn = document.getElementById('addFinancingSourceBtn');
+    calculateFinancingBtn = document.getElementById('calculateFinancingBtn');
+    financingResult = document.getElementById('financingResult');
+    financingForm = document.getElementById('financingForm');
 
     // Add event listeners
     if (unfoldAllBtn) {
@@ -116,7 +130,45 @@ function initializeControls() {
     if (bugReportModalBackdrop) {
         bugReportModalBackdrop.addEventListener('click', closeBugReportModal);
     }
-    
+
+    const financingModalClose = document.getElementById('financingModalClose');
+    const financingModalBackdrop = financingModal ? financingModal.querySelector('.modal-backdrop') : null;
+
+    if (financingModalClose) {
+        financingModalClose.addEventListener('click', closeFinancingModal);
+    }
+
+    if (financingModalBackdrop) {
+        financingModalBackdrop.addEventListener('click', closeFinancingModal);
+    }
+
+    if (financingBtn) {
+        financingBtn.addEventListener('click', handleFinancingClick);
+    }
+
+    if (addFinancingSourceBtn) {
+        addFinancingSourceBtn.addEventListener('click', () => addFinancingSourceRow());
+    }
+
+    if (calculateFinancingBtn) {
+        calculateFinancingBtn.addEventListener('click', calculateFinancingPlan);
+    }
+
+    if (financingForm) {
+        financingForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            calculateFinancingPlan();
+        });
+    }
+
+    if (financingResult) {
+        setFinancingResult('Informe os valores para gerar o resumo do financiamento.', false);
+    }
+
+    if (financingSourcesContainer && financingSourcesContainer.childElementCount === 0) {
+        addFinancingSourceRow();
+    }
+
     if (showPrintsCheckbox) {
         showPrintsCheckbox.addEventListener('change', handleConfigChange);
     }
@@ -267,6 +319,12 @@ function closeBugReportModal() {
     }
 }
 
+function closeFinancingModal() {
+    if (financingModal) {
+        financingModal.classList.add('hidden');
+    }
+}
+
 // Update help data in modals
 function updateHelpData(data) {   
     // Update bug report links
@@ -325,6 +383,15 @@ function handleBugReportClick() {
         // Request help data from extension for repository info
         if (vscode) {
             vscode.postMessage({ command: 'getHelpData' });
+        }
+    }
+}
+
+function handleFinancingClick() {
+    if (financingModal) {
+        financingModal.classList.remove('hidden');
+        if (typeof window.enhanceHelpTargets === 'function') {
+            window.enhanceHelpTargets(financingModal);
         }
     }
 }
@@ -392,5 +459,135 @@ function updateCheckboxStates(checkboxStates) {
     showExceptionsCheckbox.checked = checkboxStates.showExceptions;
     showClassesCheckbox.checked = checkboxStates.showClasses;
     mergeCommonNodesCheckbox.checked = checkboxStates.mergeCommonNodes;
-    
+
+}
+
+function addFinancingSourceRow(name = '', value = '') {
+    if (!financingSourcesContainer) {
+        return;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'financing-source-row';
+    row.setAttribute('data-help', 'Informe o nome da fonte (pessoa ou origem) e o valor aportado.');
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'Nome da fonte';
+    nameInput.value = name;
+    nameInput.className = 'financing-source-name';
+    nameInput.setAttribute('aria-label', 'Nome da fonte de investimento');
+
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.placeholder = 'Valor (R$)';
+    amountInput.min = '0';
+    amountInput.step = '0.01';
+    amountInput.value = value;
+    amountInput.className = 'financing-source-amount';
+    amountInput.setAttribute('aria-label', 'Valor investido pela fonte');
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'financing-remove-source';
+    removeBtn.textContent = 'Remover';
+    removeBtn.title = 'Remover fonte';
+    removeBtn.addEventListener('click', () => {
+        row.remove();
+        if (financingSourcesContainer.childElementCount === 0) {
+            addFinancingSourceRow();
+        }
+    });
+
+    row.appendChild(nameInput);
+    row.appendChild(amountInput);
+    row.appendChild(removeBtn);
+    financingSourcesContainer.appendChild(row);
+
+    if (typeof window.enhanceHelpTargets === 'function') {
+        window.enhanceHelpTargets(row);
+    }
+}
+
+function setFinancingResult(message, isError) {
+    if (!financingResult) {
+        return;
+    }
+    financingResult.innerHTML = message;
+    financingResult.classList.toggle('error', Boolean(isError));
+    if (typeof window.enhanceHelpTargets === 'function') {
+        window.enhanceHelpTargets(financingResult);
+    }
+}
+
+function calculateFinancingPlan() {
+    if (!financingResult) {
+        return;
+    }
+
+    const amountInput = document.getElementById('financingAmount');
+    const rateInput = document.getElementById('financingRate');
+    const monthsInput = document.getElementById('financingMonths');
+
+    const amount = parseFloat(amountInput?.value ?? '');
+    const months = parseInt(monthsInput?.value ?? '', 10);
+    const rawRate = parseFloat(rateInput?.value ?? '');
+
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(months) || months <= 0) {
+        setFinancingResult('Informe um valor total e um prazo válidos para realizar o cálculo.', true);
+        return;
+    }
+
+    const monthlyRate = Number.isFinite(rawRate) ? rawRate / 100 : 0;
+    const safeRate = Number.isFinite(monthlyRate) ? monthlyRate : 0;
+    const payment = safeRate > 0
+        ? (amount * safeRate) / (1 - Math.pow(1 + safeRate, -months))
+        : amount / months;
+
+    const sources = [];
+    if (financingSourcesContainer) {
+        financingSourcesContainer.querySelectorAll('.financing-source-row').forEach(row => {
+            const nameInputEl = row.querySelector('.financing-source-name');
+            const valueInputEl = row.querySelector('.financing-source-amount');
+            const sourceName = nameInputEl?.value?.trim() || 'Fonte';
+            const sourceValue = parseFloat(valueInputEl?.value ?? '');
+            const normalizedValue = Number.isFinite(sourceValue) && sourceValue > 0 ? sourceValue : 0;
+            sources.push({ name: sourceName, amount: normalizedValue });
+        });
+    }
+
+    const totalSources = sources.reduce((sum, source) => sum + source.amount, 0);
+    const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    let summary = `<p><strong>Valor financiado:</strong> ${formatter.format(amount)}</p>`;
+    summary += `<p><strong>Prazo:</strong> ${months} mês${months === 1 ? '' : 'es'}`;
+    if (Number.isFinite(rawRate) && rawRate > 0) {
+        summary += ` · <strong>Juros:</strong> ${rawRate.toFixed(2)}% a.m.`;
+    }
+    summary += `</p>`;
+    summary += `<p><strong>Parcela mensal estimada:</strong> ${formatter.format(payment)}</p>`;
+    summary += `<p><strong>Total das fontes cadastradas:</strong> ${formatter.format(totalSources)}</p>`;
+
+    if (sources.length > 0) {
+        summary += '<p><strong>Participação por fonte:</strong></p><ul>';
+        sources.forEach(source => {
+            const share = totalSources > 0 ? (source.amount / totalSources) : 0;
+            const parcelShare = payment * share;
+            summary += `<li><strong>${source.name}</strong>: ${formatter.format(source.amount)} (${(share * 100).toFixed(1)}% do total) · Parcela proporcional: ${formatter.format(parcelShare)}</li>`;
+        });
+        summary += '</ul>';
+    } else {
+        summary += '<p>Adicione fontes para acompanhar diferentes pessoas ou origens de investimento.</p>';
+    }
+
+    const remaining = amount - totalSources;
+    if (remaining > 0.01) {
+        summary += `<p><strong>Saldo restante:</strong> ${formatter.format(remaining)} ainda precisa ser distribuído entre as fontes.</p>`;
+    } else if (remaining < -0.01) {
+        summary += `<p><strong>Excedente:</strong> ${formatter.format(Math.abs(remaining))} além do valor necessário foi informado.</p>`;
+    } else {
+        summary += '<p>As fontes cobrem exatamente o valor financiado.</p>';
+    }
+
+    setFinancingResult(summary, false);
 }
