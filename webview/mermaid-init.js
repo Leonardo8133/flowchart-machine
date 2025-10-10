@@ -207,13 +207,13 @@ function addSubgraphButtons() {
             const currentX = parseFloat(rect.getAttribute('x')) || 0;
             const currentY = parseFloat(rect.getAttribute('y')) || 0;
 
+            const nodeLabels = subgraph.querySelectorAll('.cluster-label');
             if (currentWidth < 300) {
                 // Increase size by 20px and adjust position to center
                 rect.setAttribute('width', currentWidth + 40);
                 rect.setAttribute('x', currentX - 20);
 
                 // Move node labels up by 10px and add width to label (DEBUGGING)
-                const nodeLabels = subgraph.querySelectorAll('.cluster-label');
                 nodeLabels.forEach(label => {
                     const currentTransform = label.getAttribute('transform') || '';
                     const newTransform = currentTransform ? 
@@ -222,6 +222,12 @@ function addSubgraphButtons() {
                     label.setAttribute('transform', newTransform);
                 });
             }
+            nodeLabels.forEach(label => {
+                if (label.textContent.includes('Class:')) {
+                    rect.setAttribute('width', currentWidth + 20);
+                    rect.setAttribute('x', currentX - 10);
+                }}
+            );
         }
 
         

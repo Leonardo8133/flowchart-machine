@@ -53,7 +53,7 @@ export class FileService {
    * Get the path to the main.py script in the extension's directory
    */
   getMainScriptPath(): string {
-    return path.join(this.context.extensionPath, 'flowchart', 'main.py');
+    return path.join(this.context.extensionPath, 'python', 'flowchart', 'main.py');
   }
 
   /**
@@ -61,7 +61,7 @@ export class FileService {
    */
   getFlowchartPath(pythonFilePath: string): string {
     const extensionPath = this.context.extensionPath;
-    return path.join(extensionPath, 'flowchart', 'temp', 'flowchart.mmd');
+    return path.join(extensionPath, 'python', 'flowchart', 'temp', 'flowchart.mmd');
   }
 
   /**
@@ -69,7 +69,7 @@ export class FileService {
    */
   getMetadataPath(pythonFilePath: string): string {
     const extensionPath = this.context.extensionPath;
-    return path.join(extensionPath, 'flowchart', 'temp', 'metadata.json');
+    return path.join(extensionPath, 'python', 'flowchart', 'temp', 'metadata.json');
   }
 
   /**

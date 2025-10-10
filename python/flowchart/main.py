@@ -2,9 +2,10 @@ import sys
 import os
 import json
 import ast
-from flowchart_processor import FlowchartProcessor
-from flowchart_postprocessor import FlowchartPostProcessor
-from flowchart_entryprocessor import process_entry
+from processor.processor import FlowchartProcessor   
+from post_processor import FlowchartPostProcessor
+from entry_processor import EntryProcessor
+
 
 class FlowchartGenerator:
     """
@@ -12,17 +13,23 @@ class FlowchartGenerator:
     """
 
     def __init__(self):
-        self.processor = FlowchartProcessor()
-        self.post_processor = FlowchartPostProcessor(self.processor)
+        self.processor : FlowchartProcessor = FlowchartProcessor()
+        self.post_processor : FlowchartPostProcessor = FlowchartPostProcessor(self.processor)
 
-    def generate(self, python_code, breakpoint_lines=None, entry_type: str | None = None, entry_name: str | None = None, entry_class: str | None = None):
+    def generate(self,
+        python_code: str,
+        context: dict
+    ) -> tuple[str, dict]:
         """Generate a complete Mermaid flowchart from Python code.
         Optionally focuses on an entry point (function/class).
         """
+        self.processor.file_path = context['file_path']
+        self.processor.entry_line_mapping = context['definitions_line_mapping']
+        self.processor.context = context
+        
         try:
             # Set breakpoints AFTER processor is created
-            if breakpoint_lines:
-                self.processor.set_breakpoints(breakpoint_lines)
+            self.processor.set_breakpoints(context.get('breakpoint_lines', []))
 
             # Step 1: Process the code and create initial structure
             if not self.processor.process_code(python_code):
@@ -34,11 +41,12 @@ class FlowchartGenerator:
             # Step 4: Generate final Mermaid output
             mermaid_output, metadata = self.post_processor.generate_mermaid()
             # Always include entry selection in metadata
-            if entry_type:
+            if context['entry_type']:
                 metadata['entry_selection'] = { 
-                    'type': entry_type, 
-                    'name': entry_name or None,
-                    'class': entry_class or None
+                    'type': context['entry_type'], 
+                    'name': context['entry_name'] or None,
+                    'class': context['entry_class'] or None,
+                    'line_offset': context['definitions_line_mapping']
                 }
             
             print("=== Flowchart generation completed successfully ===")
@@ -50,53 +58,67 @@ class FlowchartGenerator:
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <python_file_path>", file=sys.stderr)
-        sys.exit(1)
-    
-    file_path = sys.argv[1]
-    if not os.path.exists(file_path):
-        print(f"Error: File not found at '{file_path}'", file=sys.stderr)
-        sys.exit(1)
+    """Main function to generate the flowchart."""
+
+    # Validate the arguments
+    file_path = validate_args(sys.argv)
     
     with open(file_path, "r", encoding="utf-8") as f:
         code = f.read()
 
-    # Get breakpoint information from environment
+    # Collect the context
+    context = collect_context(file_path)
+
+    # Extract the code
+    code, line_mapping = EntryProcessor.extract_code(code, context)
+
+    context['definitions_line_mapping'] = line_mapping
+
+    # Generate the flowchart
+    mermaid_output, metadata = FlowchartGenerator().generate(code, context)
+
+    # Save the output
+    save_output(mermaid_output, metadata)
+
+def validate_args(args: list[str]):
+    """Validate the arguments."""
+    if len(args) < 2:
+        print("Usage: python main.py <python_file_path>", file=sys.stderr)
+        sys.exit(1)
+    
+    file_path = args[1] 
+    if not os.path.exists(file_path):
+        print(f"Error: File not found at '{file_path}'", file=sys.stderr)
+        sys.exit(1)
+    
+    return file_path
+
+def collect_context(file_path: str) -> dict:
+    """Collect the configuration from the environment."""
     breakpoint_lines = []
     if os.environ.get('HAS_BREAKPOINTS') == '1':
         breakpoint_lines = [int(x) for x in os.environ.get('BREAKPOINT_LINES', '').split(',') if x]
+    return {
+        'breakpoint_lines': breakpoint_lines,
+        'file_path': file_path,
+        'entry_type': os.environ.get('ENTRY_TYPE') or None,
+        'entry_name': os.environ.get('ENTRY_NAME') or None,
+        'entry_class': os.environ.get('ENTRY_CLASS') or None,
+    }
 
-    # Read entry selection from environment
-    entry_type = os.environ.get('ENTRY_TYPE') or None
-    entry_name = os.environ.get('ENTRY_NAME') or None
-    entry_class = os.environ.get('ENTRY_CLASS') or None
-    entry_line_offset = int(os.environ.get('ENTRY_LINE_OFFSET', '0'))
-
-    code = process_entry(code, entry_type, entry_name, entry_class)
-
-    builder = FlowchartGenerator()
-    # Expose the file path to the processor for metadata context
-    try:
-        builder.processor.file_path = file_path
-        builder.processor.entry_line_offset = entry_line_offset
-    except Exception:
-        pass
-    mermaid_output, metadata = builder.generate(code, breakpoint_lines, entry_type, entry_name, entry_class)
-
-    # Save the Mermaid flowchart
+def save_output(mermaid_output: str, metadata: dict):
+    """Save the Mermaid flowchart and metadata."""
     temp_dir = os.path.join(os.path.dirname(__file__), "temp")
     os.makedirs(temp_dir, exist_ok=True)
     output_path_mmd = os.path.join(temp_dir, "flowchart.mmd")
     with open(output_path_mmd, "w", encoding="utf-8") as out:
         out.write(mermaid_output)
-
-    # Save the metadata as JSON
+    
     output_path_json = os.path.join(temp_dir, "metadata.json")
     with open(output_path_json, "w", encoding="utf-8") as out:
         json.dump(metadata, out, indent=4)
 
-    print(f"[OK] Mermaid flowchart and data saved.")
-
 if __name__ == "__main__":
     main()
+
+

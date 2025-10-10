@@ -1,6 +1,6 @@
 import re
 import os
-from flowchart_processor import FlowchartConfig
+from processor.config import FlowchartConfig
 
 class FlowchartPostProcessor:
 	"""
@@ -105,6 +105,41 @@ class FlowchartPostProcessor:
 		for node_id in bypass_nodes:
 			if node_id in self.processor.nodes: 
 				del self.processor.nodes[node_id]
+
+	def _prune_unreferenced_nodes(self):
+		"""Remove nodes not referenced by any remaining connections.
+
+		This hides floating/unused nodes. Works for functions and classes alike
+		because pruning is purely connection-based and scope-agnostic.
+		Controlled via env PRUNE_UNUSED_NODES (default: enabled).
+		"""
+		if os.getenv('PRUNE_UNUSED_NODES', '1') != '1':
+			return
+
+		# Collect referenced ids from connections
+		referenced = set()
+		conn_pattern = re.compile(r'\s*(\w+)\s*-->(?:\|(.*?)\|)?\s*(\w+)\s*')
+		for conn_str in self.processor.connections:
+			match = conn_pattern.match(conn_str)
+			if not match:
+				continue
+			from_id, _, to_id = match.groups()
+			referenced.add(from_id)
+			referenced.add(to_id)
+
+		# Always keep End if present
+		if getattr(self.processor, 'end_id', None):
+			referenced.add(self.processor.end_id)
+
+		# Remove nodes not referenced
+		all_ids = set(self.processor.nodes.keys())
+		to_delete = all_ids - referenced
+		if not to_delete:
+			return
+
+		for nid in to_delete:
+			self.processor.nodes.pop(nid, None)
+			self.processor.node_scopes.pop(nid, None)
 
 	def _parse_connection(self, conn_str):
 		"""Parse connection string to extract from_id, label, and to_id."""
@@ -422,6 +457,9 @@ class FlowchartPostProcessor:
 		
 		# Step 3: Redirect connections to collapsed subgraphs
 		self._redirect_connections_to_subgraphs()
+
+		# Step 4: Prune unreferenced nodes (functions and classes)
+		self._prune_unreferenced_nodes()
 		
 		print("=== Post-processing completed ===")
 
@@ -437,27 +475,9 @@ class FlowchartPostProcessor:
 		cleaned_mermaid = self.clean_mermaid_diagram(mermaid_string)
 		
 		# Build unified name-to-line mapping from all definitions
-		name_to_line_map = {}
-		entry_line_offset = getattr(self.processor, 'entry_line_offset', 0)
-		try:
-			# Add classes
-			for cname, cnode in getattr(self.processor, 'class_defs', {}).items():
-				lineno = getattr(cnode, 'lineno', None)
-				if lineno is not None:
-					name_to_line_map[cname] = int(lineno) + entry_line_offset
-			# Add functions
-			for fname, fnode in getattr(self.processor, 'function_defs', {}).items():
-				lineno = getattr(fnode, 'lineno', None)
-				if lineno is not None:
-					name_to_line_map[fname] = int(lineno) + entry_line_offset
-			# Add methods (with class.method format)
-			for mkey, mnode in getattr(self.processor, 'method_defs', {}).items():
-				lineno = getattr(mnode, 'lineno', None)
-				if lineno is not None:
-					name_to_line_map[mkey] = int(lineno) + entry_line_offset
-		except Exception:
-			# Best-effort only
-			pass
+		name_to_line_map = self.processor.entry_line_mapping if hasattr(self.processor, 'entry_line_mapping') else {}
+
+		print("NAME TO LINE MAP", name_to_line_map)
 		
 		# Get all available subgraphs from node_scopes
 		all_subgraphs = list(set(self.processor.node_scopes.values()))
@@ -472,23 +492,9 @@ class FlowchartPostProcessor:
 			"force_collapse_list": list(FlowchartPostProcessor.force_collapse_list),
 			"all_subgraphs": all_subgraphs,  # Add all available subgraphs
 			# Include node to source line mapping when available (adjusted for entry offset)
-			"node_line_map": self._adjust_node_line_map(getattr(self.processor, 'node_line_map', {}), entry_line_offset),
 			# Include file path to help consumers locate the file
 			"file_path": getattr(self.processor, 'file_path', None),
 			# Unified mapping for all definitions
 			"name_to_line_map": name_to_line_map
 		}
 		return cleaned_mermaid, metadata
-
-	def _adjust_node_line_map(self, node_line_map, entry_line_offset):
-		"""Adjust node line map to account for entry line offset."""
-		if not entry_line_offset:
-			return node_line_map
-		
-		adjusted_map = {}
-		for node_id, line_info in node_line_map.items():
-			adjusted_map[node_id] = {
-				'start_line': line_info.get('start_line', 0) + entry_line_offset,
-				'end_line': line_info.get('end_line', 0) + entry_line_offset
-			}
-		return adjusted_map

@@ -121,11 +121,7 @@ export class GenerateFlowchartCommand {
         env.ENTRY_TYPE = entryType || 'file';
         env.ENTRY_CLASS = entryClass || '';
         env.ENTRY_NAME = entryName || '';
-
-        const lineOffset = this.getLineOffsetForEntry(editor, entryType, entryClass, entryName);
-        env.ENTRY_LINE_OFFSET = lineOffset.toString();
-
-
+        
         // Get breakpoints for the current file
         const breakpoints = vscode.debug.breakpoints.filter(bp =>
           (bp as any).location?.uri?.fsPath === filePath
@@ -294,29 +290,4 @@ export class GenerateFlowchartCommand {
     return `(${parentDir})/(${fileName})`;
   }
 
-  /**
-   * Get the line offset for a function or class entry
-   */
-  private getLineOffsetForEntry(editor: vscode.TextEditor, entryType: 'function' | 'class' | 'file', entryClass: string | undefined, entryName: string | undefined): number {
-    const document = editor.document;
-    
-    for (let i = 0; i < document.lineCount; i++) {
-      const line = document.lineAt(i);
-      const lineText = line.text;
-      
-      if (entryType === 'function') {
-          if (lineText.includes(`def ${entryName}(`)) {
-            return i; // Return 0-based line number
-          }
-      }
-      
-      if (entryType === 'class') {
-        if (lineText.includes(`class ${entryClass}(`)) {
-          return i; // Return 0-based line number
-          }
-      }
-    }
-    
-    return 0; // Fallback to 0 if not found
-  }
 }

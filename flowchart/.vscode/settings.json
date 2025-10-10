@@ -1,6 +1,0 @@
-{
-    "flowchartMachine.nodes.processTypes.functions": true,
-    "flowchartMachine.nodes.processTypes.mergeCommonNodes": true,
-    "flowchartMachine.nodes.processTypes.ifs": true,
-    "flowchartMachine.nodes.processTypes.prints": true
-}

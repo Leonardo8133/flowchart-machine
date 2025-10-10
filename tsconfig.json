@@ -8,6 +8,15 @@
 		],
 		"sourceMap": true,
 		"rootDir": "src",
+		"baseUrl": "./src",
+		"paths": {
+			"@commands/*": ["commands/*"],
+			"@services/*": ["services/*"],
+			"@webview/*": ["webview/*"],
+			"@utils/*": ["utils/*"],
+			"@types/*": ["types/*"],
+			"@config/*": ["config/*"]
+		},
 		"strict": true,   /* enable all strict type-checking options */
 		/* Additional Checks */
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */

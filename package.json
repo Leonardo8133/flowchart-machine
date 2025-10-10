@@ -1,10 +1,13 @@
 {
   "name": "flowchart-machine",
-  "displayName": "Flowchart Machine",
+  "displayName": "Python Flowchart Machine",
   "description": "An extension that generates flowcharts from Python code",
   "publisher": "LeonardoSouza",
-  "author": { "name": "Leonardo de Souza Chaves", "email": "leonardo2sc@gmail.com"},
-  "version": "1.0.1",
+  "author": {
+    "name": "Leonardo de Souza Chaves",
+    "email": "leonardo2sc@gmail.com"
+  },
+  "version": "1.0.2",
   "engines": {
     "vscode": "^1.99.3"
   },
@@ -105,7 +108,7 @@
         },
         "flowchartMachine.nodes.processTypes.ifs": {
           "type": "boolean",
-          "default": true,  
+          "default": true,
           "description": "Process if/elif/else statements"
         },
         "flowchartMachine.nodes.processTypes.returns": {

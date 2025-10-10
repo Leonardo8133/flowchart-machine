@@ -55,7 +55,9 @@ export class ConfigCommands {
       }
     );
 
-    if (!useCustomSelection) return;
+    if (!useCustomSelection) {
+        return;
+    }
 
     if (useCustomSelection === 'Use Downloads folder (default)') {
       this.configService.set('storage.export.useCustomPngLocation', false);
