@@ -14,6 +14,7 @@ export function run(): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       mocha.addFile(path.resolve(testsRoot, 'generate_command.test.ts'));
+      mocha.addFile(path.resolve(testsRoot, 'connection_view_fallback.test.ts'));
 
       // Run the mocha test
       mocha.run((failures: any) => {
