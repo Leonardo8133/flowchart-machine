@@ -6,6 +6,7 @@ def start():
     helper_func()
     local()
     call_start()
+    print('ready')
 
 
 def local():

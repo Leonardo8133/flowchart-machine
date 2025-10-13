@@ -20,10 +20,27 @@ interface EntrySelection {
   lineOffset?: Record<string, number>;
 }
 
+type NodeRole = 'root' | 'caller' | 'callee';
+
 interface NodeInfo {
   id: string;
   definition: string;
   fileLabel: string;
+  roles: Set<NodeRole>;
+}
+
+interface SubgraphInfo {
+  id: string;
+  label: string;
+  nodes: Set<string>;
+  roles: Set<NodeRole>;
+}
+
+interface PythonCallReference {
+  key: string;
+  identifier: string;
+  qualifier?: string;
+  hasQualifier: boolean;
 }
 
 interface PythonSymbolInfo {
@@ -32,13 +49,19 @@ interface PythonSymbolInfo {
   className?: string;
   signature: string;
   range: vscode.Range;
-  callKeys: Set<string>;
+  callReferences: Map<string, PythonCallReference[]>;
+}
+
+interface PythonImportInfo {
+  modules: Set<string>;
+  members: Set<string>;
 }
 
 interface PythonWorkspaceIndex {
   byKey: Map<string, PythonSymbolInfo[]>;
   byUri: Map<string, PythonSymbolInfo[]>;
   callersByKey: Map<string, Set<PythonSymbolInfo>>;
+  importsByUri: Map<string, PythonImportInfo>;
 }
 
 const PYTHON_RESERVED_NAMES = new Set([
@@ -152,10 +175,10 @@ export class ConnectionViewService {
 
     const rootItem = this.pickRootItem(rootItems, entry) ?? rootItems[0];
     const nodes = new Map<string, NodeInfo>();
-    const subgraphs = new Map<string, Set<string>>();
+    const subgraphs = new Map<string, SubgraphInfo>();
     const edges = new Set<string>();
 
-    this.ensureNode(rootItem, nodes, subgraphs, true);
+    this.ensureNode(rootItem, nodes, subgraphs, 'root');
     const outgoingVisited = new Set<string>([this.getItemKey(rootItem)]);
     const incomingVisited = new Set<string>([this.getItemKey(rootItem)]);
 
@@ -195,7 +218,7 @@ export class ConnectionViewService {
 
   private createPlaceholderDiagram(message: string): string {
     const escaped = this.escapeLabel(message);
-    return `graph TD\n    placeholder[\"${escaped}\"]`;
+    return `graph LR\n    placeholder[\"${escaped}\"]`;
   }
 
   private async collectOutgoing(
@@ -203,7 +226,7 @@ export class ConnectionViewService {
     depth: number,
     maxDepth: number,
     nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>,
+    subgraphs: Map<string, SubgraphInfo>,
     edges: Set<string>,
     visited: Set<string>
   ): Promise<void> {
@@ -234,7 +257,7 @@ export class ConnectionViewService {
     for (const call of calls) {
       const target = call.to;
       const key = this.getItemKey(target);
-      const targetInfo = this.ensureNode(target, nodes, subgraphs);
+      const targetInfo = this.ensureNode(target, nodes, subgraphs, 'callee');
       edges.add(`  ${sourceId} --> ${targetInfo.id}`);
 
       if (!visited.has(key)) {
@@ -249,7 +272,7 @@ export class ConnectionViewService {
     depth: number,
     maxDepth: number,
     nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>,
+    subgraphs: Map<string, SubgraphInfo>,
     edges: Set<string>,
     visited: Set<string>
   ): Promise<void> {
@@ -280,7 +303,7 @@ export class ConnectionViewService {
     for (const call of calls) {
       const source = call.from;
       const key = this.getItemKey(source);
-      const sourceInfo = this.ensureNode(source, nodes, subgraphs);
+      const sourceInfo = this.ensureNode(source, nodes, subgraphs, 'caller');
       edges.add(`  ${sourceInfo.id} --> ${targetId}`);
 
       if (!visited.has(key)) {
@@ -290,17 +313,25 @@ export class ConnectionViewService {
     }
   }
 
-  private buildDiagram(subgraphs: Map<string, Set<string>>, edges: Set<string>): string {
-    const lines: string[] = ['graph TD'];
+  private buildDiagram(subgraphs: Map<string, SubgraphInfo>, edges: Set<string>): string {
+    const lines: string[] = ['graph LR'];
+    const styleLines: string[] = [];
 
-    for (const [label, nodeDefinitions] of subgraphs) {
-      const escaped = this.escapeSubgraphLabel(label);
-      lines.push(`  subgraph \"${escaped}\"`);
-      for (const def of nodeDefinitions) {
+    for (const info of subgraphs.values()) {
+      const escaped = this.escapeSubgraphLabel(info.label);
+      lines.push(`  subgraph ${info.id}[\"${escaped}\"]`);
+      for (const def of info.nodes) {
         lines.push(`    ${def}`);
       }
       lines.push('  end');
+
+      const color = this.getSubgraphColor(info.roles);
+      if (color) {
+        styleLines.push(`  style ${info.id} fill:${color},stroke:#888,stroke-width:1px`);
+      }
     }
+
+    lines.push(...styleLines);
 
     for (const edge of edges) {
       lines.push(edge);
@@ -312,28 +343,89 @@ export class ConnectionViewService {
   private ensureNode(
     item: vscode.CallHierarchyItem,
     nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>,
-    isRoot: boolean = false
+    subgraphs: Map<string, SubgraphInfo>,
+    role: NodeRole
   ): NodeInfo {
     const key = this.getItemKey(item);
     const existing = nodes.get(key);
     if (existing) {
+      existing.roles.add(role);
       return existing;
     }
 
     const id = `node${nodes.size + 1}`;
-    const label = this.buildNodeLabel(item, isRoot);
-    const definition = isRoot ? `${id}((\"${label}\"))` : `${id}[\"${label}\"]`;
+    const label = this.buildNodeLabel(item, role === 'root');
+    const isRootNode = role === 'root';
+    const definition = isRootNode ? `${id}((\"${label}\"))` : `${id}[\"${label}\"]`;
     const fileLabel = this.getFileLabel(item.uri);
 
-    if (!subgraphs.has(fileLabel)) {
-      subgraphs.set(fileLabel, new Set<string>());
+    const subgraph = this.getOrCreateSubgraph(subgraphs, fileLabel);
+    subgraph.nodes.add(definition);
+    if (!isRootNode) {
+      subgraph.roles.add(role);
     }
-    subgraphs.get(fileLabel)!.add(definition);
 
-    const info: NodeInfo = { id, definition, fileLabel };
+    const info: NodeInfo = { id, definition, fileLabel, roles: new Set<NodeRole>([role]) };
     nodes.set(key, info);
     return info;
+  }
+
+  private getOrCreateSubgraph(
+    subgraphs: Map<string, SubgraphInfo>,
+    label: string
+  ): SubgraphInfo {
+    let info = subgraphs.get(label);
+    if (!info) {
+      const id = this.buildSubgraphId(label, subgraphs.size + 1);
+      info = { id, label, nodes: new Set<string>(), roles: new Set<NodeRole>() };
+      subgraphs.set(label, info);
+    }
+    return info;
+  }
+
+  private buildSubgraphId(label: string, index: number): string {
+    const sanitized = label.replace(/[^A-Za-z0-9_]/g, '_') || 'subgraph';
+    return `sg_${sanitized}_${index}`;
+  }
+
+  private getSubgraphColor(roles: Set<NodeRole>): string | null {
+    const hasCaller = roles.has('caller');
+    const hasCallee = roles.has('callee');
+    if (hasCaller && !hasCallee) {
+      return '#d6efff';
+    }
+    if (hasCallee && !hasCaller) {
+      return '#d4f7d4';
+    }
+    return null;
+  }
+
+  private isReferenceImported(
+    source: PythonSymbolInfo,
+    reference: PythonCallReference,
+    target: PythonSymbolInfo,
+    index: PythonWorkspaceIndex
+  ): boolean {
+    if (target.uri.toString() === source.uri.toString()) {
+      return true;
+    }
+
+    const importInfo = index.importsByUri.get(source.uri.toString());
+    if (!importInfo) {
+      return false;
+    }
+
+    if (reference.hasQualifier) {
+      const qualifier = reference.qualifier;
+      if (qualifier) {
+        if (importInfo.modules.has(qualifier) || importInfo.members.has(qualifier)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    return importInfo.members.has(reference.identifier);
   }
 
   private buildNodeLabel(item: vscode.CallHierarchyItem, isRoot: boolean): string {
@@ -375,10 +467,6 @@ export class ConnectionViewService {
 
   private escapeSubgraphLabel(label: string): string {
     return label.replace(/\"/g, '\'');
-  }
-
-  private escapeForPlaceholder(label: string): string {
-    return label.replace(/\"/g, '\'').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   private pickRootItem(items: vscode.CallHierarchyItem[], entry: EntrySelection): vscode.CallHierarchyItem | undefined {
@@ -496,11 +584,11 @@ export class ConnectionViewService {
     }
 
     const nodes = new Map<string, NodeInfo>();
-    const subgraphs = new Map<string, Set<string>>();
+    const subgraphs = new Map<string, SubgraphInfo>();
     const edges = new Set<string>();
 
     const rootKey = this.getPythonSymbolKey(symbol);
-    this.ensurePythonNode(symbol, nodes, subgraphs, true);
+    this.ensurePythonNode(symbol, nodes, subgraphs, 'root');
 
     const outgoingVisited = new Set<string>([rootKey]);
     const incomingVisited = new Set<string>([rootKey]);
@@ -552,6 +640,7 @@ export class ConnectionViewService {
     const byKey = new Map<string, PythonSymbolInfo[]>();
     const byUri = new Map<string, PythonSymbolInfo[]>();
     const callersByKey = new Map<string, Set<PythonSymbolInfo>>();
+    const importsByUri = new Map<string, PythonImportInfo>();
 
     for (const file of files) {
       let document: vscode.TextDocument;
@@ -562,12 +651,15 @@ export class ConnectionViewService {
         continue;
       }
 
-      const symbols = this.parsePythonDocument(document);
+      const analysis = this.analyzePythonDocument(document);
+      const symbols = analysis.symbols;
       if (!symbols.length) {
         continue;
       }
 
-      byUri.set(file.toString(), symbols);
+      const uriKey = file.toString();
+      byUri.set(uriKey, symbols);
+      importsByUri.set(uriKey, analysis.importInfo);
 
       for (const symbol of symbols) {
         const keys = this.getPythonSymbolKeys(symbol);
@@ -578,7 +670,7 @@ export class ConnectionViewService {
           byKey.get(key)!.push(symbol);
         }
 
-        for (const callKey of symbol.callKeys) {
+        for (const callKey of symbol.callReferences.keys()) {
           if (!callersByKey.has(callKey)) {
             callersByKey.set(callKey, new Set<PythonSymbolInfo>());
           }
@@ -590,15 +682,20 @@ export class ConnectionViewService {
     return {
       byKey,
       byUri,
-      callersByKey
+      callersByKey,
+      importsByUri
     };
   }
 
-  private parsePythonDocument(document: vscode.TextDocument): PythonSymbolInfo[] {
+  private analyzePythonDocument(document: vscode.TextDocument): {
+    symbols: PythonSymbolInfo[];
+    importInfo: PythonImportInfo;
+  } {
     const text = document.getText();
     const lines = text.split(/\r?\n/);
     const symbols: PythonSymbolInfo[] = [];
     const classStack: { name: string; indent: number }[] = [];
+    const importInfo = this.extractPythonImports(lines);
 
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i];
@@ -639,7 +736,7 @@ export class ConnectionViewService {
       const range = new vscode.Range(i, 0, endLine, lines[endLine]?.length ?? 0);
       const body = lines.slice(i + 1, endLine + 1).join('\n');
 
-      const callKeys = this.extractPythonCallKeys(body);
+      const callReferences = this.extractPythonCallReferences(body);
 
       const symbol: PythonSymbolInfo = {
         uri: document.uri,
@@ -647,13 +744,13 @@ export class ConnectionViewService {
         className: classContext ? classContext.name : undefined,
         signature,
         range,
-        callKeys
+        callReferences
       };
 
       symbols.push(symbol);
     }
 
-    return symbols;
+    return { symbols, importInfo };
   }
 
   private findPythonBlockEnd(lines: string[], startLine: number, baseIndent: number): number {
@@ -678,8 +775,8 @@ export class ConnectionViewService {
     return endLine;
   }
 
-  private extractPythonCallKeys(body: string): Set<string> {
-    const result = new Set<string>();
+  private extractPythonCallReferences(body: string): Map<string, PythonCallReference[]> {
+    const result = new Map<string, PythonCallReference[]>();
     if (!body) {
       return result;
     }
@@ -694,22 +791,98 @@ export class ConnectionViewService {
       }
 
       const parts = expression.split('.');
-      const method = parts[parts.length - 1];
-      if (!method || PYTHON_RESERVED_NAMES.has(method)) {
+      const identifier = parts[parts.length - 1];
+      if (!identifier || PYTHON_RESERVED_NAMES.has(identifier)) {
         continue;
       }
 
-      result.add(`function:${method}`);
+      const hasQualifier = parts.length > 1;
+      const qualifier = hasQualifier ? parts[parts.length - 2] : undefined;
 
-      if (parts.length >= 2) {
-        const qualifier = parts[parts.length - 2];
-        if (qualifier && !PYTHON_RESERVED_NAMES.has(qualifier)) {
-          result.add(`method:${qualifier}.${method}`);
-        }
+      this.addPythonCallReference(result, {
+        key: `function:${identifier}`,
+        identifier,
+        qualifier,
+        hasQualifier
+      });
+
+      if (hasQualifier && qualifier && !PYTHON_RESERVED_NAMES.has(qualifier)) {
+        this.addPythonCallReference(result, {
+          key: `method:${qualifier}.${identifier}`,
+          identifier,
+          qualifier,
+          hasQualifier: true
+        });
       }
     }
 
     return result;
+  }
+
+  private addPythonCallReference(
+    map: Map<string, PythonCallReference[]>,
+    reference: PythonCallReference
+  ): void {
+    if (!map.has(reference.key)) {
+      map.set(reference.key, []);
+    }
+    map.get(reference.key)!.push(reference);
+  }
+
+  private extractPythonImports(lines: string[]): PythonImportInfo {
+    const modules = new Set<string>();
+    const members = new Set<string>();
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) {
+        continue;
+      }
+
+      if (line.startsWith('import ')) {
+        const importSection = line.slice('import '.length);
+        const entries = importSection.split(',');
+        for (const entry of entries) {
+          const segment = entry.trim();
+          if (!segment) {
+            continue;
+          }
+          const [modulePart, aliasPart] = segment.split(/\s+as\s+/);
+          const alias = (aliasPart ?? modulePart).trim();
+          if (!alias) {
+            continue;
+          }
+          for (const portion of alias.split('.')) {
+            if (portion) {
+              modules.add(portion);
+            }
+          }
+        }
+        continue;
+      }
+
+      if (line.startsWith('from ')) {
+        const match = line.match(/^from\s+[A-Za-z0-9_\.]+\s+import\s+(.+)/);
+        if (!match) {
+          continue;
+        }
+        const importsSection = match[1];
+        const entries = importsSection.split(',');
+        for (const entry of entries) {
+          const segment = entry.trim();
+          if (!segment || segment === '*') {
+            continue;
+          }
+          const [memberPart, aliasPart] = segment.split(/\s+as\s+/);
+          const alias = (aliasPart ?? memberPart).trim();
+          if (alias) {
+            members.add(alias);
+          }
+        }
+      }
+    }
+
+    return { modules, members };
   }
 
   private getPythonSymbolKeys(symbol: PythonSymbolInfo): string[] {
@@ -773,12 +946,13 @@ export class ConnectionViewService {
   private ensurePythonNode(
     symbol: PythonSymbolInfo,
     nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>,
-    isRoot: boolean = false
+    subgraphs: Map<string, SubgraphInfo>,
+    role: NodeRole
   ): NodeInfo {
     const key = this.getPythonSymbolKey(symbol);
     const existing = nodes.get(key);
     if (existing) {
+      existing.roles.add(role);
       return existing;
     }
 
@@ -790,59 +964,24 @@ export class ConnectionViewService {
       labelParts.push(this.escapeLabel(symbol.signature));
     }
     labelParts.push(`Line ${symbol.range.start.line + 1}`);
-    if (isRoot) {
+    if (role === 'root') {
       labelParts.push('Selected');
     }
 
     const label = labelParts.join('<br/>');
-    const definition = isRoot ? `${id}((\"${label}\"))` : `${id}[\"${label}\"]`;
+    const isRootNode = role === 'root';
+    const definition = isRootNode ? `${id}((\"${label}\"))` : `${id}[\"${label}\"]`;
     const fileLabel = this.getFileLabel(symbol.uri);
 
-    if (!subgraphs.has(fileLabel)) {
-      subgraphs.set(fileLabel, new Set<string>());
+    const subgraph = this.getOrCreateSubgraph(subgraphs, fileLabel);
+    subgraph.nodes.add(definition);
+    if (!isRootNode) {
+      subgraph.roles.add(role);
     }
-    subgraphs.get(fileLabel)!.add(definition);
 
-    const info: NodeInfo = { id, definition, fileLabel };
+    const info: NodeInfo = { id, definition, fileLabel, roles: new Set<NodeRole>([role]) };
     nodes.set(key, info);
     return info;
-  }
-
-  private ensurePythonPlaceholderNode(
-    callKey: string,
-    nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>
-  ): NodeInfo {
-    const key = `placeholder:${callKey}`;
-    const existing = nodes.get(key);
-    if (existing) {
-      return existing;
-    }
-
-    const id = `node${nodes.size + 1}`;
-    const label = this.escapeForPlaceholder(this.describeCallKey(callKey));
-    const definition = `${id}[\"${label}\"]`;
-    const placeholderGroup = 'Unresolved references';
-    if (!subgraphs.has(placeholderGroup)) {
-      subgraphs.set(placeholderGroup, new Set<string>());
-    }
-    subgraphs.get(placeholderGroup)!.add(definition);
-
-    const info: NodeInfo = { id, definition, fileLabel: placeholderGroup };
-    nodes.set(key, info);
-    return info;
-  }
-
-  private describeCallKey(callKey: string): string {
-    if (callKey.startsWith('method:')) {
-      const [, name] = callKey.split(':');
-      return `${name} (unresolved)`;
-    }
-    if (callKey.startsWith('function:')) {
-      const [, name] = callKey.split(':');
-      return `${name} (unresolved)`;
-    }
-    return `Unresolved (${callKey})`;
   }
 
   private async collectPythonOutgoing(
@@ -851,7 +990,7 @@ export class ConnectionViewService {
     maxDepth: number,
     index: PythonWorkspaceIndex,
     nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>,
+    subgraphs: Map<string, SubgraphInfo>,
     edges: Set<string>,
     visited: Set<string>
   ): Promise<void> {
@@ -859,26 +998,40 @@ export class ConnectionViewService {
       return;
     }
 
-    const sourceInfo = this.ensurePythonNode(symbol, nodes, subgraphs);
-    const callKeys = Array.from(symbol.callKeys);
+    const roleForSource: NodeRole = depth === 0 ? 'root' : 'callee';
+    const sourceInfo = this.ensurePythonNode(symbol, nodes, subgraphs, roleForSource);
+    const references = symbol.callReferences;
 
-    for (const callKey of callKeys) {
+    for (const [callKey, refs] of references) {
       const targets = index.byKey.get(callKey);
-
       if (!targets || targets.length === 0) {
-        const placeholder = this.ensurePythonPlaceholderNode(callKey, nodes, subgraphs);
-        edges.add(`  ${sourceInfo.id} --> ${placeholder.id}`);
         continue;
       }
 
       for (const target of targets) {
+        const hasResolvableReference = refs.some(ref =>
+          this.isReferenceImported(symbol, ref, target, index)
+        );
+        if (!hasResolvableReference) {
+          continue;
+        }
+
         const key = this.getPythonSymbolKey(target);
-        const targetInfo = this.ensurePythonNode(target, nodes, subgraphs);
+        const targetInfo = this.ensurePythonNode(target, nodes, subgraphs, 'callee');
         edges.add(`  ${sourceInfo.id} --> ${targetInfo.id}`);
 
         if (!visited.has(key)) {
           visited.add(key);
-          await this.collectPythonOutgoing(target, depth + 1, maxDepth, index, nodes, subgraphs, edges, visited);
+          await this.collectPythonOutgoing(
+            target,
+            depth + 1,
+            maxDepth,
+            index,
+            nodes,
+            subgraphs,
+            edges,
+            visited
+          );
         }
       }
     }
@@ -890,7 +1043,7 @@ export class ConnectionViewService {
     maxDepth: number,
     index: PythonWorkspaceIndex,
     nodes: Map<string, NodeInfo>,
-    subgraphs: Map<string, Set<string>>,
+    subgraphs: Map<string, SubgraphInfo>,
     edges: Set<string>,
     visited: Set<string>
   ): Promise<void> {
@@ -898,7 +1051,8 @@ export class ConnectionViewService {
       return;
     }
 
-    const targetInfo = this.ensurePythonNode(symbol, nodes, subgraphs);
+    const roleForTarget: NodeRole = depth === 0 ? 'root' : 'callee';
+    const targetInfo = this.ensurePythonNode(symbol, nodes, subgraphs, roleForTarget);
     const symbolKeys = this.getPythonSymbolKeys(symbol);
     const callers = new Set<PythonSymbolInfo>();
 
@@ -908,7 +1062,16 @@ export class ConnectionViewService {
         continue;
       }
       for (const caller of found) {
-        callers.add(caller);
+        const references = caller.callReferences.get(key);
+        if (!references) {
+          continue;
+        }
+        const hasResolvableReference = references.some(ref =>
+          this.isReferenceImported(caller, ref, symbol, index)
+        );
+        if (hasResolvableReference) {
+          callers.add(caller);
+        }
       }
     }
 
@@ -918,12 +1081,21 @@ export class ConnectionViewService {
 
     for (const caller of callers) {
       const callerKey = this.getPythonSymbolKey(caller);
-      const callerInfo = this.ensurePythonNode(caller, nodes, subgraphs);
+      const callerInfo = this.ensurePythonNode(caller, nodes, subgraphs, 'caller');
       edges.add(`  ${callerInfo.id} --> ${targetInfo.id}`);
 
       if (!visited.has(callerKey)) {
         visited.add(callerKey);
-        await this.collectPythonIncoming(caller, depth + 1, maxDepth, index, nodes, subgraphs, edges, visited);
+        await this.collectPythonIncoming(
+          caller,
+          depth + 1,
+          maxDepth,
+          index,
+          nodes,
+          subgraphs,
+          edges,
+          visited
+        );
       }
     }
   }

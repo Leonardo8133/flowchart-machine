@@ -80,9 +80,23 @@ suite('Connection View Fallback', () => {
       const result = await service.createFromMetadata(mainPath, metadata);
       assert.ok(result, 'Result should not be null');
       assert.ok(result?.metadata.hasData, 'Fallback should produce data');
-      assert.ok(result?.diagram.includes('main.py'));
-      assert.ok(result?.diagram.includes('helper.py'));
-      assert.ok(result?.diagram.includes('caller.py'));
+
+      const diagram = result!.diagram;
+
+      assert.ok(diagram.startsWith('graph LR'), 'Diagram should render left-to-right');
+      assert.ok(diagram.includes('main.py'));
+      assert.ok(diagram.includes('helper.py'));
+      assert.ok(diagram.includes('caller.py'));
+      assert.ok(!diagram.includes('Unresolved'), 'Diagram should not include unresolved references');
+      assert.ok(!diagram.includes('print'), 'Built-in calls should be filtered out');
+      assert.ok(
+        diagram.includes('#d6efff'),
+        'Caller subgraphs should be styled with light blue'
+      );
+      assert.ok(
+        diagram.includes('#d4f7d4'),
+        'Callee subgraphs should be styled with light green'
+      );
     } finally {
       (vscode.commands.executeCommand as any) = originalExecute;
     }
