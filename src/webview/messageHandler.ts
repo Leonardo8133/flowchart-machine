@@ -16,6 +16,9 @@ export class WebviewMessageHandler {
   private whitelistService: WhitelistService | null = null;
   private processor: any = null;
   private currentMetadata: any = null;
+  private currentConnectionDiagram: string | null = null;
+  private currentConnectionMetadata: any = null;
+  private workspaceRoot: string | null = null;
 
   constructor() {
     // Initialize storage service when needed
@@ -38,6 +41,9 @@ export class WebviewMessageHandler {
       this.whitelistService = whitelistService;
     }
 
+    this.workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ||
+      (originalFilePath ? path.dirname(originalFilePath) : null);
+
     
     panel.webview.onDidReceiveMessage(
       async (message) => {        
@@ -54,6 +60,11 @@ export class WebviewMessageHandler {
     );
     
 
+  }
+
+  public setConnectionViewData(diagram: string | null, metadata: any): void {
+    this.currentConnectionDiagram = diagram;
+    this.currentConnectionMetadata = metadata;
   }
 
   /**
@@ -378,8 +389,8 @@ export class WebviewMessageHandler {
   /**
    * Get current checkbox states from VS Code configuration
    */
-  private getCurrentCheckboxStates(): { 
-    showPrints: boolean; 
+  private getCurrentCheckboxStates(): {
+    showPrints: boolean;
     showFunctions: boolean;
     showForLoops: boolean;
     showWhileLoops: boolean;
@@ -415,6 +426,16 @@ export class WebviewMessageHandler {
       showExceptions: getConfig('nodes.processTypes.exceptions', true),
       showClasses: getConfig('nodes.processTypes.classes', true),
       mergeCommonNodes: getConfig('nodes.processTypes.mergeCommonNodes', true)
+    };
+  }
+
+  private getConnectionViewDepths(): { callerDepth: number; calleeDepth: number } {
+    const config = vscode.workspace.getConfiguration('flowchartMachine');
+    const callerDepth = config.get<number>('connectionView.inboundDepth', 3) ?? 3;
+    const calleeDepth = config.get<number>('connectionView.outboundDepth', 4) ?? 4;
+    return {
+      callerDepth,
+      calleeDepth
     };
   }
 
@@ -474,6 +495,15 @@ export class WebviewMessageHandler {
         MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0',
         FILE_KEY: fileKey,
       } as Record<string, string>;
+
+      const { callerDepth, calleeDepth } = this.getConnectionViewDepths();
+      (env as any).CONNECTION_CALLER_DEPTH = `${callerDepth}`;
+      (env as any).CONNECTION_CALLEE_DEPTH = `${calleeDepth}`;
+
+      const workspaceRoot = this.workspaceRoot || (this.originalFilePath ? path.dirname(this.originalFilePath) : null);
+      if (workspaceRoot) {
+        (env as any).WORKSPACE_ROOT = workspaceRoot;
+      }
 
       const breakpoints = vscode.debug.breakpoints.filter(bp => 
         (bp as any).location?.uri?.fsPath === this.originalFilePath
@@ -551,13 +581,41 @@ export class WebviewMessageHandler {
         // Store the metadata for use in other methods
         this.currentMetadata = output.metadata;
 
+        let connectionDiagram: string | null = null;
+        let connectionMetadata: any = null;
+        const connectionScriptPath = this.fileService.getConnectionScriptPath();
+        const entryType = (env as any).ENTRY_TYPE || this.currentMetadata?.entry_selection?.type;
+
+        if (entryType && entryType !== 'file' && FileService.fileExists(connectionScriptPath)) {
+          try {
+            const connectionEnv = { ...env };
+            const connectionResult = await PythonService.executeScript(connectionScriptPath, [this.originalFilePath], connectionEnv);
+            if (connectionResult.success) {
+              const connectionOutput = this.fileService.readConnectionViewOutput();
+              if (connectionOutput) {
+                connectionDiagram = connectionOutput.mermaidCode;
+                connectionMetadata = connectionOutput.metadata;
+              }
+            } else {
+              console.warn('Connection view regeneration failed:', connectionResult.error);
+            }
+          } catch (connectionError) {
+            console.warn('Connection view regeneration error:', connectionError);
+          }
+        }
+
+        this.currentConnectionDiagram = connectionDiagram;
+        this.currentConnectionMetadata = connectionMetadata;
+
         // Send the updated diagram to the webview with current state
         panel.webview.postMessage({
           command: 'updateFlowchart',
           diagram: cleanDiagram,
           metadata: output.metadata,
           whitelist: currentWhitelist,
-          forceCollapse: forceCollapseList
+          forceCollapse: forceCollapseList,
+          connectionDiagram: connectionDiagram,
+          connectionMetadata: connectionMetadata
         });
 
         // Update the global metadata in the webview
@@ -921,13 +979,18 @@ export class WebviewMessageHandler {
         const currentWhitelist = whitelistService.getWhitelist();
         const forceCollapseList = whitelistService.getForceCollapseList();
 
+        this.currentConnectionDiagram = null;
+        this.currentConnectionMetadata = null;
+
         // Update the webview with the loaded diagram and current state
         panel.webview.postMessage({
           command: 'updateFlowchart',
           diagram: result.flowchart.mermaidCode,
           whitelist: currentWhitelist,
           forceCollapse: forceCollapseList,
-          savedDiagram: result.flowchart
+          savedDiagram: result.flowchart,
+          connectionDiagram: null,
+          connectionMetadata: null
         });
 
         // Show success notification

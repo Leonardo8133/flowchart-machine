@@ -2,9 +2,119 @@
 // Global variable to store current mermaid diagram code
 let currentDiagramCode = '';
 
+const diagramViewState = {
+    active: 'flowchart',
+    views: {
+        flowchart: {
+            diagram: '',
+            metadata: {},
+            whitelist: [],
+            forceCollapse: []
+        },
+        connection: {
+            diagram: '',
+            metadata: {}
+        }
+    }
+};
+
+function hasConnectionDiagram() {
+    const diagram = diagramViewState.views.connection.diagram;
+    return typeof diagram === 'string' && diagram.trim().length > 0;
+}
+
+function updateDiagramViewButtons() {
+    if (typeof window.setDiagramViewUIState === 'function') {
+        window.setDiagramViewUIState(diagramViewState.active, hasConnectionDiagram());
+    }
+}
+
+function switchDiagramView(view, options = {}) {
+    const views = ['flowchart', 'connection'];
+    if (!views.includes(view)) {
+        return;
+    }
+
+    const targetData = diagramViewState.views[view] || {};
+    const diagram = typeof targetData.diagram === 'string' ? targetData.diagram : '';
+    const hasDiagram = diagram.trim().length > 0;
+
+    if (view === 'connection' && !hasDiagram && !options.force) {
+        updateDiagramViewButtons();
+        return;
+    }
+
+    diagramViewState.active = hasDiagram ? view : 'flowchart';
+    const activeKey = diagramViewState.active;
+    const activeData = diagramViewState.views[activeKey];
+    const activeDiagram = typeof activeData.diagram === 'string' ? activeData.diagram : '';
+
+    if (activeDiagram.trim()) {
+        updateFlowchart(activeDiagram);
+        if (typeof window.storeDiagramCode === 'function') {
+            window.storeDiagramCode(activeDiagram);
+        }
+    } else {
+        const container = document.getElementById('mermaidContainer');
+        if (container) {
+            if (diagramViewState.active === 'connection') {
+                container.innerHTML = '<div class="empty-connection-message">No connection data available.</div>';
+            } else {
+                container.innerHTML = '';
+            }
+        }
+        const loading = document.getElementById('loadingContainer');
+        if (loading) {
+            loading.style.display = 'none';
+        }
+        if (typeof window.storeDiagramCode === 'function') {
+            window.storeDiagramCode('');
+        }
+    }
+
+    if (diagramViewState.active === 'flowchart') {
+        if (typeof window.updateSubgraphStates === 'function') {
+            window.updateSubgraphStates({
+                whitelist: Array.isArray(activeData.whitelist) ? activeData.whitelist : [],
+                forceCollapse: Array.isArray(activeData.forceCollapse) ? activeData.forceCollapse : [],
+                metadata: activeData.metadata || {}
+            });
+        }
+    } else if (typeof window.resetSubgraphStates === 'function') {
+        window.resetSubgraphStates();
+    }
+
+    updateDiagramViewButtons();
+}
+
+function receiveFlowchartUpdate(message) {
+    diagramViewState.views.flowchart = {
+        diagram: typeof message.diagram === 'string' ? message.diagram : '',
+        metadata: message.metadata || {},
+        whitelist: Array.isArray(message.whitelist) ? message.whitelist : [],
+        forceCollapse: Array.isArray(message.forceCollapse) ? message.forceCollapse : []
+    };
+
+    diagramViewState.views.connection = {
+        diagram: typeof message.connectionDiagram === 'string' ? message.connectionDiagram : '',
+        metadata: message.connectionMetadata || {}
+    };
+
+    let targetView = diagramViewState.active;
+    if (targetView === 'connection' && !hasConnectionDiagram()) {
+        targetView = 'flowchart';
+    }
+
+    switchDiagramView(targetView, { force: true });
+    updateDiagramViewButtons();
+}
+
+window.switchDiagramView = switchDiagramView;
+window.receiveFlowchartUpdate = receiveFlowchartUpdate;
+
 // Function to store the diagram code (called from message handler)
 function storeDiagramCode(diagramCode) {
-    currentDiagramCode = diagramCode;    
+    currentDiagramCode = diagramCode;
     // Also update the mermaidCodeText element if it exists
     const mermaidCodeText = document.getElementById('mermaidCodeText');
     if (mermaidCodeText) {

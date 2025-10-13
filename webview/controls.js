@@ -27,6 +27,8 @@ let helpBtn;
 let bugReportBtn;
 let helpModal;
 let bugReportModal;
+let flowchartViewBtn;
+let connectionViewBtn;
 
 // Acquire VS Code API once
 let vscode;
@@ -66,6 +68,8 @@ function initializeControls() {
     bugReportBtn = document.getElementById('bugReportBtn');
     helpModal = document.getElementById('helpModal');
     bugReportModal = document.getElementById('bugReportModal');
+    flowchartViewBtn = document.getElementById('flowchartViewBtn');
+    connectionViewBtn = document.getElementById('connectionViewBtn');
 
     // Add event listeners
     if (unfoldAllBtn) {
@@ -177,13 +181,57 @@ function initializeControls() {
         bugReportBtn.addEventListener('click', handleBugReportClick);
     }
 
+    if (flowchartViewBtn) {
+        flowchartViewBtn.addEventListener('click', () => {
+            if (typeof window.switchDiagramView === 'function') {
+                window.switchDiagramView('flowchart');
+            }
+        });
+    }
+
+    if (connectionViewBtn) {
+        connectionViewBtn.addEventListener('click', () => {
+            if (connectionViewBtn.disabled) {
+                return;
+            }
+            if (typeof window.switchDiagramView === 'function') {
+                window.switchDiagramView('connection');
+            }
+        });
+    }
+
     // Close dropdown when clicking outside
     document.addEventListener('click', handleOutsideClick);
 
     // Handle Retrieve Initial Values for Checkboxes
     getCurrentCheckboxStatesValues();
 
+    setDiagramViewUIState('flowchart', false);
+
 }
+
+function setDiagramViewUIState(activeView, hasConnectionView) {
+    if (flowchartViewBtn) {
+        flowchartViewBtn.classList.toggle('active', activeView === 'flowchart');
+    }
+
+    if (connectionViewBtn) {
+        connectionViewBtn.classList.toggle('active', activeView === 'connection');
+        connectionViewBtn.disabled = !hasConnectionView;
+    }
+
+    const disableExpandCollapse = activeView === 'connection';
+    if (unfoldAllBtn) {
+        unfoldAllBtn.disabled = disableExpandCollapse;
+        unfoldAllBtn.classList.toggle('disabled', disableExpandCollapse);
+    }
+    if (collapseAllBtn) {
+        collapseAllBtn.disabled = disableExpandCollapse;
+        collapseAllBtn.classList.toggle('disabled', disableExpandCollapse);
+    }
+}
+
+window.setDiagramViewUIState = setDiagramViewUIState;
 
 function handleShowCodeClick() {
     mermaidCodeText.classList.toggle('hidden');

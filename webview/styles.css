@@ -289,9 +289,42 @@ body {
     left: 10px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
     z-index: 200;
     pointer-events: auto;
+}
+
+.unfold-collapse-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.view-toggle-group {
+    display: flex;
+    gap: 6px;
+}
+
+.view-toggle-button {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
+    color: var(--vscode-button-secondaryForeground, #ffffff);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.view-toggle-button.active {
+    background-color: var(--vscode-button-background, #007acc);
+    color: var(--vscode-button-foreground, #ffffff);
+    border-color: var(--vscode-button-hoverBackground, #005a9e);
+}
+
+.view-toggle-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .unfold-collapse-button {
@@ -318,6 +351,20 @@ body {
     opacity: 1;
     transform: scale(1.05);
     width: 120px;
+}
+
+.unfold-collapse-button:disabled,
+.unfold-collapse-button.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none !important;
+    width: 32px !important;
+}
+
+.unfold-collapse-button:disabled .button-text,
+.unfold-collapse-button.disabled .button-text {
+    opacity: 0;
+    transform: translateX(-20px);
 }
 
 .unfold-collapse-button .button-icon {
@@ -496,6 +543,14 @@ body {
     max-width: 100%;
     max-height: 100%;
     display: block;
+}
+
+.empty-connection-message {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--vscode-foreground, #cccccc);
+    font-size: 14px;
+    width: 100%;
 }
 
 /* Saved Diagrams List Styles */

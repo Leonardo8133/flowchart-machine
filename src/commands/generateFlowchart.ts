@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { PythonService } from '../services/pythonService';
 import { FileService } from '../services/fileService';
 import { WebviewManager } from '../webview/webviewManager';
@@ -100,6 +101,8 @@ export class GenerateFlowchartCommand {
         const returns = config.get('nodes.processTypes.returns', true);
         const classes = config.get('nodes.processTypes.classes', true);
         const mergeCommonNodes = config.get('nodes.processTypes.mergeCommonNodes', true);
+        const callerDepth = config.get('connectionView.inboundDepth', 3);
+        const calleeDepth = config.get('connectionView.outboundDepth', 4);
 
         // Set environment variables for Python script
         const env = {
@@ -114,8 +117,13 @@ export class GenerateFlowchartCommand {
           SHOW_EXCEPTIONS: exceptions ? '1' : '0',
           SHOW_RETURNS: returns ? '1' : '0',
           SHOW_CLASSES: classes ? '1' : '0',
-          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0'
+          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0',
+          CONNECTION_CALLER_DEPTH: `${callerDepth}`,
+          CONNECTION_CALLEE_DEPTH: `${calleeDepth}`
         } as Record<string, string>;
+
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || path.dirname(filePath);
+        env.WORKSPACE_ROOT = workspaceRoot;
 
         // Pass entry selection to Python
         env.ENTRY_TYPE = entryType || 'file';
@@ -163,6 +171,27 @@ export class GenerateFlowchartCommand {
         try {
           // Read the output files
           const output = this.fileService.readFlowchartOutput(filePath);
+          let connectionDiagram: string | null = null;
+          let connectionMetadata: any = null;
+
+          const connectionScriptPath = this.fileService.getConnectionScriptPath();
+          if (entryType !== 'file' && FileService.fileExists(connectionScriptPath)) {
+            try {
+              const connectionEnv = { ...env };
+              const connectionResult = await PythonService.executeScript(connectionScriptPath, [filePath], connectionEnv);
+              if (connectionResult.success) {
+                const connectionOutput = this.fileService.readConnectionViewOutput();
+                if (connectionOutput) {
+                  connectionDiagram = connectionOutput.mermaidCode;
+                  connectionMetadata = connectionOutput.metadata;
+                }
+              } else {
+                console.warn('Connection view generation failed:', connectionResult.error);
+              }
+            } catch (connectionError) {
+              console.warn('Connection view script error:', connectionError);
+            }
+          }
           progress.report({ increment: 100 });
 
           const whitelistService = new WhitelistService(this.createFileKey(filePath));
@@ -175,7 +204,9 @@ export class GenerateFlowchartCommand {
             FileService.getBaseName(filePath),
             filePath,
             whitelistService,
-            null // processor is not available in TypeScript
+            null, // processor is not available in TypeScript
+            connectionDiagram,
+            connectionMetadata
           );
           resolve();
         } catch (error) {

@@ -7,6 +7,11 @@ export interface FlowchartOutput {
   metadata: any;
 }
 
+export interface ConnectionViewOutput {
+  mermaidCode: string;
+  metadata: any;
+}
+
 export class FileService {
   private context: vscode.ExtensionContext;
 
@@ -56,6 +61,10 @@ export class FileService {
     return path.join(this.context.extensionPath, 'python', 'flowchart', 'main.py');
   }
 
+  getConnectionScriptPath(): string {
+    return path.join(this.context.extensionPath, 'python', 'flowchart', 'connection_view.py');
+  }
+
   /**
    * Get the path to the flowchart output file in the temp folder
    */
@@ -70,6 +79,11 @@ export class FileService {
   getMetadataPath(pythonFilePath: string): string {
     const extensionPath = this.context.extensionPath;
     return path.join(extensionPath, 'python', 'flowchart', 'temp', 'metadata.json');
+  }
+
+  getConnectionViewPath(): string {
+    const extensionPath = this.context.extensionPath;
+    return path.join(extensionPath, 'python', 'flowchart', 'temp', 'connection_view.json');
   }
 
   /**
@@ -101,6 +115,27 @@ export class FileService {
       mermaidCode,
       metadata
     };
+  }
+
+  readConnectionViewOutput(): ConnectionViewOutput | null {
+    const outputPath = this.getConnectionViewPath();
+
+    if (!FileService.fileExists(outputPath)) {
+      return null;
+    }
+
+    try {
+      const raw = FileService.readFile(outputPath);
+      const parsed = JSON.parse(raw);
+      return {
+        mermaidCode: typeof parsed.mermaid === 'string' ? parsed.mermaid : '',
+        metadata: parsed.metadata ?? {}
+      };
+    } catch (error) {
+      vscode.window.showWarningMessage('Warning: Error parsing connection view output.');
+      console.error(error);
+      return null;
+    }
   }
 
   /**

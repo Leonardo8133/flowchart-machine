@@ -160,14 +160,20 @@
             
             <!-- Unfold/Collapse Controls -->
             <div class="unfold-collapse-controls">
-                <button class="unfold-collapse-button" id="unfoldAllBtn" title="Expand All Subgraphs">
-                    <img class="button-icon" src="{{maximizeIcon}}" width="20" height="20" alt="Expand All" title="Expand all subgraphs">
-                    <span class="button-text">Expand All</span>
-                </button>
-                <button class="unfold-collapse-button" id="collapseAllBtn" title="Collapse All Subgraphs">
-                    <img class="button-icon" src="{{collapseIcon}}" width="20" height="20" alt="Collapse All" title="Collapse all subgraphs">
-                    <span class="button-text">Collapse All</span>
-                </button>
+                <div class="view-toggle-group">
+                    <button class="view-toggle-button active" id="flowchartViewBtn" title="Show flowchart view">Flowchart View</button>
+                    <button class="view-toggle-button" id="connectionViewBtn" title="Show connection view" disabled>Connection View</button>
+                </div>
+                <div class="unfold-collapse-buttons">
+                    <button class="unfold-collapse-button" id="unfoldAllBtn" title="Expand All Subgraphs">
+                        <img class="button-icon" src="{{maximizeIcon}}" width="20" height="20" alt="Expand All" title="Expand all subgraphs">
+                        <span class="button-text">Expand All</span>
+                    </button>
+                    <button class="unfold-collapse-button" id="collapseAllBtn" title="Collapse All Subgraphs">
+                        <img class="button-icon" src="{{collapseIcon}}" width="20" height="20" alt="Collapse All" title="Collapse all subgraphs">
+                        <span class="button-text">Collapse All</span>
+                    </button>
+                </div>
             </div>
             
             <!-- Loading Message Container -->

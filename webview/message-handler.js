@@ -4,44 +4,15 @@ function handleExtensionMessage(event) {
     
     switch (message.command) {
         case 'updateFlowchart':
-            if (message.diagram) {
-                // Store the diagram code globally for expand functionality
+            if (typeof window.receiveFlowchartUpdate === 'function') {
+                window.receiveFlowchartUpdate(message);
+            } else if (message.diagram) {
+                // Fallback to original behaviour if view management is unavailable
                 window.currentDiagramCode = message.diagram;
                 updateFlowchart(message.diagram);
-                // Store the diagram code for saving
                 if (typeof window.storeDiagramCode === 'function') {
                     window.storeDiagramCode(message.diagram);
                 }
-
-                // Minimal HUD cursor update
-                try {
-                    const info = document.getElementById('cursorInfo');
-                    const valueEl = document.getElementById('cursorValue');
-                    if (message.savedDiagram) {
-                        valueEl.textContent = "Saved Diagram: " + message.savedDiagram.name;
-                    } else {
-                        if (info && valueEl) {
-                            const es = message?.metadata?.entry_selection;
-                            if (es && es.type && es.type !== 'file') {
-                                let text = '';
-                                if (es.class) {
-                                    text += es.class + '.';
-                                }
-                                if (es.name) {
-                                    text += es.name;
-                                }
-                                valueEl.textContent = text || 'Unknown';
-                            } else {
-                                valueEl.textContent = 'Entire File';
-                            }
-                                info.style.display = '';
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Cursor HUD update failed:', e);
-                }
-
-                // Update subgraph states if provided, otherwise reset
                 if (message.whitelist || message.forceCollapse || message.metadata) {
                     if (typeof window.updateSubgraphStates === 'function') {
                         window.updateSubgraphStates({
@@ -50,12 +21,36 @@ function handleExtensionMessage(event) {
                             metadata: message.metadata
                         });
                     }
+                } else if (typeof window.resetSubgraphStates === 'function') {
+                    window.resetSubgraphStates();
+                }
+            }
+
+            try {
+                const info = document.getElementById('cursorInfo');
+                const valueEl = document.getElementById('cursorValue');
+                if (message.savedDiagram) {
+                    valueEl.textContent = "Saved Diagram: " + message.savedDiagram.name;
                 } else {
-                    // Reset local UI states when a new diagram is loaded without state
-                    if (typeof window.resetSubgraphStates === 'function') {
-                        window.resetSubgraphStates();
+                    if (info && valueEl) {
+                        const es = message?.metadata?.entry_selection;
+                        if (es && es.type && es.type !== 'file') {
+                            let text = '';
+                            if (es.class) {
+                                text += es.class + '.';
+                            }
+                            if (es.name) {
+                                text += es.name;
+                            }
+                            valueEl.textContent = text || 'Unknown';
+                        } else {
+                            valueEl.textContent = 'Entire File';
+                        }
+                            info.style.display = '';
                     }
                 }
+            } catch (e) {
+                console.warn('Cursor HUD update failed:', e);
             }
             break;
 

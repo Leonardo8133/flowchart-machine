@@ -20,10 +20,12 @@ export class WebviewManager {
   createFlowchartWebview(
     mermaidCode: string,
     metadata: any,
-    fileName: string, 
+    fileName: string,
     originalFilePath?: string,
     whitelistService?: any,
-    processor?: any
+    processor?: any,
+    connectionDiagram?: string | null,
+    connectionMetadata?: any
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
     this.originalFilePath = originalFilePath || 
@@ -70,6 +72,10 @@ export class WebviewManager {
     // Set up message handling
     this.messageHandler.setupMessageHandling(panel, this.originalFilePath, this.context, whitelistService, processor);
 
+    if (connectionDiagram !== undefined) {
+      this.messageHandler.setConnectionViewData(connectionDiagram ?? null, connectionMetadata ?? null);
+    }
+
     // Store the initial metadata in the message handler
     if (metadata) {
       (this.messageHandler as any).currentMetadata = metadata;
@@ -91,7 +97,9 @@ export class WebviewManager {
         diagram: mermaidCode,
         metadata: metadata,
         whitelist: currentWhitelist,
-        forceCollapse: forceCollapseList
+        forceCollapse: forceCollapseList,
+        connectionDiagram: connectionDiagram ?? null,
+        connectionMetadata: connectionMetadata ?? null
       });
     }
 
