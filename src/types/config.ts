@@ -7,6 +7,8 @@ export interface FlowchartConfig {
   general: GeneralConfig;
   /** Node processing configuration */
   nodes: NodeConfig;
+  /** Connection view configuration */
+  connectionView: ConnectionViewConfig;
   /** Storage and persistence settings */
   storage: StorageConfig;
   /** Visual appearance settings */
@@ -31,6 +33,11 @@ export interface NodeConfig {
     imports: boolean;
     exceptions: boolean;
   };
+}
+
+export interface ConnectionViewConfig {
+  maxIncomingDepth: number;
+  maxOutgoingDepth: number;
 }
 
 export interface StorageConfig {
@@ -134,5 +141,7 @@ export type ConfigurationKey =
   | 'nodes.processTypes.ifs'
   | 'nodes.processTypes.imports'
   | 'nodes.processTypes.exceptions'
+  | 'connectionView.maxIncomingDepth'
+  | 'connectionView.maxOutgoingDepth'
   | 'performance.maxNodes'
   | 'performance.timeout';

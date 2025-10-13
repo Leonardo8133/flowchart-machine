@@ -32,6 +32,10 @@ document.addEventListener("DOMContentLoaded", function () {
         initializeControls();
         initializeSavedDiagrams();
     }
+
+    if (typeof initializeViewToggle === "function") {
+        initializeViewToggle();
+    }
     
     // Add copy button event listener
     const copyCodeBtn = document.getElementById('copyCodeBtn');

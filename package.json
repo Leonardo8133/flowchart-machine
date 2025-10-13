@@ -136,6 +136,20 @@
           "default": true,
           "description": "Process try/except/finally blocks"
         },
+        "flowchartMachine.connectionView.maxIncomingDepth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "default": 3,
+          "description": "Maximum depth for discovering callers in the connection view"
+        },
+        "flowchartMachine.connectionView.maxOutgoingDepth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "default": 4,
+          "description": "Maximum depth for discovering callees in the connection view"
+        },
         "flowchartMachine.storage.maxSavedFlowcharts": {
           "type": "number",
           "minimum": 1,
