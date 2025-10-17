@@ -241,6 +241,20 @@ body {
     max-height: 80vh; /* Limit to 80% of viewport height */
 }
 
+/* Connection View specific spacing */
+.mermaid .cluster {
+    margin: 40px 20px !important;
+}
+
+.mermaid .cluster + .cluster {
+    margin-left: 100px !important;
+}
+
+/* Ensure proper spacing in Connection View diagrams */
+.mermaid svg .cluster rect {
+    margin: 20px !important;
+}
+
 .mermaid:active {
     cursor: grabbing;
 }

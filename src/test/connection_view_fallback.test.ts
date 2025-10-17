@@ -90,11 +90,11 @@ suite('Connection View Fallback', () => {
       assert.ok(!diagram.includes('Unresolved'), 'Diagram should not include unresolved references');
       assert.ok(!diagram.includes('print'), 'Built-in calls should be filtered out');
       assert.ok(
-        diagram.includes('#d6efff'),
+        diagram.includes('#295673'),
         'Caller subgraphs should be styled with light blue'
       );
       assert.ok(
-        diagram.includes('#d4f7d4'),
+        diagram.includes('#2e572e'),
         'Callee subgraphs should be styled with light green'
       );
     } finally {

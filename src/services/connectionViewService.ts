@@ -392,10 +392,10 @@ export class ConnectionViewService {
     const hasCaller = roles.has('caller');
     const hasCallee = roles.has('callee');
     if (hasCaller && !hasCallee) {
-      return '#d6efff';
+      return '#295673';
     }
     if (hasCallee && !hasCaller) {
-      return '#d4f7d4';
+      return '#2e572e';
     }
     return null;
   }
@@ -435,15 +435,6 @@ export class ConnectionViewService {
     }
     if (item.detail) {
       parts.push(this.escapeLabel(item.detail));
-    }
-
-    const line = item.selectionRange?.start.line ?? item.range?.start.line;
-    if (typeof line === 'number') {
-      parts.push(`Line ${line + 1}`);
-    }
-
-    if (isRoot) {
-      parts.push('Selected');
     }
 
     return parts.join('<br/>');
@@ -959,13 +950,10 @@ export class ConnectionViewService {
     const id = `node${nodes.size + 1}`;
     const labelParts: string[] = [];
     const qualifiedName = symbol.className ? `${symbol.className}.${symbol.name}` : symbol.name;
-    labelParts.push(this.escapeLabel(qualifiedName));
     if (symbol.signature) {
       labelParts.push(this.escapeLabel(symbol.signature));
-    }
-    labelParts.push(`Line ${symbol.range.start.line + 1}`);
-    if (role === 'root') {
-      labelParts.push('Selected');
+    } else {
+      labelParts.push(this.escapeLabel(qualifiedName));
     }
 
     const label = labelParts.join('<br/>');

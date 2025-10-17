@@ -26,6 +26,11 @@ async function initializeAndRender() {
             securityLevel: "loose",
             fontFamily: "var(--vscode-font-family)",
             startOnLoad: true,
+            flowchart: {
+                nodeSpacing: 100,
+                rankSpacing: 150,
+                curve: 'basis'
+            },
             themeCSS: `
               /* Make subgraph labels opaque to hide edges behind */
               .flowchart-link {
@@ -38,6 +43,11 @@ async function initializeAndRender() {
               /* Add padding to subgraph content */
               .cluster {
                 padding: 20px !important;
+                margin: 30px !important;
+              }
+              /* Increase spacing between subgraphs */
+              .cluster + .cluster {
+                margin-left: 80px !important;
               }
               /* Style for subgraph buttons */
               .subgraph-buttons {
@@ -96,6 +106,19 @@ function updateFlowchart(diagram) {
         mermaidContainer.setAttribute('data-processed', 'false');
         mermaidContainer.innerHTML = '';
         
+        // Reinitialize Mermaid with fixed spacing
+        mermaid.initialize({
+            theme: "dark",
+            securityLevel: "loose",
+            fontFamily: "var(--vscode-font-family)",
+            startOnLoad: false,
+            flowchart: {
+                nodeSpacing: 100,
+                rankSpacing: 150,
+                curve: 'basis'
+            }
+        });
+        
         // Generate unique ID for this render
         const uniqueId = 'mermaid_' + Date.now();
         
@@ -124,6 +147,11 @@ function updateFlowchart(diagram) {
               /* Add padding to subgraph content */
               .cluster {
                 padding: 20px !important;
+                margin: 30px !important;
+              }
+              /* Increase spacing between subgraphs */
+              .cluster + .cluster {
+                margin-left: 80px !important;
               }
               /* Style for subgraph buttons */
               .subgraph-buttons {
