@@ -476,8 +476,6 @@ class FlowchartPostProcessor:
 		
 		# Build unified name-to-line mapping from all definitions
 		name_to_line_map = self.processor.entry_line_mapping if hasattr(self.processor, 'entry_line_mapping') else {}
-
-		print("NAME TO LINE MAP", name_to_line_map)
 		
 		# Get all available subgraphs from node_scopes
 		all_subgraphs = list(set(self.processor.node_scopes.values()))

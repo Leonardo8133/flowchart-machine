@@ -35,6 +35,11 @@ class FlowchartProcessor:
         self.class_defs = {} # Added for class definitions
         self.context_data = {}
         
+        # Entry context for focused processing
+        self.entry_type = None
+        self.entry_name = None
+        self.entry_class = None
+        
         # Recursion tracking
         self.recursive_calls = {}  # Track recursive function calls
         self.function_start_nodes = {}  # Track function start nodes for recursion loops
@@ -376,10 +381,16 @@ class FlowchartProcessor:
 
     # ===== MAIN PROCESSING METHOD =====
     
-    def process_code(self, python_code):
+    def process_code(self, python_code, context=None):
         """Main method to process Python code and generate flowchart."""
         try:
             print("=== Starting flowchart processing ===")
+            
+            # Set entry context if provided
+            if context:
+                self.entry_type = context.get('entry_type')
+                self.entry_name = context.get('entry_name')
+                self.entry_class = context.get('entry_class')
             
             # Parse and setup
             tree = ast.parse(python_code)
@@ -398,6 +409,9 @@ class FlowchartProcessor:
                     self.function_defs[node.name] = node
                 elif isinstance(node, ast.ClassDef):
                     self.class_defs[node.name] = node
+            
+            logger.debug(f"Function definitions: {self.function_defs.keys()}")
+            logger.debug(f"Class definitions: {self.class_defs.keys()}")
 
             # Process main flow
             current_id = self._process_main_flow(start_id, main_flow_nodes)

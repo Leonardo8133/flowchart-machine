@@ -464,13 +464,24 @@ class ExprHandler(NodeHandler):
         if not self.processor.show_classes:
             return method_call_id
         
-        # Try to find the method definition and create a subgraph for it
-        # Look through all class definitions to find this method
-        for class_name, class_node in self.processor.class_defs.items():
-            for item in class_node.body:
-                if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, method_call_id)
-                    break
+        # Only process method if we have a specific entry class selected
+        if self.processor.entry_class:
+            # Only look in the selected class
+            if self.processor.entry_class in self.processor.class_defs:
+                class_node = self.processor.class_defs[self.processor.entry_class]
+                for item in class_node.body:
+                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
+                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(self.processor.entry_class, method_name, item, method_call_id)
+                        # Return None so method call doesn't connect to end
+                        break
+        else:
+            # Fallback: look through all classes (original behavior)
+            for class_name, class_node in self.processor.class_defs.items():
+                for item in class_node.body:
+                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
+                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, method_call_id)
+                        # Return None so method call doesn't connect to end
+                        break
         
         return method_call_id
     
@@ -637,14 +648,26 @@ class AssignHandler(NodeHandler):
         self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
         self.processor._add_connection(prev_id, assign_id)
         
-        # Try to find the method definition and create a subgraph for it
-        # Look through all class definitions to find this method
-        for class_name, class_node in self.processor.class_defs.items():
-            for item in class_node.body:
-                if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                    # Found the method, create a subgraph for it
-                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, assign_id)
-                    break
+        # Only process method if we have a specific entry class selected
+        if self.processor.entry_class:
+            # Only look in the selected class
+            if self.processor.entry_class in self.processor.class_defs:
+                class_node = self.processor.class_defs[self.processor.entry_class]
+                for item in class_node.body:
+                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
+                        # Found the method, create a subgraph for it
+                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(self.processor.entry_class, method_name, item, assign_id)
+                        # Return None so method call doesn't connect to end
+                        return None
+        else:
+            # Fallback: look through all classes (original behavior)
+            for class_name, class_node in self.processor.class_defs.items():
+                for item in class_node.body:
+                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
+                        # Found the method, create a subgraph for it
+                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, assign_id)
+                        # Return None so method call doesn't connect to end
+                        return None
         
         return assign_id
     
@@ -733,6 +756,7 @@ class ClassHandler(NodeHandler):
         if not self.processor.show_classes:
             return prev_id
         
+        logging.debug(f"Class definition: {node.name} at line {node.lineno}")
         # Store class info for method calls and context (always needed)
         self.processor.class_defs[node.name] = node
         
@@ -800,27 +824,14 @@ class ClassHandler(NodeHandler):
         # Create method scope
         method_scope = f"class_{class_name}_{method_name}"
         
-        # Create method node with arguments
-        method_id = self.processor._generate_id(f"method_{method_name}")
-        self.processor.last_added_node = method_node
-        args_text = self._get_method_arguments(method_node)
-        if method_name == '__init__':
-            text = f"Constructor: __init__({args_text})"
-        else:
-            text = f"Method: {method_name}({args_text})"
-        self.processor._add_node(method_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=method_scope)
-        
-        # Connect the call to the method
-        label = "Call __init__" if method_name == '__init__' else "Execute"
-        self.processor._add_connection(call_node_id, method_id, label=label)
-        
         # Store the calling node for this method scope so returns can connect back
         if not hasattr(self, 'method_calling_nodes'):
             self.method_calling_nodes = {}
         self.method_calling_nodes[method_scope] = call_node_id
         
-        # Process method body and create subgraph content
-        self._process_method_body(method_node, method_id, method_scope)
+        # Process method body directly without creating intermediate method node
+        # The method body will start directly from the call_node_id
+        self._process_method_body(method_node, call_node_id, method_scope)
 
     def _process_method_body(self, method_node, method_id, method_scope):
         """Process method body and create nodes within the method scope."""

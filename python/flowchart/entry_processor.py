@@ -1,4 +1,15 @@
 import ast
+import logging
+import sys
+
+# Configure logging to output to stdout so it appears in VS Code output window
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+
+logger = logging.getLogger(__name__)
 
 class EntryProcessor:
     """Processor for the entry point of the code."""
@@ -9,6 +20,7 @@ class EntryProcessor:
         entry_type = context['entry_type']
         entry_name = context['entry_name']
         entry_class = context['entry_class']
+        logger.info(f"Extracting code for entry type: {entry_type}, entry name: {entry_name}, entry class: {entry_class}")
         
         # Create line mapping once for the entire file
         line_mapping = cls.create_line_mapping(code)

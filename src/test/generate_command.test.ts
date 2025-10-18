@@ -53,6 +53,9 @@ suite('Generate Command (Cursor vs Palette)', () => {
     }
     // Wait and read outputs
     const { meta, flowchart } = await waitForOutputs();
+
+    // Wait 5 seconds
+    await new Promise(resolve => setTimeout(resolve, 5000));
     return { meta, flowchart };
   }
 
@@ -199,16 +202,15 @@ suite('Generate Command (Cursor vs Palette)', () => {
     assert.strictEqual(meta?.entry_selection?.type, 'class');
     assert.strictEqual(meta?.entry_selection?.name, '__init__');
     assert.strictEqual(meta?.entry_selection?.class, 'TestClass');
-
-    // Optional sanity check on flowchart content      
-      // Should include the class structure when cursor is on class definition
-      assert.ok(flowchart.includes('TestClass'), 'Flowchart should include TestClass');
-      assert.ok(flowchart.includes('__init__'), 'Flowchart should include __init__ method');
-      
-      // Check if TestClass2 and TestClass3 are not included
-      assert.ok(!flowchart.includes('print(`standalone`)'), 'Flowchart should not include print("standalone") from standalone_function()');
-      assert.ok(!flowchart.includes('TestClass2'), 'Flowchart should not include TestClass2');
-      assert.ok(!flowchart.includes('TestClass3'), 'Flowchart should not include TestClass3');
+   
+    // Should include the class structure when cursor is on class definition
+    assert.ok(flowchart.includes('TestClass'), 'Flowchart should include TestClass');
+    assert.ok(flowchart.includes('__init__'), 'Flowchart should include __init__ method');
+    
+    // Check if TestClass2 and TestClass3 are not included
+    assert.ok(!flowchart.includes('print(`standalone`)'), 'Flowchart should not include print("standalone") from standalone_function()');
+    assert.ok(!flowchart.includes('TestClass2'), 'Flowchart should not include TestClass2');
+    assert.ok(!flowchart.includes('TestClass3'), 'Flowchart should not include TestClass3');
     
   });
 
