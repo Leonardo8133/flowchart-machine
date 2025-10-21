@@ -132,8 +132,8 @@ class IfHandler(NodeHandler):
         self.processor._add_node(cond_id, text, shape=FlowchartConfig.SHAPES['condition'], scope=scope)
         self.processor._add_connection(prev_id, cond_id)
         
-        # Process true path
-        true_path_end = self.processor._process_node_list(node.body, cond_id, scope)
+        # Process true path with "True" label
+        true_path_end = self.processor._process_node_list(node.body, cond_id, scope, next_node_label="True")
         
         # Process false path (else clause)
         if node.orelse:
@@ -144,7 +144,7 @@ class IfHandler(NodeHandler):
             if true_path_end:
                 self.processor._add_connection(true_path_end, merge_id)
             
-            false_path_end = self.processor._process_node_list(node.orelse, cond_id, scope)
+            false_path_end = self.processor._process_node_list(node.orelse, cond_id, scope, next_node_label="False")
             if false_path_end:
                 self.processor._add_connection(false_path_end, merge_id)
             
@@ -165,13 +165,27 @@ class IfHandler(NodeHandler):
                 # Return None since both paths are handled
                 return None
             else:
-                # Simple if statement in method context - no merge node needed
-                # The flow will continue naturally from the true path or condition
+                # Simple if statement in method context - need to handle false path
+                # Create a merge node to handle both true and false paths
+                merge_id = self.processor._generate_id("merge")
+                self.processor._add_node(merge_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                
                 if true_path_end:
-                    return true_path_end
-                else:
-                    # If no true path, return the condition itself
-                    return cond_id
+                    self.processor._add_connection(true_path_end, merge_id)
+                
+                # Connect false path directly to merge node
+                self.processor._add_connection(cond_id, merge_id, label="False")
+                
+                return merge_id
+    
+    def _add_label_to_connection(self, from_id, to_id, label):
+        """Add a label to an existing connection."""
+        # Find the connection in the connections list and add the label
+        for i, connection in enumerate(self.processor.connections):
+            if connection[0] == from_id and connection[1] == to_id:
+                # Update the connection with the label
+                self.processor.connections[i] = (from_id, to_id, label)
+                break
 
 class ForHandler(NodeHandler):
     """Handle for loops."""
@@ -355,15 +369,18 @@ class ExprHandler(NodeHandler):
             call = node.value
             func_name = getattr(call.func, 'id', None)
             
-            # Check for attribute calls like sys.exit() or method calls like obj.method()
-            if func_name is None and hasattr(call.func, 'attr'):
+            # Check for attribute calls like sys.exit() or method calls like obj.method() or self.attr.method()
+            if hasattr(call.func, 'attr'):
                 attr_name = call.func.attr
-                if hasattr(call.func, 'value') and hasattr(call.func.value, 'id'):
-                    module_name = call.func.value.id
-                    full_name = f"{module_name}.{attr_name}"
-                    if full_name in FlowchartConfig.EXIT_FUNCTIONS:
-                        return self.processor.handlers['exit_function'].handle(node, prev_id, scope)
+                if hasattr(call.func, 'value'):
+                    # Check if it's a simple name (obj.method or sys.exit)
+                    if hasattr(call.func.value, 'id'):
+                        module_name = call.func.value.id
+                        full_name = f"{module_name}.{attr_name}"
+                        if full_name in FlowchartConfig.EXIT_FUNCTIONS:
+                            return self.processor.handlers['exit_function'].handle(node, prev_id, scope)
                     
+                    # Handle any method call with attribute access (obj.method, self.attr.method, etc.)
                     return self._handle_method_call(node, prev_id, scope, attr_name)
             
             # Check for direct function names
@@ -374,12 +391,17 @@ class ExprHandler(NodeHandler):
             if func_name == 'print':
                 return self.processor.handlers['print'].handle(node, prev_id, scope)
             
-            # Handle class instantiation
-            if func_name and func_name in self.processor.class_defs:
+            # Handle class instantiation (only if it's not a method call)
+            if func_name and func_name in self.processor.class_defs and not hasattr(call.func, 'attr'):
                 if not self.processor.show_classes:
                     return prev_id
                 
                 return self._handle_class_instantiation(node, prev_id, scope, func_name)
+            
+            # Handle static method calls like TestClass.method()
+            if func_name and func_name in self.processor.class_defs and hasattr(call.func, 'attr'):
+                attr_name = call.func.attr
+                return self._handle_method_call(node, prev_id, scope, attr_name, func_name)
                
             if not self.processor.show_functions:
                 return prev_id
@@ -454,7 +476,7 @@ class ExprHandler(NodeHandler):
         self.processor._add_connection(prev_id, expr_id)
         return expr_id
     
-    def _handle_method_call(self, node, prev_id, scope, method_name):
+    def _handle_method_call(self, node, prev_id, scope, method_name, class_name=None):
         """Handle method calls on objects."""
         method_call_id = self.processor._generate_id("method_call")
         text = f"Call: {self.processor._get_node_text(node)}"
@@ -464,24 +486,39 @@ class ExprHandler(NodeHandler):
         if not self.processor.show_classes:
             return method_call_id
         
-        # Only process method if we have a specific entry class selected
-        if self.processor.entry_class:
-            # Only look in the selected class
-            if self.processor.entry_class in self.processor.class_defs:
-                class_node = self.processor.class_defs[self.processor.entry_class]
-                for item in class_node.body:
-                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(self.processor.entry_class, method_name, item, method_call_id)
-                        # Return None so method call doesn't connect to end
-                        break
-        else:
-            # Fallback: look through all classes (original behavior)
-            for class_name, class_node in self.processor.class_defs.items():
-                for item in class_node.body:
-                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, method_call_id)
-                        # Return None so method call doesn't connect to end
-                        break
+        # Try to find the method definition and create a subgraph for it
+        method_found = False
+        
+        if class_name and class_name in self.processor.class_defs:
+            # We know the specific class, look for the method in that class
+            class_info = self.processor.class_defs[class_name]
+            if method_name in class_info["methods"]:
+                method_node = class_info["methods"][method_name]
+                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, method_node, method_call_id)
+                method_found = True
+        
+        # Try to resolve the object type if not already resolved
+        if not method_found and isinstance(node.value, ast.Call) and hasattr(node.value.func, 'value'):
+            call_obj = node.value.func.value
+            resolved_class = self.processor.handlers[ast.Assign]._resolve_object_type(call_obj, scope)
+            
+            if resolved_class and resolved_class in self.processor.class_defs:
+                class_info = self.processor.class_defs[resolved_class]
+                if method_name in class_info["methods"]:
+                    method_node = class_info["methods"][method_name]
+                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, method_call_id)
+                    method_found = True
+        
+        if not method_found:
+            # Could not find the method or couldn't resolve the class
+            error_id = self.processor._generate_id("error")
+            if resolved_class:
+                error_text = f"❌ Method '{method_name}' not found in {resolved_class}"
+            else:
+                error_text = f"❌ Could not resolve class for method '{method_name}'"
+            self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+            self.processor._add_connection(method_call_id, error_id)
+            return error_id
         
         return method_call_id
     
@@ -495,13 +532,12 @@ class ExprHandler(NodeHandler):
         
         # Find the class and connect to its __init__ method
         if class_name in self.processor.class_defs:
-            class_node = self.processor.class_defs[class_name]
+            class_info = self.processor.class_defs[class_name]
             # Look for __init__ method in the class
-            for item in class_node.body:
-                if isinstance(item, ast.FunctionDef) and item.name == '__init__':
-                    # Create __init__ method subgraph and connect instantiation to it
-                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', item, instantiation_id)
-                    break
+            if '__init__' in class_info["methods"]:
+                method_node = class_info["methods"]['__init__']
+                # Create __init__ method subgraph and connect instantiation to it
+                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', method_node, instantiation_id)
             else:
                 # If no __init__ method found, connect to class node as fallback
                 class_scope = f"class_{class_name}"
@@ -516,15 +552,20 @@ class ReturnHandler(NodeHandler):
     """Handle return statements."""
     
     def handle(self, node, prev_id, scope):
-        return_id = self.processor._generate_id("return")
-        text = self.processor._get_node_text(node) if node.value else "return"
-        self.processor._add_node(return_id, text, scope=scope)
-        self.processor._add_connection(prev_id, return_id)
+        current_id = prev_id
         
-        # Check if return value contains a recursive function call
+        # Check if return value contains a method call - process it first
         if node.value and isinstance(node.value, ast.Call):
             func_name = getattr(node.value.func, 'id', None)
+            
+            # Check for recursive function call
             if func_name and self.processor._is_recursive_call(func_name, scope):
+                # Create return node first
+                return_id = self.processor._generate_id("return")
+                text = self.processor._get_node_text(node)
+                self.processor._add_node(return_id, text, scope=scope)
+                self.processor._add_connection(current_id, return_id)
+                
                 # This is a recursive return - create loop back to function start
                 function_start = self.processor._get_function_start_node(scope)
                 if function_start:
@@ -534,16 +575,40 @@ class ReturnHandler(NodeHandler):
                         self.processor.recursive_calls[scope] = []
                     self.processor.recursive_calls[scope].append(return_id)
                 return None
+            
+            # Check if it's a method call (has attribute access)
+            if hasattr(node.value.func, 'attr'):
+                attr_name = node.value.func.attr
+                # Process the method call first
+                method_call_node_id = self.processor._generate_id("method_call")
+                text = f"Call: {self.processor._get_node_text(node)}"
+                self.processor._add_node(method_call_node_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+                self.processor._add_connection(current_id, method_call_node_id)
+                
+                # Try to resolve and create subgraph
+                if hasattr(node.value.func, 'value'):
+                    call_obj = node.value.func.value
+                    resolved_class = self.processor.handlers[ast.Assign]._resolve_object_type(call_obj, scope)
+                    
+                    if resolved_class and resolved_class in self.processor.class_defs:
+                        class_info = self.processor.class_defs[resolved_class]
+                        if attr_name in class_info["methods"]:
+                            method_node = class_info["methods"][attr_name]
+                            self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, attr_name, method_node, method_call_node_id)
+                
+                current_id = method_call_node_id
+        
+        # Create return node
+        return_id = self.processor._generate_id("return")
+        text = self.processor._get_node_text(node) if node.value else "return"
+        self.processor._add_node(return_id, text, scope=scope)
+        self.processor._add_connection(current_id, return_id)
         
         # Check if we're in a method scope (class_methodName)
         if scope and scope.startswith("class_") and "_" in scope[6:]:
-            # We're in a method, connect back to the calling node
-            if hasattr(self.processor, 'method_calling_nodes') and scope in self.processor.method_calling_nodes:
-                calling_node = self.processor.method_calling_nodes[scope]
-                self.processor._add_connection(return_id, calling_node, label="return")
-            else:
-                # Fallback: don't connect anywhere, method just ends
-                pass
+            # We're in a method - no need to connect back since we use bidirectional arrows
+            # Just end the method without connecting anywhere
+            pass
         elif self.processor.call_stack:
             # We're in a function call, connect back to the call stack
             self.processor._add_connection(return_id, self.processor.call_stack[-1])
@@ -551,12 +616,29 @@ class ReturnHandler(NodeHandler):
             # We're in the main flow, connect to end
             self.processor._add_connection(return_id, self.processor.end_id)
         
-        return None
+        return return_id
 
 class AssignHandler(NodeHandler):
     """Handle assignments including function call assignments and class instantiation."""
     
     def handle(self, node, prev_id, scope):
+        # Track attribute assignments like self.db = db
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Attribute):
+            target_attr = node.targets[0]
+            # Check if it's self.attribute
+            if isinstance(target_attr.value, ast.Name) and target_attr.value.id == 'self':
+                attr_name = target_attr.attr
+                # Check if the value is a parameter with known type
+                if isinstance(node.value, ast.Name):
+                    param_name = node.value.id
+                    # Look up parameter type in current scope
+                    if scope in self.processor.parameter_types and param_name in self.processor.parameter_types[scope]:
+                        param_type = self.processor.parameter_types[scope][param_name]
+                        # Track attribute type
+                        if scope not in self.processor.attribute_types:
+                            self.processor.attribute_types[scope] = {}
+                        self.processor.attribute_types[scope][attr_name] = param_type
+        
         # Check if the right-hand side is a function call
         if len(node.targets) == 1 and isinstance(node.value, ast.Call):
             call = node.value
@@ -569,7 +651,7 @@ class AssignHandler(NodeHandler):
                 return self._handle_class_instantiation_assignment(node, prev_id, scope, func_name)
             
             # Handle method call assignment (like result = obj.method())
-            if func_name is None and hasattr(call.func, 'attr'):
+            if hasattr(call.func, 'attr'):
                 if not self.processor.show_classes:
                     return prev_id
 
@@ -648,28 +730,98 @@ class AssignHandler(NodeHandler):
         self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
         self.processor._add_connection(prev_id, assign_id)
         
-        # Only process method if we have a specific entry class selected
-        if self.processor.entry_class:
-            # Only look in the selected class
-            if self.processor.entry_class in self.processor.class_defs:
-                class_node = self.processor.class_defs[self.processor.entry_class]
-                for item in class_node.body:
-                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                        # Found the method, create a subgraph for it
-                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(self.processor.entry_class, method_name, item, assign_id)
-                        # Return None so method call doesn't connect to end
-                        return None
-        else:
-            # Fallback: look through all classes (original behavior)
-            for class_name, class_node in self.processor.class_defs.items():
-                for item in class_node.body:
-                    if isinstance(item, ast.FunctionDef) and item.name == method_name:
-                        # Found the method, create a subgraph for it
-                        self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, item, assign_id)
-                        # Return None so method call doesn't connect to end
-                        return None
+        # Special handling for __init__ calls
+        if method_name == '__init__':
+            # Check if this is a redundant __init__ call (e.g., TestClass().__init__())
+            if isinstance(node.value, ast.Call) and hasattr(node.value.func, 'value'):
+                call_obj = node.value.func.value
+                
+                # Check if the call_obj is itself a class instantiation (e.g., TestClass())
+                if isinstance(call_obj, ast.Call) and hasattr(call_obj.func, 'id'):
+                    class_name = call_obj.func.id
+                    if class_name in self.processor.class_defs:
+                        # First, process the class instantiation (TestClass())
+                        # This will call the constructor
+                        class_info = self.processor.class_defs[class_name]
+                        if '__init__' in class_info["methods"]:
+                            init_node = class_info["methods"]['__init__']
+                            last_node_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(
+                                class_name, '__init__', init_node, assign_id
+                            )
+                        
+                        # Then show warning about the redundant __init__() call
+                        warning_id = self.processor._generate_id("warning")
+                        warning_text = f"⚠️ Redundant __init__ call: {class_name}() already calls constructor"
+                        self.processor._add_node(warning_id, warning_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                        self.processor._add_connection(assign_id, warning_id)
+                        return warning_id
+        
+        # Try to find the method definition and create a subgraph for it
+        method_found = False
+        
+        # Try to determine the class from the call
+        if isinstance(node.value, ast.Call) and hasattr(node.value.func, 'value'):
+            call_obj = node.value.func.value
+            resolved_class = self._resolve_object_type(call_obj, scope)
+            
+            if resolved_class and resolved_class in self.processor.class_defs:
+                class_info = self.processor.class_defs[resolved_class]
+                if method_name in class_info["methods"]:
+                    method_node = class_info["methods"][method_name]
+                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, assign_id)
+                    method_found = True
+        
+        if not method_found:
+            # Could not find the method or couldn't resolve the class
+            error_id = self.processor._generate_id("error")
+            if resolved_class:
+                error_text = f"❌ Method '{method_name}' not found in {resolved_class}"
+            else:
+                error_text = f"❌ Could not resolve class for method '{method_name}'"
+            self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+            self.processor._add_connection(assign_id, error_id)
+            return error_id
         
         return assign_id
+    
+    def _resolve_object_type(self, obj_node, scope):
+        """Resolve the type of an object (variable, attribute access, etc.)."""
+        # Simple variable: obj.method()
+        if isinstance(obj_node, ast.Name):
+            var_name = obj_node.id
+            if var_name in self.processor.variable_types:
+                return self.processor.variable_types[var_name]
+            
+            # Check if it's a direct class name (for static method calls like Calculator.add())
+            if var_name in self.processor.class_defs:
+                return var_name
+        
+        # Attribute access: self.attr.method() or obj.attr.method()
+        if isinstance(obj_node, ast.Attribute):
+            # Check if it's self.attribute
+            if isinstance(obj_node.value, ast.Name) and obj_node.value.id == 'self':
+                attr_name = obj_node.attr
+                
+                # Try current scope first
+                if scope in self.processor.attribute_types and attr_name in self.processor.attribute_types[scope]:
+                    return self.processor.attribute_types[scope][attr_name]
+                
+                # If not found, look up in class scope (attributes are usually set in __init__)
+                # Scope format: class_ClassName_methodName -> class_ClassName___init__
+                if scope and scope.startswith("class_"):
+                    parts = scope.split("_")
+                    if len(parts) >= 3:  # class_ClassName_methodName
+                        class_name = parts[1]
+                        init_scope = f"class_{class_name}___init__"
+                        if init_scope in self.processor.attribute_types and attr_name in self.processor.attribute_types[init_scope]:
+                            return self.processor.attribute_types[init_scope][attr_name]
+            # Otherwise, recursively resolve the object type
+            else:
+                # For obj.attr, we'd need to track object attribute types
+                # For now, skip this case
+                pass
+        
+        return None
     
     def _handle_class_instantiation_assignment(self, node, prev_id, scope, class_name):
         """Handle class instantiation assignment by connecting to the class's __init__ method."""
@@ -678,16 +830,43 @@ class AssignHandler(NodeHandler):
         self.processor._add_node(assign_id, self.processor._get_node_text(node), scope=scope)
         self.processor._add_connection(prev_id, assign_id)
         
+        # Track variable type for method resolution
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            var_name = node.targets[0].id
+            self.processor.variable_types[var_name] = class_name
+        
+        # Track parameter types passed to __init__
+        if class_name in self.processor.class_defs and isinstance(node.value, ast.Call):
+            class_info = self.processor.class_defs[class_name]
+            if '__init__' in class_info["methods"]:
+                method_node = class_info["methods"]['__init__']
+                # Get parameter names from __init__ (skip 'self')
+                param_names = [arg.arg for arg in method_node.args.args[1:]]
+                # Get arguments passed to the call
+                call_args = node.value.args
+                
+                # Map parameters to their types
+                method_scope = f"class_{class_name}___init__"
+                if method_scope not in self.processor.parameter_types:
+                    self.processor.parameter_types[method_scope] = {}
+                
+                for i, arg in enumerate(call_args):
+                    if i < len(param_names):
+                        param_name = param_names[i]
+                        # Check if argument is a variable with known type
+                        if isinstance(arg, ast.Name) and arg.id in self.processor.variable_types:
+                            arg_type = self.processor.variable_types[arg.id]
+                            self.processor.parameter_types[method_scope][param_name] = arg_type
+        
         # Find the class and connect to its __init__ method
         if class_name in self.processor.class_defs:
-            class_node = self.processor.class_defs[class_name]
+            class_info = self.processor.class_defs[class_name]
+            
             # Look for __init__ method in the class
-            for item in class_node.body:
-                if isinstance(item, ast.FunctionDef) and item.name == '__init__':
-                    # Create __init__ method subgraph and connect assignment to it
-                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', item, assign_id)
-                    # Delete the class node
-                    break
+            if '__init__' in class_info["methods"]:
+                method_node = class_info["methods"]['__init__']
+                # Create __init__ method subgraph and connect assignment to it
+                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', method_node, assign_id)
         
         return assign_id
 
@@ -750,7 +929,6 @@ class ImportFromHandler(NodeHandler):
 
 class ClassHandler(NodeHandler):
     """Handle class definitions with subgraph creation for classes and methods."""
-    nodes_to_delete : list = []
     
     def handle(self, node, prev_id, scope):
         if not self.processor.show_classes:
@@ -758,7 +936,9 @@ class ClassHandler(NodeHandler):
         
         logging.debug(f"Class definition: {node.name} at line {node.lineno}")
         # Store class info for method calls and context (always needed)
-        self.processor.class_defs[node.name] = node
+        # Only store if not already populated by main processor
+        if node.name not in self.processor.class_defs:
+            self.processor.class_defs[node.name] = {"node": node, "methods": {}}
         
         # Extract class context data (docstring, methods, class variables)
         self._extract_class_context(node)
@@ -772,26 +952,14 @@ class ClassHandler(NodeHandler):
                 method_key = f"{node.name}.{item.name}"
                 self.processor.method_defs[method_key] = item
         
-        # Only create visual class node if classes are shown
+        # Don't create a visual class node - the subgraph title serves this purpose
+        # Just set the class scope for subgraph generation
         if self.processor.show_classes:
-            class_id = self.processor._generate_id("class")
-            
-            # Handle inheritance if present
-            if node.bases:
-                base_names = [self.processor._get_node_text(base) for base in node.bases]
-                text = f"Class: {node.name}({', '.join(base_names)})"
-            else:
-                text = f"Class: {node.name}"
-            
-            # Add decorators if present
-            if node.decorator_list:
-                decorator_names = [self.processor._get_node_text(dec) for dec in node.decorator_list]
-                text = f"{', '.join(decorator_names)}\n{text}"
-            
-            # Set the class scope for subgraph generation
             class_scope = f"class_{node.name}"
-            self.processor._add_node(class_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=class_scope)
-            ClassHandler.nodes_to_delete.append(class_id)
+            # Create a dummy node to ensure the scope is tracked for subgraph generation
+            # but don't display it (empty text)
+            dummy_id = self.processor._generate_id("class_dummy")
+            self.processor._add_node(dummy_id, " ", scope=class_scope)  # Use space instead of empty string
         
         # Return the previous ID since we don't connect to main flow
         return prev_id
@@ -824,19 +992,74 @@ class ClassHandler(NodeHandler):
         # Create method scope
         method_scope = f"class_{class_name}_{method_name}"
         
-        # Store the calling node for this method scope so returns can connect back
-        if not hasattr(self, 'method_calling_nodes'):
-            self.method_calling_nodes = {}
-        self.method_calling_nodes[method_scope] = call_node_id
+        # Check if this method subgraph already exists
+        if not hasattr(self.processor, 'method_subgraphs'):
+            self.processor.method_subgraphs = {}
         
-        # Process method body directly without creating intermediate method node
-        # The method body will start directly from the call_node_id
-        self._process_method_body(method_node, call_node_id, method_scope)
+        method_key = f"{class_name}.{method_name}"
+        if method_key in self.processor.method_subgraphs:
+            # Method subgraph already exists, reuse it
+            existing_method_id = self.processor.method_subgraphs[method_key]
+            
+            # Connect the call to the existing method with bidirectional arrow
+            label = "Call and Return"
+            self.processor._add_connection(call_node_id, existing_method_id, label=label, bidirectional=True)
+            
+            # Store the calling node for this method scope so returns can connect back
+            if not hasattr(self.processor, 'method_calling_nodes'):
+                self.processor.method_calling_nodes = {}
+            self.processor.method_calling_nodes[method_scope] = call_node_id
+            
+            # Get the last node of the existing method
+            if hasattr(self.processor, 'method_last_nodes') and existing_method_id in self.processor.method_last_nodes:
+                last_node_id = self.processor.method_last_nodes[existing_method_id]
+            else:
+                last_node_id = existing_method_id
+            
+            # Store the last node of the method for potential end connection
+            if not hasattr(self.processor, 'method_last_nodes'):
+                self.processor.method_last_nodes = {}
+            self.processor.method_last_nodes[call_node_id] = last_node_id
+            
+            return last_node_id
+        
+        # Method subgraph doesn't exist, create it
+        method_id = self.processor._generate_id(f"method_{method_name}")
+        self.processor.last_added_node = method_node
+        args_text = self._get_method_arguments(method_node)
+        if method_name == '__init__':
+            text = f"Constructor: __init__({args_text})"
+        else:
+            text = f"Method: {method_name}({args_text})"
+        self.processor._add_node(method_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=method_scope)
+        
+        # Store the method subgraph for future reuse
+        self.processor.method_subgraphs[method_key] = method_id
+        
+        # Connect the call to the method with bidirectional arrow
+        label = "Call and Return"
+        self.processor._add_connection(call_node_id, method_id, label=label, bidirectional=True)
+        
+        # Store the calling node for this method scope so returns can connect back
+        if not hasattr(self.processor, 'method_calling_nodes'):
+            self.processor.method_calling_nodes = {}
+        self.processor.method_calling_nodes[method_scope] = call_node_id
+        
+        # Process method body and create subgraph content
+        last_node_id = self._process_method_body(method_node, method_id, method_scope)
+        
+        # Store the last node of the method for potential end connection
+        if not hasattr(self.processor, 'method_last_nodes'):
+            self.processor.method_last_nodes = {}
+        self.processor.method_last_nodes[call_node_id] = last_node_id if last_node_id else method_id
+        
+        return last_node_id
 
     def _process_method_body(self, method_node, method_id, method_scope):
         """Process method body and create nodes within the method scope."""
         if method_node.body:
-            self.processor._process_node_list(method_node.body, method_id, method_scope)
+            return self.processor._process_node_list(method_node.body, method_id, method_scope)
+        return method_id
     
     def _get_method_arguments(self, method_node):
         """Extract method arguments as a string."""
@@ -847,6 +1070,180 @@ class ClassHandler(NodeHandler):
                 continue
             args.append(arg.arg)
         return ", ".join(args) if args else ""
+
+class MethodHandler(NodeHandler):
+    """Handle method calls on objects with proper validation."""
+    
+    def handle_method_call(self, node, prev_id, scope, method_name, class_name=None, call_obj=None):
+        """
+        Handle a method call with validation.
+        
+        Args:
+            node: AST node
+            prev_id: Previous node ID
+            scope: Current scope
+            method_name: Name of the method being called
+            class_name: Name of the class (if known from static call)
+            call_obj: AST node of the object being called on (for resolution)
+        """
+        method_call_id = self.processor._generate_id("method_call")
+        text = f"Call: {self.processor._get_node_text(node)}"
+        self.processor._add_node(method_call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+        self.processor._add_connection(prev_id, method_call_id)
+        
+        if not self.processor.show_classes:
+            return method_call_id
+        
+        # Try to resolve the class if not already known
+        if not class_name and call_obj:
+            class_name = self.processor.handlers[ast.Assign]._resolve_object_type(call_obj, scope)
+        
+        # Try to find and validate the method
+        method_found = False
+        
+        if class_name and class_name in self.processor.class_defs:
+            class_info = self.processor.class_defs[class_name]
+            
+            # Check if method exists in the class
+            if method_name in class_info["methods"]:
+                method_node = class_info["methods"][method_name]
+                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, method_node, method_call_id)
+                method_found = True
+            else:
+                # Method not found in the class - check if it's actually a property
+                is_property = self._is_class_property(class_name, method_name)
+                if is_property:
+                    # Warn: trying to call a property as a method
+                    warning_id = self.processor._generate_id("warning")
+                    warning_text = f"⚠️ '{method_name}' is a property, not a method"
+                    self.processor._add_node(warning_id, warning_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                    self.processor._add_connection(method_call_id, warning_id)
+                    return warning_id
+                else:
+                    # Method doesn't exist at all
+                    error_id = self.processor._generate_id("error")
+                    error_text = f"❌ Method '{method_name}' not found in {class_name}"
+                    self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                    self.processor._add_connection(method_call_id, error_id)
+                    return error_id
+        if not method_found:
+            # Could not find the method or couldn't resolve the class
+            error_id = self.processor._generate_id("error")
+            if class_name:
+                error_text = f"❌ Method '{method_name}' not found in {class_name}"
+            else:
+                error_text = f"❌ Could not resolve class for method '{method_name}'"
+            self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+            self.processor._add_connection(method_call_id, error_id)
+            return error_id
+        
+        return method_call_id
+    
+    def _is_class_property(self, class_name, property_name):
+        """Check if a name is a property (attribute) of a class."""
+        if class_name not in self.processor.class_defs:
+            return False
+        
+        class_node = self.processor.class_defs[class_name]["node"]
+        
+        # Check __init__ for attribute assignments
+        for item in class_node.body:
+            if isinstance(item, ast.FunctionDef) and item.name == '__init__':
+                for stmt in ast.walk(item):
+                    if isinstance(stmt, ast.Assign):
+                        for target in stmt.targets:
+                            if isinstance(target, ast.Attribute) and target.attr == property_name:
+                                return True
+        
+        # Check class-level attributes
+        for item in class_node.body:
+            if isinstance(item, ast.Assign):
+                for target in item.targets:
+                    if isinstance(target, ast.Name) and target.id == property_name:
+                        return True
+        
+        return False
+    
+    def handle(self, node, prev_id, scope):
+        # This handler is not called directly, it's used by other handlers
+        return prev_id
+
+
+class PropertyHandler(NodeHandler):
+    """Handle property access on objects with validation."""
+    
+    def handle_property_access(self, node, prev_id, scope, property_name, class_name=None, obj_node=None):
+        """
+        Handle property access with validation.
+        
+        Args:
+            node: AST node (the Attribute node)
+            prev_id: Previous node ID
+            scope: Current scope
+            property_name: Name of the property being accessed
+            class_name: Name of the class (if known)
+            obj_node: AST node of the object (for resolution)
+        """
+        # Try to resolve the class if not already known
+        if not class_name and obj_node:
+            class_name = self.processor.handlers[ast.Assign]._resolve_object_type(obj_node, scope)
+        
+        # Validate the property exists
+        if class_name and class_name in self.processor.class_defs:
+            class_info = self.processor.class_defs[class_name]
+            
+            # Check if it's actually a method, not a property
+            if property_name in class_info["methods"]:
+                # Warn: accessing a method as a property
+                warning_id = self.processor._generate_id("warning")
+                warning_text = f"⚠️ '{property_name}' is a method, not a property. Did you forget ()?"
+                self.processor._add_node(warning_id, warning_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                self.processor._add_connection(prev_id, warning_id)
+                return warning_id
+            
+            # Check if property exists
+            is_property = self._property_exists(class_name, property_name)
+            if not is_property:
+                # Property not found
+                error_id = self.processor._generate_id("error")
+                error_text = f"❌ Property '{property_name}' not found in {class_name}"
+                self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                self.processor._add_connection(prev_id, error_id)
+                return error_id
+        
+        # Property access is valid or we couldn't determine the class
+        # Just return prev_id as property access doesn't create a node by itself
+        return prev_id
+    
+    def _property_exists(self, class_name, property_name):
+        """Check if a property exists in a class."""
+        if class_name not in self.processor.class_defs:
+            return False
+        
+        class_node = self.processor.class_defs[class_name]["node"]
+        
+        # Check __init__ for attribute assignments (self.property = ...)
+        for item in class_node.body:
+            if isinstance(item, ast.FunctionDef) and item.name == '__init__':
+                for stmt in ast.walk(item):
+                    if isinstance(stmt, ast.Assign):
+                        for target in stmt.targets:
+                            if isinstance(target, ast.Attribute) and target.attr == property_name:
+                                return True
+        
+        # Check class-level attributes
+        for item in class_node.body:
+            if isinstance(item, ast.Assign):
+                for target in item.targets:
+                    if isinstance(target, ast.Name) and target.id == property_name:
+                        return True
+        
+        return False
+    
+    def handle(self, node, prev_id, scope):
+        # This handler is not called directly, it's used by other handlers
+        return prev_id
+
 
 class FunctionDefHandler(NodeHandler):
     """Handle function definitions - they should not appear as nodes in the flowchart."""

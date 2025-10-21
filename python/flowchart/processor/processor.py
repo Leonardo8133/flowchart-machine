@@ -32,13 +32,23 @@ class FlowchartProcessor:
 
         # Function definitions and context
         self.function_defs = {}
-        self.class_defs = {} # Added for class definitions
+        self.class_defs = {} # Added for class definitions - format: {class_name: {"node": class_node, "methods": {method_name: method_node}}}
         self.context_data = {}
         
         # Entry context for focused processing
         self.entry_type = None
         self.entry_name = None
         self.entry_class = None
+        # Variable type tracking for method resolution
+        self.variable_types = {} # Track variable types: {var_name: class_name}
+        
+        # Parameter type tracking for resolving attribute access
+        # Format: {scope: {param_name: class_name}}
+        self.parameter_types = {}
+        
+        # Attribute type tracking for resolving self.attribute access
+        # Format: {scope: {attr_name: class_name}}
+        self.attribute_types = {}
         
         # Recursion tracking
         self.recursive_calls = {}  # Track recursive function calls
@@ -101,7 +111,9 @@ class FlowchartProcessor:
             ast.FunctionDef: handlers.FunctionDefHandler(self),
             ast.ClassDef: handlers.ClassHandler(self),
             'exit_function': handlers.ExitFunctionHandler(self),
-            'print': handlers.PrintHandler(self)
+            'print': handlers.PrintHandler(self),
+            'method': handlers.MethodHandler(self),
+            'property': handlers.PropertyHandler(self)
         }
         self.default_handler = handlers.UnsupportedHandler(self)
 
@@ -127,7 +139,7 @@ class FlowchartProcessor:
         self.node_scopes[node_id] = scope
         return True
 
-    def _add_connection(self, from_id, to_id, label=""):
+    def _add_connection(self, from_id, to_id, label="", bidirectional=False):
         """Add connection between nodes with fallback handling."""
         if from_id is None or to_id is None:
             return
@@ -140,7 +152,11 @@ class FlowchartProcessor:
         if hasattr(from_id, 'lineno') and self.nodes:
             from_id = list(self.nodes.keys())[-1]
         
-        connection = f'    {from_id} -->|{label}| {to_id}' if label else f'    {from_id} --> {to_id}'
+        if bidirectional:
+            # Create bidirectional connection with arrows pointing both ways
+            connection = f'    {from_id} <-->|{label}| {to_id}' if label else f'    {from_id} <--> {to_id}'
+        else:
+            connection = f'    {from_id} -->|{label}| {to_id}' if label else f'    {from_id} --> {to_id}'
         self.connections.append(connection)
 
     # ===== TEXT PROCESSING METHODS =====
@@ -344,6 +360,10 @@ class FlowchartProcessor:
             if new_id is False:
                 self._handle_max_nodes_exceeded(current_id)
                 break
+            
+            # Handle None return (end of flow)
+            if new_id is None:
+                break
 
             current_id = new_id
         
@@ -408,21 +428,31 @@ class FlowchartProcessor:
                 if isinstance(node, ast.FunctionDef):
                     self.function_defs[node.name] = node
                 elif isinstance(node, ast.ClassDef):
-                    self.class_defs[node.name] = node
-            
-            logger.debug(f"Function definitions: {self.function_defs.keys()}")
-            logger.debug(f"Class definitions: {self.class_defs.keys()}")
+                    # Store class with methods structure
+                    methods = {}
+                    for item in node.body:
+                        if isinstance(item, ast.FunctionDef):
+                            methods[item.name] = item
+                    self.class_defs[node.name] = {
+                        "node": node,
+                        "methods": methods
+                    }
 
             # Process main flow
             current_id = self._process_main_flow(start_id, main_flow_nodes)
             
             # Connect to end if needed
             if current_id and current_id != start_id and current_id is not False:
-                self._add_connection(current_id, self.end_id)
-
-            # Delete nodes that are not connected to anything
-            for node_id in handlers.ClassHandler.nodes_to_delete:
-                del self.nodes[node_id]
+                # Check if this is a method call node with a tracked last node
+                # If so, use the last node inside the method for end connection
+                if hasattr(self, 'method_last_nodes') and current_id in self.method_last_nodes:
+                    end_node = self.method_last_nodes[current_id]
+                    if end_node and end_node != current_id:
+                        self._add_connection(end_node, self.end_id)
+                    else:
+                        self._add_connection(current_id, self.end_id)
+                else:
+                    self._add_connection(current_id, self.end_id)
 
             print("=== Flowchart processing completed successfully ===")
             return True

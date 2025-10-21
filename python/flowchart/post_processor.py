@@ -12,6 +12,10 @@ class FlowchartPostProcessor:
 
 	def __init__(self, processor):
 		self.processor = processor
+		# Clear class variables to prevent state bleeding between tests
+		FlowchartPostProcessor.collapsed_subgraphs = {}
+		FlowchartPostProcessor.subgraph_whitelist = set()
+		FlowchartPostProcessor.force_collapse_list = set()
 		self._load_whitelist_from_env()
 
 	def _load_whitelist_from_env(self):
@@ -58,14 +62,15 @@ class FlowchartPostProcessor:
 			return
 		
 		forwarding_map = {}
-		conn_pattern = re.compile(r'\s*(\w+)\s*-->(?:\|(.*?)\|)?\s*(\w+)\s*')
+		# Updated pattern to match both --> and <--> arrows
+		conn_pattern = re.compile(r'\s*(\w+)\s*(<)?-->(?:\|(.*?)\|)?\s*(\w+)\s*')
 		
 		# Build forwarding map
 		for conn_str in self.processor.connections:
 			match = conn_pattern.match(conn_str)
 			if not match: 
 				continue
-			from_id, _, to_id = match.groups()
+			from_id, bidirectional, _, to_id = match.groups()
 			if from_id in bypass_nodes: 
 				forwarding_map[from_id] = to_id
 		
@@ -89,15 +94,17 @@ class FlowchartPostProcessor:
 			match = conn_pattern.match(conn_str)
 			if not match: 
 				continue
-			from_id, label, to_id = match.groups()
+			from_id, bidirectional, label, to_id = match.groups()
 			if from_id in bypass_nodes: 
 				continue
 			if to_id in forwarding_map: 
 				to_id = forwarding_map[to_id]
+			# Preserve bidirectional arrows
+			arrow = '<-->' if bidirectional else '-->'
 			if label: 
-				new_connections.append(f'	{from_id} -->|{label}| {to_id}')
+				new_connections.append(f'	{from_id} {arrow}|{label}| {to_id}')
 			else: 
-				new_connections.append(f'	{from_id} --> {to_id}')
+				new_connections.append(f'	{from_id} {arrow} {to_id}')
 		
 		self.processor.connections = new_connections
 		
@@ -151,21 +158,47 @@ class FlowchartPostProcessor:
 		return None, "", None
 
 	def _is_subgraph_too_large(self, scope):
-		"""Check if a subgraph has too many nodes and should be collapsed."""
-		# Don't collapse whitelisted subgraphs
-		if scope in FlowchartPostProcessor.subgraph_whitelist:
-			return False
+		"""
+		Check if a subgraph should be collapsed based on priority rules.
 		
-		# Don't collapse entry function/class when generating from cursor position
-		if hasattr(self, 'entry_name') and self.entry_name and scope == self.entry_name:
-			return False
-		
-		# Force collapse if in force collapse list
+		Priority order (highest to lowest):
+		1. Force collapse EXACT match - highest priority
+		2. Whitelist EXACT match - second priority
+		3. Entry point protection - third priority
+		4. Force collapse PATTERN match - fourth priority
+		5. Whitelist PATTERN match - fifth priority
+		6. Size-based - lowest priority
+		"""
+		# 1. Force collapse EXACT match - highest priority
 		if scope in FlowchartPostProcessor.force_collapse_list:
 			return True
 		
+		# 2. Whitelist EXACT match - second priority
+		if scope in FlowchartPostProcessor.subgraph_whitelist:
+			return False
+		
+		# 3. Entry point protection - third priority
+		if hasattr(self, 'entry_name') and self.entry_name and scope == self.entry_name:
+			return False
+		
+		# 4 & 5. Extract class name for pattern matching (if applicable)
+		class_name = None
+		if scope.startswith("class_") and len(scope) > 6:
+			class_name = scope[6:]  # Remove "class_" prefix
+		
+		# 4. Force collapse PATTERN match - fourth priority
+		if class_name and class_name in FlowchartPostProcessor.force_collapse_list:
+			return True
+		
+		# 5. Whitelist PATTERN match - fifth priority
+		if class_name and class_name in FlowchartPostProcessor.subgraph_whitelist:
+			return False
+		
+		# 6. Size-based - lowest priority
+		max_subgraph_nodes = int(os.getenv('MAX_SUBGRAPH_NODES', FlowchartConfig.MAX_SUBGRAPH_NODES))
+		
 		scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
-		return len(scope_nodes) > FlowchartConfig.MAX_SUBGRAPH_NODES
+		return len(scope_nodes) > max_subgraph_nodes
 
 	def _get_subgraph_node_count(self, scope):
 		"""Get the number of nodes in a subgraph scope."""
@@ -205,8 +238,11 @@ class FlowchartPostProcessor:
 		# Update connections to redirect to collapsed nodes
 		new_connections = []
 		for connection in self.processor.connections:
-			from_id, label, to_id = self._parse_connection(connection)
-			if from_id and to_id:
+			# Parse connection with support for bidirectional arrows
+			conn_pattern = re.compile(r'\s*(\w+)\s*(<)?-->(?:\|(.*?)\|)?\s*(\w+)\s*')
+			match = conn_pattern.match(connection)
+			if match:
+				from_id, bidirectional, label, to_id = match.groups()
 				# Redirect both from and to nodes if they're in collapsed subgraphs
 				new_from_id = node_redirect_map.get(from_id, from_id)
 				new_to_id = node_redirect_map.get(to_id, to_id)
@@ -214,11 +250,12 @@ class FlowchartPostProcessor:
 				# Only keep connections that don't point to deleted nodes
 				if new_from_id in self.processor.nodes or new_from_id == from_id:
 					if new_to_id in self.processor.nodes or new_to_id == to_id:
-						# Rebuild the connection string
+						# Rebuild the connection string with bidirectional support
+						arrow = '<-->' if bidirectional else '-->'
 						if label:
-							new_connections.append(f'    {new_from_id} -->|{label}| {new_to_id}')
+							new_connections.append(f'    {new_from_id} {arrow}|{label}| {new_to_id}')
 						else:
-							new_connections.append(f'    {new_from_id} --> {new_to_id}')
+							new_connections.append(f'    {new_from_id} {arrow} {new_to_id}')
 		
 		# Add connections for collapsed subgraphs
 		for scope, metadata in FlowchartPostProcessor.collapsed_subgraphs.items():
@@ -228,32 +265,42 @@ class FlowchartPostProcessor:
 			# Find connections that go into this scope (from outside to inside)
 			entry_connections = set()
 			for connection in self.processor.connections:
-				from_id, label, to_id = self._parse_connection(connection)
-				if from_id and to_id and to_id in scope_nodes:
-					# This connection goes into the collapsed scope
-					if from_id in self.processor.nodes:
-						conn_key = (from_id, collapsed_node_id, label)
-						if conn_key not in entry_connections:
-							entry_connections.add(conn_key)
-							if label:
-								new_connections.append(f'    {from_id} -->|{label}| {collapsed_node_id}')
-							else:
-								new_connections.append(f'    {from_id} --> {collapsed_node_id}')
+				conn_pattern = re.compile(r'\s*(\w+)\s*(<)?-->(?:\|(.*?)\|)?\s*(\w+)\s*')
+				match = conn_pattern.match(connection)
+				if match:
+					from_id, bidirectional, label, to_id = match.groups()
+					if from_id and to_id and to_id in scope_nodes:
+						# This connection goes into the collapsed scope
+						if from_id in self.processor.nodes:
+							conn_key = (from_id, collapsed_node_id, label, bidirectional)
+							if conn_key not in entry_connections:
+								entry_connections.add(conn_key)
+								# Preserve bidirectional arrows for method calls
+								arrow = '<-->' if bidirectional else '-->'
+								if label:
+									new_connections.append(f'    {from_id} {arrow}|{label}| {collapsed_node_id}')
+								else:
+									new_connections.append(f'    {from_id} {arrow} {collapsed_node_id}')
 			
 			# Find connections that come out of this scope (from inside to outside)
 			exit_connections = set()
 			for connection in self.processor.connections:
-				from_id, label, to_id = self._parse_connection(connection)
-				if from_id and to_id and from_id in scope_nodes:
-					# This connection comes out of the collapsed scope
-					if to_id in self.processor.nodes:
-						conn_key = (collapsed_node_id, to_id, label)
-						if conn_key not in exit_connections:
-							exit_connections.add(conn_key)
-							if label:
-								new_connections.append(f'    {collapsed_node_id} -->|{label}| {to_id}')
-							else:
-								new_connections.append(f'    {collapsed_node_id} --> {to_id}')
+				conn_pattern = re.compile(r'\s*(\w+)\s*(<)?-->(?:\|(.*?)\|)?\s*(\w+)\s*')
+				match = conn_pattern.match(connection)
+				if match:
+					from_id, bidirectional, label, to_id = match.groups()
+					if from_id and to_id and from_id in scope_nodes:
+						# This connection comes out of the collapsed scope
+						if to_id in self.processor.nodes:
+							conn_key = (collapsed_node_id, to_id, label, bidirectional)
+							if conn_key not in exit_connections:
+								exit_connections.add(conn_key)
+								# Preserve bidirectional arrows for method calls
+								arrow = '<-->' if bidirectional else '-->'
+								if label:
+									new_connections.append(f'    {collapsed_node_id} {arrow}|{label}| {to_id}')
+								else:
+									new_connections.append(f'    {collapsed_node_id} {arrow} {to_id}')
 		
 		self.processor.connections = new_connections
 
@@ -337,8 +384,9 @@ class FlowchartPostProcessor:
 				return
 			visited_scopes.add(scope)
 			# Only create subgraph if this scope has visible nodes
+			# Exception: class scopes can be created even without nodes (they contain method subgraphs)
 			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
-			if not scope_nodes:
+			if not scope_nodes and not (scope and scope.startswith("class_") and scope.count("_") == 1):
 				return
 			
 			# Check if subgraph is too large and should be collapsed
@@ -369,7 +417,7 @@ class FlowchartPostProcessor:
 			else:
 				# Fallback for empty scope
 				subgraph_name = "Main Flow"
-				
+			
 			if subgraph_name:
 				lines.append(f"{indent}subgraph \"{subgraph_name}\"")
 			
@@ -384,8 +432,7 @@ class FlowchartPostProcessor:
 				class_name = scope[6:]
 				method_scopes = [s for s in self.processor.node_scopes.values() 
 							   if s and s.startswith(f"class_{class_name}_")]
-				method_scopes = list(set(method_scopes))
-				method_scopes.sort()
+				method_scopes = sorted(list(set([s for s in method_scopes if s is not None])))
 
 				# Remove current scope from the list os scopes
 				# Build method subgraphs nested inside class
@@ -394,7 +441,7 @@ class FlowchartPostProcessor:
 			
 			# For other scopes, find their children
 			elif scope in self.processor.scope_children:
-				children = sorted(self.processor.scope_children[scope])
+				children = sorted([c for c in self.processor.scope_children[scope] if c is not None])
 				for child in children:
 					build(child, indent + "    ")
 			
@@ -405,12 +452,21 @@ class FlowchartPostProcessor:
 		build("main", "")
 		
 		# Build class subgraphs (these will contain their method subgraphs)
-		class_scopes = [s for s in self.processor.node_scopes.values() 
-					   if s and s.startswith("class_") and "_" not in s[6:]]
-		class_scopes.sort()
-
+		# Look for class definition scopes by finding method scopes and extracting class names
+		# Method scopes have format: class_ClassName_methodName
+		# We can infer class scopes from method scopes
+		class_scopes = set()
+		for node_id, scope in self.processor.node_scopes.items():
+			if scope and scope.startswith("class_") and scope.count("_") >= 2:
+				# This is a method scope, extract the class name
+				parts = scope.split("_")
+				if len(parts) >= 3:  # class_ClassName_methodName
+					class_name = parts[1]
+					class_scope = f"class_{class_name}"
+					class_scopes.add(class_scope)
+		class_scopes = sorted(list(class_scopes))
+		
 		for class_scope in class_scopes:
-			visited_scopes.clear()  # Clear visited scopes for each top-level class
 			build(class_scope, "")
 		
 		# Build function subgraphs - only for scopes that have actual nodes
@@ -421,8 +477,7 @@ class FlowchartPostProcessor:
 		
 		function_scopes = [s for s in self.processor.node_scopes.values() 
 						  if s and not s.startswith("class_") and s not in all_nested_scopes]
-		function_scopes = list(set(function_scopes))  # Remove duplicates
-		function_scopes.sort()
+		function_scopes = sorted(list(set([s for s in function_scopes if s is not None])))
 		for function_scope in function_scopes:
 			# Only build subgraph if this scope has visible nodes
 			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == function_scope]

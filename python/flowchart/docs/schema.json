@@ -1,0 +1,631 @@
+{
+  "version": "1.0",
+  "description": "Machine-readable schema for the Python Flowchart Processor",
+  "processor_info": {
+    "name": "Python Flowchart Processor",
+    "output_format": "Mermaid JS",
+    "python_version": "3.8+",
+    "ast_based": true
+  },
+  "node_types": {
+    "if_statement": {
+      "handler": "IfHandler",
+      "ast_type": "ast.If",
+      "shape": "condition",
+      "mermaid_syntax": "{\"text\"}",
+      "creates_branches": true,
+      "connection_labels": ["True", "False"],
+      "creates_merge_node": true,
+      "visibility_flag": "SHOW_IFS"
+    },
+    "for_loop": {
+      "handler": "ForHandler",
+      "ast_type": "ast.For",
+      "shape": "loop",
+      "mermaid_syntax": "{{\"text\"}}",
+      "creates_branches": false,
+      "connection_labels": ["Next Iteration", "Done"],
+      "creates_merge_node": true,
+      "visibility_flag": "SHOW_FOR_LOOPS"
+    },
+    "while_loop": {
+      "handler": "WhileHandler",
+      "ast_type": "ast.While",
+      "shape": "condition",
+      "mermaid_syntax": "{\"text\"}",
+      "creates_branches": false,
+      "connection_labels": ["Next Iteration", "Done"],
+      "creates_merge_node": true,
+      "visibility_flag": "SHOW_WHILE_LOOPS"
+    },
+    "print_statement": {
+      "handler": "PrintHandler",
+      "ast_type": "ast.Call (print)",
+      "shape": "print",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false,
+      "can_consolidate": true,
+      "visibility_flag": "SHOW_PRINTS"
+    },
+    "assignment": {
+      "handler": "AssignHandler",
+      "ast_type": "ast.Assign",
+      "shape": "default",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false,
+      "can_consolidate": true,
+      "tracks_variable_types": true,
+      "tracks_attribute_types": true,
+      "visibility_flag": "SHOW_VARIABLES"
+    },
+    "augmented_assignment": {
+      "handler": "AugAssignHandler",
+      "ast_type": "ast.AugAssign",
+      "shape": "default",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false,
+      "can_consolidate": true,
+      "operators": ["+=", "-=", "*=", "/=", "%=", "**=", "//=", "&=", "|=", "^=", "<<=", ">>="]
+    },
+    "function_call": {
+      "handler": "ExprHandler",
+      "ast_type": "ast.Call",
+      "shape": "function_call",
+      "mermaid_syntax": "[[\"text\"]]",
+      "creates_branches": false,
+      "creates_subgraph": true,
+      "connection_type": "bidirectional",
+      "connection_label": "Call and Return",
+      "max_nesting_depth": 6,
+      "detects_recursion": true,
+      "visibility_flag": "SHOW_FUNCTIONS"
+    },
+    "method_call": {
+      "handler": "MethodHandler",
+      "ast_type": "ast.Call (attribute)",
+      "shape": "function_call",
+      "mermaid_syntax": "[[\"text\"]]",
+      "creates_branches": false,
+      "creates_subgraph": true,
+      "connection_type": "bidirectional",
+      "connection_label": "Call and Return",
+      "requires_type_resolution": true,
+      "reuses_subgraph": true
+    },
+    "constructor_call": {
+      "handler": "ClassHandler._create_method_subgraph",
+      "ast_type": "ast.Call (class instantiation)",
+      "shape": "function_call",
+      "mermaid_syntax": "[[\"Constructor: __init__(params)\"]]",
+      "creates_branches": false,
+      "creates_subgraph": true,
+      "connection_type": "bidirectional",
+      "connection_label": "Call and Return",
+      "tracks_variable_types": true,
+      "tracks_parameter_types": true
+    },
+    "return_statement": {
+      "handler": "ReturnHandler",
+      "ast_type": "ast.Return",
+      "shape": "default",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false,
+      "ends_flow_in_methods": true,
+      "connects_to_end_in_functions": true,
+      "visibility_flag": "SHOW_RETURNS"
+    },
+    "break_statement": {
+      "handler": "BreakHandler",
+      "ast_type": "ast.Break",
+      "shape": "default",
+      "mermaid_syntax": "[\"break\"]",
+      "creates_branches": false,
+      "stops_processing": true,
+      "connects_to_loop_exit": true
+    },
+    "continue_statement": {
+      "handler": "ContinueHandler",
+      "ast_type": "ast.Continue",
+      "shape": "default",
+      "mermaid_syntax": "[\"continue\"]",
+      "creates_branches": false,
+      "stops_processing": true,
+      "connects_to_loop_start": true
+    },
+    "try_except": {
+      "handler": "TryHandler",
+      "ast_type": "ast.Try",
+      "shape": "try",
+      "mermaid_syntax": "{\"try\"}",
+      "creates_branches": true,
+      "creates_merge_node": true,
+      "has_except_nodes": true,
+      "has_finally_node": true,
+      "visibility_flag": "SHOW_EXCEPTIONS"
+    },
+    "raise_statement": {
+      "handler": "RaiseHandler",
+      "ast_type": "ast.Raise",
+      "shape": "exception",
+      "mermaid_syntax": "[[\"text\"]]",
+      "creates_branches": false,
+      "connects_to_end": true
+    },
+    "with_statement": {
+      "handler": "WithHandler",
+      "ast_type": "ast.With",
+      "shape": "default",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false
+    },
+    "assert_statement": {
+      "handler": "AssertHandler",
+      "ast_type": "ast.Assert",
+      "shape": "default",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false
+    },
+    "import_statement": {
+      "handler": "ImportHandler/ImportFromHandler",
+      "ast_type": "ast.Import/ast.ImportFrom",
+      "shape": "import",
+      "mermaid_syntax": "[/\"text\"\\]",
+      "creates_branches": false,
+      "only_first_shown": true,
+      "visibility_flag": "SHOW_IMPORTS"
+    },
+    "lambda": {
+      "handler": "LambdaHandler",
+      "ast_type": "ast.Lambda",
+      "shape": "default",
+      "mermaid_syntax": "[\"lambda_function\"]",
+      "creates_branches": false
+    },
+    "comprehension": {
+      "handler": "ComprehensionHandler",
+      "ast_type": "ast.ListComp/ast.DictComp/ast.SetComp/ast.GeneratorExp",
+      "shape": "default",
+      "mermaid_syntax": "[\"text\"]",
+      "creates_branches": false
+    },
+    "exit_function": {
+      "handler": "ExitFunctionHandler",
+      "ast_type": "ast.Call (exit functions)",
+      "shape": "exit",
+      "mermaid_syntax": "[/\"text\"\\]",
+      "creates_branches": false,
+      "connects_to_end": true,
+      "stops_processing": true,
+      "recognized_functions": ["sys.exit", "os._exit", "exit", "quit"]
+    },
+    "class_definition": {
+      "handler": "ClassHandler",
+      "ast_type": "ast.ClassDef",
+      "shape": "none",
+      "creates_subgraph": true,
+      "stores_methods": true,
+      "visibility_flag": "SHOW_CLASSES"
+    },
+    "function_definition": {
+      "handler": "FunctionDefHandler",
+      "ast_type": "ast.FunctionDef",
+      "shape": "none",
+      "creates_subgraph_on_call": true
+    },
+    "pass_statement": {
+      "handler": "PassHandler",
+      "ast_type": "ast.Pass",
+      "shape": "none",
+      "skipped": true
+    }
+  },
+  "error_warning_nodes": {
+    "method_not_found": {
+      "shape": "exception",
+      "mermaid_syntax": "[[\"text\"]]",
+      "text_format": "❌ Method '{method_name}' not found in {class_name}"
+    },
+    "class_not_resolved": {
+      "shape": "exception",
+      "mermaid_syntax": "[[\"text\"]]",
+      "text_format": "❌ Could not resolve class for method '{method_name}'"
+    },
+    "property_not_found": {
+      "shape": "exception",
+      "mermaid_syntax": "[[\"text\"]]",
+      "text_format": "❌ Property '{property_name}' not found in {class_name}"
+    },
+    "property_called_as_method": {
+      "shape": "exception",
+      "mermaid_syntax": "[[\"text\"]]",
+      "text_format": "⚠️ '{property_name}' is a property, not a method"
+    },
+    "redundant_init_call": {
+      "shape": "exception",
+      "mermaid_syntax": "[[\"text\"]]",
+      "text_format": "⚠️ Redundant __init__ call: {class_name}() already calls constructor"
+    },
+    "nesting_limit_exceeded": {
+      "shape": "function_call",
+      "mermaid_syntax": "[[\"text\"]]",
+      "text_format": "Call: {function_name}() (Max nesting depth {max_depth} exceeded)"
+    }
+  },
+  "connection_types": {
+    "standard": {
+      "syntax": "-->",
+      "description": "Sequential flow",
+      "example": "node1 --> node2"
+    },
+    "labeled": {
+      "syntax": "-->|label|",
+      "description": "Sequential flow with label",
+      "example": "if_cond1 -->|True| node2"
+    },
+    "bidirectional": {
+      "syntax": "<-->",
+      "description": "Call and return",
+      "example": "call1 <--> method2",
+      "used_for": ["function_calls", "method_calls", "constructor_calls"]
+    },
+    "bidirectional_labeled": {
+      "syntax": "<-->|label|",
+      "description": "Call and return with label",
+      "example": "call1 <-->|Call and Return| method2"
+    }
+  },
+  "connection_labels": {
+    "True": {
+      "used_in": ["if_statement"],
+      "description": "Condition is true"
+    },
+    "False": {
+      "used_in": ["if_statement"],
+      "description": "Condition is false"
+    },
+    "Next Iteration": {
+      "used_in": ["for_loop", "while_loop"],
+      "description": "Loop continues"
+    },
+    "Done": {
+      "used_in": ["for_loop", "while_loop"],
+      "description": "Loop exits"
+    },
+    "Call and Return": {
+      "used_in": ["function_call", "method_call", "constructor_call"],
+      "description": "Bidirectional flow for calls"
+    },
+    "uses": {
+      "used_in": ["class_instantiation"],
+      "description": "References class definition"
+    },
+    "Instantiate": {
+      "used_in": ["class_instantiation_without_init"],
+      "description": "Creates class instance"
+    }
+  },
+  "shapes": {
+    "start": {
+      "syntax": "[text]",
+      "description": "Start node"
+    },
+    "end": {
+      "syntax": "[text]",
+      "description": "End node"
+    },
+    "condition": {
+      "syntax": "{\"text\"}",
+      "description": "Diamond shape for conditions"
+    },
+    "loop": {
+      "syntax": "{{\"text\"}}",
+      "description": "Double curly braces for loops"
+    },
+    "merge": {
+      "syntax": "{{}}",
+      "description": "Merge point (empty double braces)"
+    },
+    "print": {
+      "syntax": "[\"text\"]",
+      "description": "Print statement"
+    },
+    "function_call": {
+      "syntax": "[[\"text\"]]",
+      "description": "Double brackets for calls"
+    },
+    "import": {
+      "syntax": "[/\"text\"\\]",
+      "description": "Trapezoid for imports"
+    },
+    "exit": {
+      "syntax": "[/\"text\"\\]",
+      "description": "Trapezoid for exit functions"
+    },
+    "exception": {
+      "syntax": "[[\"text\"]]",
+      "description": "Double brackets for errors/warnings"
+    },
+    "finally": {
+      "syntax": "[/\"text\"\\]",
+      "description": "Trapezoid for finally blocks"
+    },
+    "try": {
+      "syntax": "{\"text\"}",
+      "description": "Diamond for try blocks"
+    },
+    "catch": {
+      "syntax": "[[\"text\"]]",
+      "description": "Double brackets for except"
+    }
+  },
+  "scopes": {
+    "main_flow": {
+      "pattern": "None",
+      "description": "Top-level code, no scope"
+    },
+    "function": {
+      "pattern": "functionName",
+      "description": "Function scope",
+      "example": "calculate_total"
+    },
+    "class": {
+      "pattern": "class_ClassName",
+      "description": "Class scope",
+      "example": "class_Calculator"
+    },
+    "method": {
+      "pattern": "class_ClassName_methodName",
+      "description": "Method scope",
+      "example": "class_Calculator_add"
+    },
+    "dunder_method": {
+      "pattern": "class_ClassName___methodName",
+      "description": "Method with double underscores",
+      "example": "class_Calculator___init__",
+      "note": "Double underscores become triple in scope"
+    }
+  },
+  "subgraphs": {
+    "class_subgraph": {
+      "title_format": "Class: {class_name}",
+      "contains": ["method_subgraphs"],
+      "scope_pattern": "class_ClassName",
+      "can_collapse": true
+    },
+    "method_subgraph": {
+      "title_format": "Method: {method_name}",
+      "nested_in": "class_subgraph",
+      "scope_pattern": "class_ClassName_methodName",
+      "can_collapse": true,
+      "reusable": true
+    },
+    "constructor_subgraph": {
+      "title_format": "Method: __init__",
+      "nested_in": "class_subgraph",
+      "scope_pattern": "class_ClassName___init__",
+      "can_collapse": true,
+      "reusable": true
+    },
+    "function_subgraph": {
+      "title_format": "Function: {function_name}",
+      "scope_pattern": "functionName",
+      "can_collapse": true
+    }
+  },
+  "collapse_rules": {
+    "priority_order": [
+      {
+        "rank": 1,
+        "rule": "force_collapse_exact",
+        "description": "Exact scope in FORCE_COLLAPSE_LIST"
+      },
+      {
+        "rank": 2,
+        "rule": "whitelist_exact",
+        "description": "Exact scope in SUBGRAPH_WHITELIST"
+      },
+      {
+        "rank": 3,
+        "rule": "entry_point_protection",
+        "description": "Entry point scope"
+      },
+      {
+        "rank": 4,
+        "rule": "force_collapse_pattern",
+        "description": "Class name in FORCE_COLLAPSE_LIST"
+      },
+      {
+        "rank": 5,
+        "rule": "whitelist_pattern",
+        "description": "Class name in SUBGRAPH_WHITELIST"
+      },
+      {
+        "rank": 6,
+        "rule": "size_based",
+        "description": "Node count > MAX_SUBGRAPH_NODES"
+      }
+    ],
+    "collapsed_node_format": "collapsed_nodes__{scope}_{node_count}",
+    "collapsed_subgraph_title": "{subgraph_type}: {name} ({node_count} nodes)"
+  },
+  "environment_variables": {
+    "display_toggles": {
+      "SHOW_PRINTS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show print statements"
+      },
+      "SHOW_FUNCTIONS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show function calls"
+      },
+      "SHOW_FOR_LOOPS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show for loops"
+      },
+      "SHOW_WHILE_LOOPS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show while loops"
+      },
+      "SHOW_VARIABLES": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show variable assignments"
+      },
+      "SHOW_IFS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show if statements"
+      },
+      "SHOW_IMPORTS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show import statements"
+      },
+      "SHOW_EXCEPTIONS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show try/except blocks"
+      },
+      "SHOW_RETURNS": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Show return statements"
+      },
+      "SHOW_CLASSES": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Track class definitions"
+      },
+      "MERGE_COMMON_NODES": {
+        "type": "boolean",
+        "default": "1",
+        "description": "Consolidate consecutive simple nodes"
+      }
+    },
+    "entry_points": {
+      "ENTRY_TYPE": {
+        "type": "enum",
+        "values": ["file", "function", "class"],
+        "default": "file",
+        "description": "Type of entry point"
+      },
+      "ENTRY_NAME": {
+        "type": "string",
+        "default": null,
+        "description": "Function or method name"
+      },
+      "ENTRY_CLASS": {
+        "type": "string",
+        "default": null,
+        "description": "Class name for method entry"
+      }
+    },
+    "subgraph_control": {
+      "MAX_SUBGRAPH_NODES": {
+        "type": "integer",
+        "default": 25,
+        "description": "Node threshold for auto-collapse"
+      },
+      "SUBGRAPH_WHITELIST": {
+        "type": "comma_separated_list",
+        "default": "",
+        "description": "Subgraphs to never collapse"
+      },
+      "FORCE_COLLAPSE_LIST": {
+        "type": "comma_separated_list",
+        "default": "",
+        "description": "Subgraphs to always collapse"
+      }
+    },
+    "limits": {
+      "MAX_NODES": {
+        "type": "integer",
+        "default": 100,
+        "description": "Maximum nodes before stopping"
+      },
+      "MAX_NESTING_DEPTH": {
+        "type": "integer",
+        "default": 6,
+        "description": "Maximum function call nesting"
+      }
+    },
+    "breakpoints": {
+      "HAS_BREAKPOINTS": {
+        "type": "boolean",
+        "default": "0",
+        "description": "Enable breakpoint highlighting"
+      },
+      "BREAKPOINT_LINES": {
+        "type": "comma_separated_integers",
+        "default": "",
+        "description": "Line numbers to highlight"
+      }
+    }
+  },
+  "type_tracking": {
+    "variable_types": {
+      "description": "Tracks variable assignments to class instances",
+      "format": "{ variable_name: class_name }",
+      "example": "{ 'calc': 'Calculator', 'user': 'User' }"
+    },
+    "parameter_types": {
+      "description": "Tracks parameter types in method scopes",
+      "format": "{ scope: { param_name: class_name } }",
+      "example": "{ 'class_UserService___init__': { 'db': 'Database' } }"
+    },
+    "attribute_types": {
+      "description": "Tracks self.attribute assignments",
+      "format": "{ scope: { attr_name: class_name } }",
+      "example": "{ 'class_UserService___init__': { 'db': 'Database' } }"
+    }
+  },
+  "special_features": {
+    "recursion_detection": {
+      "enabled": true,
+      "description": "Detects recursive calls and creates loop backs",
+      "prevents_infinite_loops": true
+    },
+    "method_reuse": {
+      "enabled": true,
+      "description": "Same method called multiple times reuses subgraph"
+    },
+    "node_consolidation": {
+      "enabled_by_default": true,
+      "configurable": true,
+      "eligible_nodes": ["print", "simple_assignment", "augmented_assignment"]
+    },
+    "breakpoint_highlighting": {
+      "enabled": false,
+      "configurable": true,
+      "marker": "🔴"
+    },
+    "error_nodes": {
+      "enabled": true,
+      "types": ["method_not_found", "class_not_resolved", "property_not_found", "redundant_init", "nesting_limit"]
+    }
+  },
+  "output_format": {
+    "mermaid_version": "Compatible with Mermaid JS 8.0+",
+    "graph_direction": "TD (Top to Down)",
+    "metadata_included": true,
+    "metadata_fields": [
+      "collapsed_subgraphs",
+      "subgraph_whitelist",
+      "force_collapse_list",
+      "all_subgraphs"
+    ]
+  },
+  "limitations": {
+    "no_runtime_types": "Cannot determine types from dynamic code",
+    "no_control_flow_analysis": "Doesn't track type changes across branches",
+    "no_collection_element_tracking": "List/dict element types not tracked",
+    "no_literal_type_inference": "String/int literals not typed",
+    "parameter_tracking_limited": "Only __init__ parameters tracked",
+    "nested_attribute_limited": "obj.attr.method() may not resolve"
+  }
+}
+
