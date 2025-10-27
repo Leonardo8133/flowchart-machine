@@ -184,7 +184,9 @@
     "test:watch": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index --watch",
     "test:coverage": "npm run compile && npm run test:unit",
     "test:clean": "rimraf test-workspace*",
-    "test:all": "npm run pretest && npm run test:unit"
+    "test:all": "npm run pretest && npm run test:unit",
+    "pretest:ui": "npm run compile",
+    "test:ui": "extest setup-and-run './out/ui-test/**/*.test.js' --code_version max --code_settings ui-test/settings.json --extensions_dir .test-extensions"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

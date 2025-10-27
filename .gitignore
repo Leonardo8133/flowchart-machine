@@ -2,6 +2,7 @@ out
 dist
 node_modules
 .vscode-test/
+.test-extensions/
 *.vsix
 */__pycache__/
 */__pycache__/*
