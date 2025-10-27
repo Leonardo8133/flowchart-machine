@@ -21,7 +21,7 @@ class TestClass3:
 class TestClass2:
     def __init__(self):
         self.value = 0
-    
+
     def calculate_value(self):
         print("TestClass2.calculate_value")
         return 25 * 12
@@ -32,6 +32,3 @@ class TestClass2:
 def standalone_function():
     print("standalone")
     return 1
-
-print(TestClass2())
-TestClass3().call_another_class()

@@ -64,6 +64,13 @@
 				"focus": false,
 				"panel": "shared"
 			}
+		},
+		{
+			"type": "npm",
+			"script": "pretest",
+			"problemMatcher": [],
+			"label": "npm: pretest",
+			"detail": "npm run compile && npm run lint"
 		}
 	]
 }

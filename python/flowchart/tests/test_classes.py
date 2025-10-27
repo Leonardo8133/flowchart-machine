@@ -139,12 +139,18 @@ class TestFlowchartClasses(TestFlowchartMain):
         self.assertIn('graph', mermaid_output)
         self.assertIsInstance(metadata, dict)
         
-        # Check return connections for method calls with assignments
+        # Check that direct class method calls show error nodes
+        # TestClass.test_method() and TestClass.other_method() are instance methods
+        # called directly on the class without instantiation - this should show errors
+        self.assertIn('❌', mermaid_output, "Should show error nodes for uninstanciated class method calls")
+        self.assertIn('Method', mermaid_output)
+        
+        # Check return connections for correct instance method calls with assignments
         self.assertIn('result1 = obj1.test_method()', mermaid_output)
         self.assertIn('result2 = obj2.calculate_value()', mermaid_output)
         
-        # Verify bidirectional arrows exist for method calls
-        # (Current behavior: all method calls get bidirectional arrows)
+        # Verify bidirectional arrows exist for valid method calls
+        # (Valid method calls should get bidirectional arrows)
         self.assertIn('<-->|Call and Return|', mermaid_output)
     
     def test_complex_scenario(self):

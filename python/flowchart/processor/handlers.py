@@ -380,8 +380,14 @@ class ExprHandler(NodeHandler):
                         if full_name in FlowchartConfig.EXIT_FUNCTIONS:
                             return self.processor.handlers['exit_function'].handle(node, prev_id, scope)
                     
+                    # Check if calling a method on a class directly (like TestClass.method())
+                    # Extract the class name to pass to _handle_method_call
+                    class_name_for_call = None
+                    if hasattr(call.func.value, 'id') and call.func.value.id in self.processor.class_defs:
+                        class_name_for_call = call.func.value.id
+                    
                     # Handle any method call with attribute access (obj.method, self.attr.method, etc.)
-                    return self._handle_method_call(node, prev_id, scope, attr_name)
+                    return self._handle_method_call(node, prev_id, scope, attr_name, class_name_for_call)
             
             # Check for direct function names
             if func_name in FlowchartConfig.EXIT_FUNCTIONS:
@@ -494,6 +500,23 @@ class ExprHandler(NodeHandler):
             class_info = self.processor.class_defs[class_name]
             if method_name in class_info["methods"]:
                 method_node = class_info["methods"][method_name]
+                
+                # Check if this is calling an instance method on a class without instantiation
+                # If the method has 'self' as first parameter, we can't call it on the class directly
+                # Exception: entry point analysis allows this for visualization purposes
+                entry_type = getattr(self.processor, 'context', {}).get('entry_type')
+                # entry_type is None for file mode, 'class' for class entry point analysis
+                if entry_type != 'class' and method_node.args.args and len(method_node.args.args) > 0:
+                    first_param = method_node.args.args[0].arg
+                    if first_param == 'self':
+                        # This is an instance method being called on a class - show error (only in file mode)
+                        error_id = self.processor._generate_id("error")
+                        error_text = f"❌ Instance method '{method_name}' called on class '{class_name}' without instantiation"
+                        self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                        self.processor._add_connection(method_call_id, error_id)
+                        return error_id
+                
+                # Method is either static or we're calling it on an instance
                 self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, method_node, method_call_id)
                 method_found = True
         

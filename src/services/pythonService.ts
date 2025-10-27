@@ -44,9 +44,19 @@ export class PythonService {
    */
   static async executeScript(scriptPath: string, args: string[], env?: NodeJS.ProcessEnv): Promise<PythonExecutionResult> {
     return new Promise((resolve) => {
+      const path = require('path');
+      // Get the python directory path (parent of flowchart)
+      const pythonDir = path.resolve(__dirname, '../../python');
+      
+      // Set PYTHONPATH to include the python directory
+      const extendedEnv = {
+        ...env,
+        PYTHONPATH: `${pythonDir}${process.env.PYTHONPATH ? path.delimiter + process.env.PYTHONPATH : ''}`
+      };
+      
       const command = `python "${scriptPath}" ${args.map(arg => `"${arg}"`).join(' ')}`;
       
-      exec(command, { env }, (error, stdout, stderr) => {
+      exec(command, { env: extendedEnv }, (error, stdout, stderr) => {
         if (error) {
           resolve({
             success: false,
