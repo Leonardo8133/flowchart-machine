@@ -11,6 +11,11 @@ from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 from pathlib import Path
 
+# Add parent directory to sys.path for imports
+parent_dir = Path(__file__).parent.parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 class TestFlowchartMain(unittest.TestCase):
     """Test suite for the main flowchart generation function."""
     
@@ -31,6 +36,7 @@ class TestFlowchartMain(unittest.TestCase):
     def _run_main_with_file(self, test_file, entry_type=None, entry_name=None, entry_class=None, breakpoint_lines=None):
         """Helper method to run main() with a test file and environment variables."""
         file_path = str(self.test_dir / test_file)
+        
         
         # Capture stdout and stderr
         stdout_capture = io.StringIO()
@@ -59,7 +65,7 @@ class TestFlowchartMain(unittest.TestCase):
                 
                 with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
                     # Import and run main
-                    from main import main
+                    from flowchart.main import main
                     main()
         
         # Get captured output

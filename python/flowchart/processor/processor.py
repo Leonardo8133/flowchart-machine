@@ -4,8 +4,8 @@ import html
 import re
 import logging
 from typing import Dict, List, Set, Optional, Any, Union
-from processor.config import FlowchartConfig
-import processor.handlers as handlers
+from .config import FlowchartConfig
+from . import handlers
 
 # Configure logging
 logger = logging.getLogger(__name__)

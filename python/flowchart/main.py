@@ -2,9 +2,9 @@ import sys
 import os
 import json
 import ast
-from processor.processor import FlowchartProcessor   
-from post_processor import FlowchartPostProcessor
-from entry_processor import EntryProcessor
+from flowchart.processor.processor import FlowchartProcessor   
+from flowchart.post_processor import FlowchartPostProcessor
+from flowchart.entry_processor import EntryProcessor
 
 
 class FlowchartGenerator:

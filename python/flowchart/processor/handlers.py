@@ -1,7 +1,7 @@
 import ast
 import logging
 from typing import Optional, List, Dict, Any, Union
-from processor.config import FlowchartConfig
+from .config import FlowchartConfig
 
 logger = logging.getLogger(__name__)
 

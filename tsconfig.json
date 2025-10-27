@@ -30,9 +30,6 @@
 	"exclude": [
 		"node_modules",
 		"out",
-		"test/**/*",
-		"**/*.spec.ts",
-		"**/*.test.ts",
 		"wdio.conf.ts",
 		"playwright.config.ts"
 	]

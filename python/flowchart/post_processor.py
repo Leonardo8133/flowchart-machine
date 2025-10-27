@@ -1,6 +1,6 @@
 import re
 import os
-from processor.config import FlowchartConfig
+from flowchart.processor.config import FlowchartConfig
 
 class FlowchartPostProcessor:
 	"""

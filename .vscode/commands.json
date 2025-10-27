@@ -1,36 +1,49 @@
 {
   "folders": [
     {
-      "name": "Samples",
+      "name": "Development",
+      "icon": "$(tools)",
+      "expanded": true,
+      "commands": [
+        {
+          "id": "compile-typescript",
+          "label": "Compile TypeScript",
+          "description": "Compile TypeScript source code to JavaScript",
+          "command": "npm run compile",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Build a"
+          },
+          "variables": []
+        }
+      ]
+    },
+    {
+      "name": "Testing",
       "icon": "$(beaker)",
       "expanded": true,
       "commands": [
         {
-          "id": "hello-world",
-          "label": "Echo Hello",
-          "command": "echo \"Hello from Command Manager\"",
+          "id": "run-npm-tests",
+          "label": "Run npm tests",
+          "description": "Run VS Code extension tests (npm test)",
+          "command": "npm test",
           "terminal": {
             "type": "vscode-new",
-            "name": "Command Manager"
+            "name": "Tests"
           },
-          "description": "Sample command that echoes a welcome message"
+          "variables": []
         },
         {
-          "id": "build-environment",
-          "label": "Build for environment",
-          "description": "Builds the project using one of the configured environments",
-          "command": "node test/vscode-extension-tester-test.js",
+          "id": "run-python-tests",
+          "label": "Run Python tests",
+          "description": "Run Python flowchart generation tests",
+          "command": "cd python; python -m unittest discover flowchart.tests -v",
           "terminal": {
-            "type": "vscode-current"
+            "type": "vscode-new",
+            "name": "Python Tests"
           },
-          "variables": [
-            {
-              "key": "environment",
-              "value": "production\ndevelopment\nstaging",
-              "label": "Environment",
-              "type": "options"
-            }
-          ]
+          "variables": []
         }
       ]
     }
@@ -55,6 +68,6 @@
       "description": "Common deployment targets"
     }
   ],
-  "version": 1,
-  "lastModified": "2025-10-26T02:47:59.275Z"
+  "version": 7,
+  "lastModified": "2025-10-27T13:59:47.108Z"
 }

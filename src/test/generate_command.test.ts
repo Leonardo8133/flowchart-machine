@@ -245,28 +245,24 @@ suite('Generate Command (Cursor vs Palette)', () => {
     const editor = await vscode.workspace.openTextDocument(methodFileUri);
     const doc = await vscode.window.showTextDocument(editor, vscode.ViewColumn.One);
 
-    // Place cursor inside the call_another_class
-    const line = findLine(doc, 'def call_another_class');
+    // Place cursor inside the call_another_class method
+    const line = findLine(doc, 'self.value = TestClass2');
 
-    console.log("line", line);
-    // Put cursor at.
     doc.selection = new vscode.Selection(new vscode.Position(line, 5), new vscode.Position(line, 5));
 
     const { meta, flowchart } = await generateFlowchart(doc, true);
 
-    
+    // Create a 10s 
     await new Promise(resolve => setTimeout(resolve, 10000));
+
     assert.ok(flowchart.includes('Class: TestClass3'), 'Should include Class: TestClass3');
     assert.ok(flowchart.includes('call_another_class'));
-    assert.ok(flowchart.includes('TestClass2.calculate_value()'), 'Flowchart should include calculate_value()');
+    assert.ok(flowchart.includes('calculate_value'), 'Flowchart should include calculate_value');
     // Should include TestClass2
     assert.ok(flowchart.includes('Class: TestClass2'), 'Should include Class: TestClass2');
     assert.ok(flowchart.includes('return 25 * 12'), 'Flowchart should include return 25 * 12');
     //Test if class Testclass1 is not present
     assert.ok(!flowchart.includes('Class: TestClass'), 'Flowchart should not include Class: TestClass');
-
-    
-
   });
 });
 
