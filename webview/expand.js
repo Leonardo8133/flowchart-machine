@@ -4,6 +4,8 @@ let subgraphStates = {}; // UI state hint (expanded/collapsed), optional
 let whitelistSet = new Set();
 let forceCollapseSet = new Set();
 let collapsedSubgraphsMetadata = {}; // Track automatically collapsed subgraphs
+let expandedSubgraphsMetadata = {}; // Track automatically expanded subgraphs
+let subgraphStatusMap = {}; // Unified map of all subgraph statuses
 let allSubgraphsList = []; // Canonical subgraph identifiers from Python
 
 // Receive current lists from the extension and update local caches
@@ -15,21 +17,39 @@ function updateSubgraphStates(payload) {
     // Process names for consistent matching
     whitelistSet = new Set(whitelist.map(name => name.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim()));
     forceCollapseSet = new Set(forceList.map(name => name.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim()));
+    
+    // Use new comprehensive metadata structure
     collapsedSubgraphsMetadata = metadata.collapsed_subgraphs || {};
+    expandedSubgraphsMetadata = metadata.expanded_subgraphs || {};
+    subgraphStatusMap = metadata.subgraph_status_map || {};
     allSubgraphsList = Array.isArray(metadata.all_subgraphs) ? metadata.all_subgraphs : [];
+    
+    console.log('Updated subgraph states:', {
+        collapsed: Object.keys(collapsedSubgraphsMetadata).length,
+        expanded: Object.keys(expandedSubgraphsMetadata).length,
+        total: Object.keys(subgraphStatusMap).length
+    });
+    
+    // Update statistics display
+    updateSubgraphStatistics();
 }
 
-// Function to check if a subgraph is collapsed
+// Function to check if a subgraph is collapsed using new metadata
 function isSubgraphCollapsed(scopeName) {
     // Clean the scope name by removing the parentheses and arguments
     const originalScopeName = scopeName;
     scopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
 
-    // Check if the processed scope name matches any of the sets
+    // First, try to get status from the unified status map (most reliable)
+    const statusInfo = subgraphStatusMap[originalScopeName] || subgraphStatusMap[scopeName];
+    if (statusInfo && statusInfo.status) {
+        return statusInfo.status === 'collapsed';
+    }
+
+    // Fallback to legacy detection methods
     const isWhitelisted = whitelistSet.has(scopeName);
     const isForceCollapsed = forceCollapseSet.has(scopeName);
     const isAutoCollapsed = collapsedSubgraphsMetadata[originalScopeName] || collapsedSubgraphsMetadata[scopeName];
-
 
     // Not collapsed if whitelisted
     if (isWhitelisted) {
@@ -49,11 +69,18 @@ function isSubgraphCollapsed(scopeName) {
     return false;
 }
 
-// Context-aware collapsed-state check using canonical resolution
+// Context-aware collapsed-state check using canonical resolution and new metadata
 function isSubgraphCollapsedWithContext(displayLabel, context) {
     const canonical = resolveCanonicalScope(displayLabel, context);
     const processed = canonical.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
 
+    // First, try to get status from the unified status map (most reliable)
+    const statusInfo = subgraphStatusMap[canonical];
+    if (statusInfo && statusInfo.status) {
+        return statusInfo.status === 'collapsed';
+    }
+
+    // Fallback to legacy detection methods
     const isWhitelisted = whitelistSet.has(processed);
     if (isWhitelisted) { return false; }
 
@@ -64,6 +91,68 @@ function isSubgraphCollapsedWithContext(displayLabel, context) {
     if (isForceCollapsed) { return true; }
 
     return false;
+}
+
+// Helper function to get subgraph information from new metadata
+function getSubgraphInfo(scopeName) {
+    const originalScopeName = scopeName;
+    const cleanedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+    
+    // Try to get from status map first
+    let statusInfo = subgraphStatusMap[originalScopeName] || subgraphStatusMap[cleanedScopeName];
+    
+    if (statusInfo) {
+        return {
+            status: statusInfo.status,
+            nodeCount: statusInfo.node_count,
+            subgraphName: statusInfo.subgraph_name,
+            scopeNodes: statusInfo.scope_nodes,
+            isCollapsed: statusInfo.status === 'collapsed',
+            isExpanded: statusInfo.status === 'expanded'
+        };
+    }
+    
+    // Fallback to individual maps
+    if (collapsedSubgraphsMetadata[originalScopeName] || collapsedSubgraphsMetadata[cleanedScopeName]) {
+        const info = collapsedSubgraphsMetadata[originalScopeName] || collapsedSubgraphsMetadata[cleanedScopeName];
+        return {
+            status: 'collapsed',
+            nodeCount: info.node_count,
+            subgraphName: info.subgraph_name,
+            scopeNodes: info.scope_nodes,
+            isCollapsed: true,
+            isExpanded: false
+        };
+    }
+    
+    if (expandedSubgraphsMetadata[originalScopeName] || expandedSubgraphsMetadata[cleanedScopeName]) {
+        const info = expandedSubgraphsMetadata[originalScopeName] || expandedSubgraphsMetadata[cleanedScopeName];
+        return {
+            status: 'expanded',
+            nodeCount: info.node_count,
+            subgraphName: info.subgraph_name,
+            scopeNodes: info.scope_nodes,
+            isCollapsed: false,
+            isExpanded: true
+        };
+    }
+    
+    return null;
+}
+
+// Function to get all subgraphs with their status
+function getAllSubgraphStatuses() {
+    const statuses = {};
+    for (const [scope, info] of Object.entries(subgraphStatusMap)) {
+        statuses[scope] = {
+            status: info.status,
+            nodeCount: info.node_count,
+            subgraphName: info.subgraph_name,
+            isCollapsed: info.status === 'collapsed',
+            isExpanded: info.status === 'expanded'
+        };
+    }
+    return statuses;
 }
 
 // Function to expand a collapsed subgraph by adding it to whitelist
@@ -232,6 +321,105 @@ function collapseSubgraphWithContext(displayLabel, context) {
     } else {
         console.error('VS Code API not available for collapse');
     }
+}
+
+// Enhanced expand/collapse all functionality using new metadata
+function expandAllSubgraphs() {
+    console.log('Expanding all subgraphs using new metadata...');
+    
+    // Get all subgraphs from the status map
+    const allStatuses = getAllSubgraphStatuses();
+    const collapsedScopes = Object.keys(allStatuses).filter(scope => allStatuses[scope].isCollapsed);
+    
+    console.log(`Found ${collapsedScopes.length} collapsed subgraphs to expand`);
+    
+    if (collapsedScopes.length === 0) {
+        console.log('No collapsed subgraphs to expand');
+        return;
+    }
+    
+    // Send message to extension to expand all
+    if (window.vscode && window.vscode.postMessage) {
+        window.vscode.postMessage({ 
+            command: 'expandAllSubgraphs',
+            scopes: collapsedScopes,
+            metadata: {
+                collapsed_subgraphs: collapsedSubgraphsMetadata,
+                expanded_subgraphs: expandedSubgraphsMetadata,
+                subgraph_status_map: subgraphStatusMap
+            }
+        });
+    } else {
+        console.error('VS Code API not available for expand all');
+    }
+}
+
+function collapseAllSubgraphs() {
+    console.log('Collapsing all subgraphs using new metadata...');
+    
+    // Get all subgraphs from the status map
+    const allStatuses = getAllSubgraphStatuses();
+    const expandedScopes = Object.keys(allStatuses).filter(scope => allStatuses[scope].isExpanded);
+    
+    console.log(`Found ${expandedScopes.length} expanded subgraphs to collapse`);
+    
+    if (expandedScopes.length === 0) {
+        console.log('No expanded subgraphs to collapse');
+        return;
+    }
+    
+    // Send message to extension to collapse all
+    if (window.vscode && window.vscode.postMessage) {
+        window.vscode.postMessage({ 
+            command: 'collapseAllSubgraphs',
+            scopes: expandedScopes,
+            metadata: {
+                collapsed_subgraphs: collapsedSubgraphsMetadata,
+                expanded_subgraphs: expandedSubgraphsMetadata,
+                subgraph_status_map: subgraphStatusMap
+            }
+        });
+    } else {
+        console.error('VS Code API not available for collapse all');
+    }
+}
+
+// Function to get statistics about subgraph states
+function getSubgraphStatistics() {
+    const allStatuses = getAllSubgraphStatuses();
+    const total = Object.keys(allStatuses).length;
+    const collapsed = Object.values(allStatuses).filter(s => s.isCollapsed).length;
+    const expanded = Object.values(allStatuses).filter(s => s.isExpanded).length;
+    
+    return {
+        total,
+        collapsed,
+        expanded,
+        collapsedPercentage: total > 0 ? Math.round((collapsed / total) * 100) : 0,
+        expandedPercentage: total > 0 ? Math.round((expanded / total) * 100) : 0
+    };
+}
+
+// Function to update subgraph statistics display
+function updateSubgraphStatistics() {
+    const statsElement = document.getElementById('subgraphStats');
+    if (!statsElement) return;
+    
+    const stats = getSubgraphStatistics();
+    
+    if (stats.total === 0) {
+        statsElement.querySelector('.stats-text').textContent = 'No subgraphs';
+        return;
+    }
+    
+    const statsText = `${stats.expanded}↑ ${stats.collapsed}↓ (${stats.total} total)`;
+    statsElement.querySelector('.stats-text').textContent = statsText;
+    
+    // Update tooltip with detailed information
+    statsElement.title = `Subgraph Statistics:\n` +
+        `• Total: ${stats.total}\n` +
+        `• Expanded: ${stats.expanded} (${stats.expandedPercentage}%)\n` +
+        `• Collapsed: ${stats.collapsed} (${stats.collapsedPercentage}%)`;
 }
 
 // Backwards compat noop (metadata no longer used)

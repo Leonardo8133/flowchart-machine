@@ -31,7 +31,7 @@ class TestInitTracking(TestFlowchartMain):
         self.assertIn('⚠️ Redundant __init__ call: TestClass2() already calls constructor', mermaid_output)
         
         # Verify that TestClass2's __init__ is actually called (showing the instantiation happened)
-        self.assertIn('Call __init__', mermaid_output)
+        self.assertIn('Call and Return', mermaid_output)
         
         # Check that TestClass1 method call works
         self.assertIn('obj1.calculate_value()', mermaid_output)

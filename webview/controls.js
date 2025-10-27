@@ -204,22 +204,34 @@ function handleOutsideClick(event) {
 }
 
 function handleExpandAllClick() {
-
-    if (vscode) {
+    console.log('Expand All button clicked');
+    
+    // Use the new enhanced function if available
+    if (typeof window.expandAllSubgraphs === 'function') {
+        window.expandAllSubgraphs();
+    } else if (vscode) {
+        // Fallback to old method
         vscode.postMessage({
             command: 'expandAllSubgraphs'
         });
     } else {
+        console.error('Neither new expandAllSubgraphs function nor VS Code API available');
     }
 }
 
 function handleCollapseAllClick() {
-
-    if (vscode) {
+    console.log('Collapse All button clicked');
+    
+    // Use the new enhanced function if available
+    if (typeof window.collapseAllSubgraphs === 'function') {
+        window.collapseAllSubgraphs();
+    } else if (vscode) {
+        // Fallback to old method
         vscode.postMessage({
             command: 'collapseAllSubgraphs'
         });
     } else {
+        console.error('Neither new collapseAllSubgraphs function nor VS Code API available');
     }
 }
 

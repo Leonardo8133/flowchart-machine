@@ -200,15 +200,31 @@ export class WebviewMessageHandler {
       // Get the whitelist service
       const whitelistService = this.getWhitelistService();
 
-      // Get all subgraphs from the current metadata
-      const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
-      const allSubgraphs = Object.keys(collapsedSubgraphs);
+      // Clear both whitelist and force collapse list
+      whitelistService.clearWhitelist();
+      whitelistService.clearForceCollapseList();
 
-
-      // Add all subgraphs to the whitelist
-      for (const scopeName of allSubgraphs) {
-        const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-        whitelistService.addToWhitelist(processedScopeName);
+      // Use new metadata structure if available
+      if (message.scopes && Array.isArray(message.scopes)) {
+        console.log(`Expanding ${message.scopes.length} collapsed subgraphs using new metadata`);
+        
+        // Add all collapsed scopes to whitelist
+        for (const scopeName of message.scopes) {
+          const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+          whitelistService.addToWhitelist(processedScopeName);
+        }
+      } else {
+        // Fallback to old method using collapsed_subgraphs
+        const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
+        const allSubgraphs = Object.keys(collapsedSubgraphs);
+        
+        console.log(`Expanding ${allSubgraphs.length} subgraphs using legacy method`);
+        
+        // Add all subgraphs to the whitelist
+        for (const scopeName of allSubgraphs) {
+          const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+          whitelistService.addToWhitelist(processedScopeName);
+        }
       }
 
       // Get the updated whitelist to pass to regeneration
@@ -217,6 +233,7 @@ export class WebviewMessageHandler {
       // Regenerate flowchart with updated lists
       await this.handleRegeneration(panel, currentWhitelist);
     } catch (error) {
+      console.error('Error expanding all subgraphs:', error);
       panel.webview.postMessage({
         command: 'expandAllError',
         error: error instanceof Error ? error.message : String(error)
@@ -236,24 +253,36 @@ export class WebviewMessageHandler {
       whitelistService.clearWhitelist();
       whitelistService.clearForceCollapseList();
 
-      // Get all available subgraphs from metadata
-      const allSubgraphs = this.currentMetadata?.all_subgraphs || [];
-      
-      if (allSubgraphs.length === 0) {
-        // Fallback: if all_subgraphs is not available, use the collapseAllSubgraphs method
-        console.warn('all_subgraphs not available in metadata, using fallback method');
-        whitelistService.collapseAllSubgraphs();
-      } else {
-        // Add all available subgraphs to the force collapse list
-        for (const scopeName of allSubgraphs) {
+      // Use new metadata structure if available
+      if (message.scopes && Array.isArray(message.scopes)) {
+        console.log(`Collapsing ${message.scopes.length} expanded subgraphs using new metadata`);
+        
+        // Add all expanded scopes to force collapse list
+        for (const scopeName of message.scopes) {
           const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
           whitelistService.addToForceCollapseList(processedScopeName);
+        }
+      } else {
+        // Fallback to old method using all_subgraphs
+        const allSubgraphs = this.currentMetadata?.all_subgraphs || [];
+        
+        if (allSubgraphs.length === 0) {
+          console.warn('No subgraph information available, using fallback method');
+          whitelistService.collapseAllSubgraphs();
+        } else {
+          console.log(`Collapsing all ${allSubgraphs.length} subgraphs using legacy method`);
+          // Add all available subgraphs to the force collapse list
+          for (const scopeName of allSubgraphs) {
+            const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+            whitelistService.addToForceCollapseList(processedScopeName);
+          }
         }
       }
 
       // Regenerate flowchart with updated lists
       await this.handleRegeneration(panel);
     } catch (error) {
+      console.error('Error collapsing all subgraphs:', error);
       panel.webview.postMessage({
         command: 'collapseAllError',
         error: error instanceof Error ? error.message : String(error)

@@ -1,0 +1,60 @@
+{
+  "folders": [
+    {
+      "name": "Samples",
+      "icon": "$(beaker)",
+      "expanded": true,
+      "commands": [
+        {
+          "id": "hello-world",
+          "label": "Echo Hello",
+          "command": "echo \"Hello from Command Manager\"",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Command Manager"
+          },
+          "description": "Sample command that echoes a welcome message"
+        },
+        {
+          "id": "build-environment",
+          "label": "Build for environment",
+          "description": "Builds the project using one of the configured environments",
+          "command": "node test/vscode-extension-tester-test.js",
+          "terminal": {
+            "type": "vscode-current"
+          },
+          "variables": [
+            {
+              "key": "environment",
+              "value": "production\ndevelopment\nstaging",
+              "label": "Environment",
+              "type": "options"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sharedVariables": [
+    {
+      "key": "PROJECT_ROOT",
+      "label": "Project root",
+      "value": "${workspaceFolder}",
+      "description": "Path to the current workspace folder"
+    }
+  ],
+  "sharedLists": [
+    {
+      "key": "ENVIRONMENT_NAME",
+      "label": "Environment",
+      "options": [
+        "local",
+        "staging",
+        "production"
+      ],
+      "description": "Common deployment targets"
+    }
+  ],
+  "version": 1,
+  "lastModified": "2025-10-26T02:47:59.275Z"
+}

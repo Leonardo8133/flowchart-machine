@@ -495,7 +495,197 @@ class TestFlowchartClasses(TestFlowchartMain):
         print(f"Whitelist: {metadata.get('subgraph_whitelist', [])}")
         print(f"Force Collapse: {metadata.get('force_collapse_list', [])}")
         print(f"Collapsed Subgraphs: {list(collapsed_subgraphs.keys())}")
+    
+    def test_whitelist_pattern_vs_exact_priority(self):
+        """Test that whitelist exact matches have priority over pattern matches."""
+        with patch.dict(os.environ, {
+            'MAX_SUBGRAPH_NODES': '5',
+            'SUBGRAPH_WHITELIST': 'TestClass,class_TestClass2_calculate_value',  # Pattern + exact
+            'FORCE_COLLAPSE_LIST': 'TestClass2'  # Pattern to collapse entire TestClass2
+        }):
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('whitelist_priority_test.py')
         
+        # Verify output is valid
+        self.assertIn('graph', mermaid_output)
+        self.assertIsInstance(metadata, dict)
+        
+        collapsed_subgraphs = metadata.get('collapsed_subgraphs', {})
+        
+        # TestClass should be expanded (whitelist pattern match)
+        self.assertIn('subgraph "Class: TestClass"', mermaid_output)
+        
+        # TestClass2 should be collapsed (force collapse pattern match)
+        self.assertIn('class_TestClass2', collapsed_subgraphs, 
+                     "TestClass2 should be collapsed (force collapse pattern)")
+        
+        # But TestClass2.calculate_value should be expanded (whitelist exact match overrides force collapse pattern)
+        self.assertIn('subgraph "Method: calculate_value"', mermaid_output,
+                     "TestClass2.calculate_value should be expanded (whitelist exact overrides force collapse pattern)")
+        
+        print(f"\n=== Pattern vs Exact Priority Test ===")
+        print(f"Collapsed: {list(collapsed_subgraphs.keys())}")
+    
+    def test_force_collapse_exact_vs_whitelist_pattern(self):
+        """Test that force collapse exact matches override whitelist pattern matches."""
+        with patch.dict(os.environ, {
+            'MAX_SUBGRAPH_NODES': '5',
+            'SUBGRAPH_WHITELIST': 'TestClass',  # Pattern to expand entire TestClass
+            'FORCE_COLLAPSE_LIST': 'class_TestClass_test_method'  # Exact to collapse specific method
+        }):
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('whitelist_priority_test.py')
+        
+        # Verify output is valid
+        self.assertIn('graph', mermaid_output)
+        self.assertIsInstance(metadata, dict)
+        
+        collapsed_subgraphs = metadata.get('collapsed_subgraphs', {})
+        
+        # TestClass should be expanded (whitelist pattern match)
+        self.assertIn('subgraph "Class: TestClass"', mermaid_output)
+        
+        # But TestClass.test_method should be collapsed (force collapse exact overrides whitelist pattern)
+        self.assertIn('class_TestClass_test_method', collapsed_subgraphs,
+                     "TestClass.test_method should be collapsed (force collapse exact overrides whitelist pattern)")
+        
+        # Other TestClass methods should be expanded (whitelist pattern applies)
+        self.assertIn('subgraph "Method: other_method"', mermaid_output,
+                     "TestClass.other_method should be expanded (whitelist pattern applies)")
+        
+        print(f"\n=== Force Collapse Exact vs Whitelist Pattern Test ===")
+        print(f"Collapsed: {list(collapsed_subgraphs.keys())}")
+    
+    def test_multiple_exact_matches_priority(self):
+        """Test priority when both whitelist and force collapse have exact matches."""
+        with patch.dict(os.environ, {
+            'MAX_SUBGRAPH_NODES': '5',
+            'SUBGRAPH_WHITELIST': 'class_TestClass_test_method,class_TestClass2_calculate_value',  # Exact matches
+            'FORCE_COLLAPSE_LIST': 'class_TestClass_test_method,class_TestClass3_get_status'  # Overlapping exact matches
+        }):
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('whitelist_priority_test.py')
+        
+        # Verify output is valid
+        self.assertIn('graph', mermaid_output)
+        self.assertIsInstance(metadata, dict)
+        
+        collapsed_subgraphs = metadata.get('collapsed_subgraphs', {})
+        
+        # Force collapse exact should win over whitelist exact for same scope
+        self.assertIn('class_TestClass_test_method', collapsed_subgraphs,
+                     "TestClass.test_method should be collapsed (force collapse exact beats whitelist exact)")
+        
+        # Whitelist exact should work for non-conflicting scopes
+        self.assertIn('subgraph "Method: calculate_value"', mermaid_output,
+                     "TestClass2.calculate_value should be expanded (whitelist exact, no conflict)")
+        
+        # Force collapse exact should work for non-conflicting scopes
+        self.assertIn('class_TestClass3_get_status', collapsed_subgraphs,
+                     "TestClass3.get_status should be collapsed (force collapse exact, no conflict)")
+        
+        print(f"\n=== Multiple Exact Matches Priority Test ===")
+        print(f"Collapsed: {list(collapsed_subgraphs.keys())}")
+    
+    def test_size_based_collapse_with_whitelist(self):
+        """Test that size-based collapse works with whitelist patterns."""
+        with patch.dict(os.environ, {
+            'MAX_SUBGRAPH_NODES': '3',  # Very small to force size-based collapse
+            'SUBGRAPH_WHITELIST': 'TestClass',  # Pattern to protect TestClass from size-based collapse
+            'FORCE_COLLAPSE_LIST': ''  # No force collapse
+        }):
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('whitelist_priority_test.py')
+        
+        # Verify output is valid
+        self.assertIn('graph', mermaid_output)
+        self.assertIsInstance(metadata, dict)
+        
+        collapsed_subgraphs = metadata.get('collapsed_subgraphs', {})
+        
+        # TestClass should be expanded (whitelist pattern protects from size-based collapse)
+        self.assertIn('subgraph "Class: TestClass"', mermaid_output)
+        
+        # TestClass2 and TestClass3 methods should be collapsed (size-based collapse)
+        # Check for any collapsed subgraphs from TestClass2 and TestClass3
+        testclass2_collapsed = any('TestClass2' in key for key in collapsed_subgraphs.keys())
+        testclass3_collapsed = any('TestClass3' in key for key in collapsed_subgraphs.keys())
+        
+        # At least one of the non-whitelisted classes should be collapsed
+        non_whitelisted_collapsed = testclass2_collapsed or testclass3_collapsed
+        
+        self.assertTrue(testclass2_collapsed,
+                     "TestClass2 methods should be collapsed (size-based, not whitelisted)")
+        self.assertTrue(non_whitelisted_collapsed,
+                     "At least one non-whitelisted class should be collapsed (size-based)")
+        
+        print(f"\n=== Size-based Collapse with Whitelist Test ===")
+        print(f"Collapsed: {list(collapsed_subgraphs.keys())}")
+        print(f"TestClass2 collapsed: {testclass2_collapsed}")
+        print(f"TestClass3 collapsed: {testclass3_collapsed}")
+    
+    def test_expanded_collapsed_metadata_maps(self):
+        """Test that comprehensive expanded/collapsed subgraph maps are generated."""
+        with patch.dict(os.environ, {
+            'MAX_SUBGRAPH_NODES': '5',
+            'SUBGRAPH_WHITELIST': 'TestClass',
+            'FORCE_COLLAPSE_LIST': 'class_TestClass_test_method'
+        }):
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('whitelist_priority_test.py')
+        
+        # Verify new metadata structure exists
+        self.assertIn('expanded_subgraphs', metadata)
+        self.assertIn('subgraph_status_map', metadata)
+        self.assertIn('collapsed_subgraphs', metadata)
+        
+        expanded_subgraphs = metadata['expanded_subgraphs']
+        collapsed_subgraphs = metadata['collapsed_subgraphs']
+        subgraph_status_map = metadata['subgraph_status_map']
+        
+        # Verify expanded subgraphs structure
+        self.assertIsInstance(expanded_subgraphs, dict)
+        for scope, info in expanded_subgraphs.items():
+            self.assertIn('node_count', info)
+            self.assertIn('original_scope', info)
+            self.assertIn('subgraph_name', info)
+            self.assertIn('scope_nodes', info)
+            self.assertIn('status', info)
+            self.assertEqual(info['status'], 'expanded')
+            self.assertIsInstance(info['node_count'], int)
+            self.assertGreater(info['node_count'], 0)
+        
+        # Verify collapsed subgraphs structure
+        self.assertIsInstance(collapsed_subgraphs, dict)
+        for scope, info in collapsed_subgraphs.items():
+            self.assertIn('node_count', info)
+            self.assertIn('original_scope', info)
+            self.assertIn('subgraph_name', info)
+            self.assertIn('scope_nodes', info)
+            self.assertIn('status', info)
+            self.assertEqual(info['status'], 'collapsed')
+            self.assertIsInstance(info['node_count'], int)
+            self.assertGreater(info['node_count'], 0)
+        
+        # Verify subgraph_status_map contains all subgraphs
+        self.assertIsInstance(subgraph_status_map, dict)
+        self.assertEqual(len(subgraph_status_map), len(expanded_subgraphs) + len(collapsed_subgraphs))
+        
+        # Verify all subgraphs have status
+        for scope, info in subgraph_status_map.items():
+            self.assertIn('status', info)
+            self.assertIn(info['status'], ['expanded', 'collapsed'])
+        
+        # Verify specific test case: TestClass_test_method should be collapsed
+        self.assertIn('class_TestClass_test_method', collapsed_subgraphs)
+        self.assertEqual(collapsed_subgraphs['class_TestClass_test_method']['status'], 'collapsed')
+        
+        # Verify specific test case: TestClass_other_method should be expanded
+        self.assertIn('class_TestClass_other_method', expanded_subgraphs)
+        self.assertEqual(expanded_subgraphs['class_TestClass_other_method']['status'], 'expanded')
+        
+        print(f"\n=== Expanded/Collapsed Metadata Test ===")
+        print(f"Expanded count: {len(expanded_subgraphs)}")
+        print(f"Collapsed count: {len(collapsed_subgraphs)}")
+        print(f"Total subgraphs: {len(subgraph_status_map)}")
+        print(f"Expanded scopes: {list(expanded_subgraphs.keys())}")
+        print(f"Collapsed scopes: {list(collapsed_subgraphs.keys())}")
+    
     def test_exact_match_priority(self):
         """Test that exact matches have priority over pattern matches."""
         # Whitelist the entire TestClass, but force collapse the exact scope
