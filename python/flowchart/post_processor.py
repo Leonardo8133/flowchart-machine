@@ -305,11 +305,15 @@ class FlowchartPostProcessor:
 		self.processor.connections = new_connections
 
 	def _apply_view_mode_filters(self):
-		view_mode = getattr(self.processor, 'view_mode', 'advanced')
-		if view_mode not in {'calls', 'simple'}:
+		view_mode = getattr(self.processor, 'view_mode', 'detailed')
+		if view_mode not in {'short', 'compact'}:
 			return
 
-		if view_mode == 'calls':
+		# Remove empty __init__ subgraphs in compact and short views
+		if view_mode in {'short', 'compact'}:
+			self._remove_empty_init_subgraphs()
+
+		if view_mode == 'short':
 			nodes_to_hide = [
 				node_id for node_id, node_def in self.processor.nodes.items()
 				if not self._is_call_view_node(node_id, node_def)
@@ -317,7 +321,7 @@ class FlowchartPostProcessor:
 			self._convert_nodes_to_bypass(nodes_to_hide)
 			self._optimize_graph()
 
-		elif view_mode == 'simple':
+		elif view_mode == 'compact':
 			nodes_to_hide = []
 			for node_id, node_def in self.processor.nodes.items():
 				scope = self.processor.node_scopes.get(node_id, '')
@@ -325,6 +329,42 @@ class FlowchartPostProcessor:
 					nodes_to_hide.append(node_id)
 			self._convert_nodes_to_bypass(nodes_to_hide)
 			self._optimize_graph()
+
+	def _remove_empty_init_subgraphs(self):
+		"""Remove empty __init__ method subgraphs from node_scopes in compact and short views."""
+		# Find all __init__ method scopes
+		init_scopes = []
+		for scope in self.processor.node_scopes.values():
+			if scope and scope.endswith('__init__') and scope.startswith('class_'):
+				init_scopes.append(scope)
+		
+		# Check which __init__ scopes are empty (have no nodes)
+		empty_init_scopes = []
+		for scope in init_scopes:
+			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
+			if not scope_nodes:
+				empty_init_scopes.append(scope)
+		
+		# Remove empty __init__ scopes from node_scopes
+		for scope in empty_init_scopes:
+			# Remove any nodes that might be associated with this scope
+			nodes_to_remove = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
+			for node_id in nodes_to_remove:
+				if node_id in self.processor.node_scopes:
+					del self.processor.node_scopes[node_id]
+				if node_id in self.processor.nodes:
+					del self.processor.nodes[node_id]
+		
+		# Also remove from method_subgraphs if it exists
+		if hasattr(self.processor, 'method_subgraphs'):
+			for method_key, method_id in list(self.processor.method_subgraphs.items()):
+				if method_key.endswith('.__init__'):
+					class_name = method_key.split('.')[0]
+					scope = f"class_{class_name}__init__"
+					if scope in empty_init_scopes:
+						del self.processor.method_subgraphs[method_key]
+						if method_id in self.processor.nodes:
+							del self.processor.nodes[method_id]
 
 	def _convert_nodes_to_bypass(self, node_ids):
 		essential = {getattr(self.processor, 'end_id', None)}
@@ -450,6 +490,19 @@ class FlowchartPostProcessor:
 			# Only create subgraph if this scope has visible nodes
 			# Exception: class scopes can be created even without nodes (they contain method subgraphs)
 			scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
+			
+			# Skip empty __init__ subgraphs in compact and short views
+			view_mode = getattr(self.processor, 'view_mode', 'detailed')
+			if (view_mode in {'short', 'compact'} and 
+				scope and scope.startswith("class_") and 
+				scope.endswith("__init__")):
+				# Check if any of the scope nodes are actually visible (not bypassed)
+				visible_nodes = [nid for nid in scope_nodes 
+								if nid in self.processor.nodes and 
+								not self.processor.nodes[nid].endswith('{{}}')]
+				if not visible_nodes:
+					return
+			
 			if not scope_nodes and not (scope and scope.startswith("class_") and scope.count("_") == 1):
 				return
 			
@@ -501,6 +554,17 @@ class FlowchartPostProcessor:
 				# Remove current scope from the list os scopes
 				# Build method subgraphs nested inside class
 				for method_scope in method_scopes:
+					# Skip empty __init__ subgraphs in compact and short views
+					view_mode = getattr(self.processor, 'view_mode', 'detailed')
+					if (view_mode in {'short', 'compact'} and 
+						method_scope.endswith("__init__")):
+						method_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == method_scope]
+						# Check if any of the method nodes are actually visible (not bypassed)
+						visible_nodes = [nid for nid in method_nodes 
+										if nid in self.processor.nodes and 
+										not self.processor.nodes[nid].endswith('{{}}')]
+						if not visible_nodes:
+							continue
 					build(method_scope, indent + "    ")
 			
 			# For other scopes, find their children

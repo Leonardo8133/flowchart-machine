@@ -254,6 +254,9 @@ function resolveCanonicalScope(displayLabel, context) {
     if (displayLabel && allSubgraphsList.includes(displayLabel)) { return displayLabel; }
 
     const raw = stripExtra(displayLabel);
+    
+    // Debug logging
+    console.log('resolveCanonicalScope:', { displayLabel, context, raw, allSubgraphsList });
     // Class label
     if (/^Class:\s*/i.test(raw)) {
         const className = raw.replace(/^Class:\s*/i, '').trim();
@@ -276,15 +279,24 @@ function resolveCanonicalScope(displayLabel, context) {
     if (/^Method:\s*/i.test(raw)) {
         const methodName = raw.replace(/^Method:\s*/i, '').trim();
         const className = (context && context.className) ? context.className : undefined;
+        
+        // First, try to find exact matches in allSubgraphsList
+        const exactMatches = allSubgraphsList.filter(s => s.endsWith(`_${methodName}`));
+        if (exactMatches.length === 1) { 
+            return exactMatches[0]; 
+        }
+        
+        // If we have class context, try to use it
         if (className) {
             const candidate = `class_${className}_${methodName}`;
             if (allSubgraphsList.includes(candidate)) { return candidate; }
-            return candidate; // best-effort
+            // If not found, try to find a match with the same class name
+            const classMatches = exactMatches.filter(s => s.includes(`_${className}_`));
+            if (classMatches.length === 1) { return classMatches[0]; }
         }
-        // Try to uniquely resolve by suffix if no class context
-        const matches = allSubgraphsList.filter(s => /^class_/.test(s) && s.endsWith(`_${methodName}`));
-        if (matches.length === 1) { return matches[0]; }
-        return matches[0] || methodName; // fallback to first if ambiguous
+        
+        // Fallback: return first match or method name
+        return exactMatches[0] || methodName;
     }
 
     // Fallback: return as-is
@@ -309,6 +321,8 @@ function expandSubgraphWithContext(displayLabel, context) {
 
 function collapseSubgraphWithContext(displayLabel, context) {
     const canonical = resolveCanonicalScope(displayLabel, context);
+    console.log('collapseSubgraphWithContext:', { displayLabel, context, canonical });
+    
     // Update state
     subgraphStates[displayLabel] = 'collapsed';
     // Keep local sets in sync (use canonical for stable matching)

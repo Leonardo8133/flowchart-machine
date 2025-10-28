@@ -61,7 +61,7 @@ class FlowchartProcessor:
         self.imported_modules = {}
         self.imported_symbols = {}
         self.external_definitions_cache = {}
-        self.view_mode = 'advanced'
+        self.view_mode = 'detailed'
 
         # Configuration and display settings
         self.breakpoint_lines = set()
@@ -95,9 +95,9 @@ class FlowchartProcessor:
             else:
                 setattr(self, attr, os.environ.get(env_var, '1') == '1')
 
-        view_mode = (os.environ.get('FLOWCHART_VIEW') or self.view_mode or 'advanced').lower()
-        if view_mode not in {'calls', 'simple', 'advanced'}:
-            view_mode = 'advanced'
+        view_mode = (os.environ.get('FLOWCHART_VIEW') or self.view_mode or 'detailed').lower()
+        if view_mode not in {'short', 'compact', 'detailed'}:
+            view_mode = 'detailed'
         self.view_mode = view_mode
 
         env_root = os.environ.get('WORKSPACE_ROOT')

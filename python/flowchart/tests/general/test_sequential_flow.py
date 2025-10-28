@@ -5,7 +5,7 @@ Tests that SEQUENTIAL_FLOW mode generates one-way arrows instead of bidirectiona
 import os
 import unittest
 from unittest.mock import patch
-from .base import TestFlowchartMain
+from ..base import TestFlowchartMain
 
 
 class TestSequentialFlow(TestFlowchartMain):
@@ -16,7 +16,7 @@ class TestSequentialFlow(TestFlowchartMain):
         with patch.dict(os.environ, {
             'SEQUENTIAL_FLOW': '0'
         }):
-            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('test_sequential.py')
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('example_test_sequential.py')
             
         # Verify Call and Return is present
         self.assertIn('Call and Return', mermaid_output,
@@ -31,7 +31,7 @@ class TestSequentialFlow(TestFlowchartMain):
         with patch.dict(os.environ, {
             'SEQUENTIAL_FLOW': '1'
         }):
-            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('test_sequential.py')
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('example_test_sequential.py')
             
         # Verify Call and Return is NOT present
         self.assertNotIn('Call and Return', mermaid_output,

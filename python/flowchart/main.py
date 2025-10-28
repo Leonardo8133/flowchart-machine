@@ -115,7 +115,7 @@ def collect_context(file_path: str) -> dict:
         'entry_name': os.environ.get('ENTRY_NAME') or None,
         'entry_class': os.environ.get('ENTRY_CLASS') or None,
         'workspace_root': os.environ.get('WORKSPACE_ROOT') or None,
-        'view_mode': (os.environ.get('FLOWCHART_VIEW') or 'advanced').lower(),
+        'view_mode': (os.environ.get('FLOWCHART_VIEW') or 'detailed').lower(),
     }
 
 def save_output(mermaid_output: str, metadata: dict):

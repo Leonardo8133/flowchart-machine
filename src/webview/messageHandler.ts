@@ -16,7 +16,7 @@ export class WebviewMessageHandler {
   private whitelistService: WhitelistService | null = null;
   private processor: any = null;
   private currentMetadata: any = null;
-  private viewMode: 'calls' | 'simple' | 'advanced' = 'advanced';
+  private viewMode: 'short' | 'compact' | 'detailed' = 'detailed';
 
   constructor() {
     // Initialize storage service when needed
@@ -34,7 +34,7 @@ export class WebviewMessageHandler {
     extensionContext?: vscode.ExtensionContext,
     whitelistService?: WhitelistService,
     processor?: any,
-    viewMode?: 'calls' | 'simple' | 'advanced'
+    viewMode?: 'short' | 'compact' | 'detailed'
   ): void {
     this.originalFilePath = originalFilePath;
     this.processor = processor;
@@ -145,11 +145,11 @@ export class WebviewMessageHandler {
     }
   }
 
-  private normalizeViewMode(mode?: string | null): 'calls' | 'simple' | 'advanced' {
-    if (mode === 'calls' || mode === 'simple' || mode === 'advanced') {
+  private normalizeViewMode(mode?: string | null): 'short' | 'compact' | 'detailed' {
+    if (mode === 'short' || mode === 'compact' || mode === 'detailed') {
       return mode;
     }
-    return 'advanced';
+    return 'detailed';
   }
 
   /**
@@ -241,31 +241,15 @@ export class WebviewMessageHandler {
       // Get the whitelist service
       const whitelistService = this.getWhitelistService();
 
-      // Clear both whitelist and force collapse list
-      whitelistService.clearWhitelist();
-      whitelistService.clearForceCollapseList();
+      // Get all subgraphs from the current metadata
+      const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
+      const allSubgraphs = Object.keys(collapsedSubgraphs);
 
-      // Use new metadata structure if available
-      if (message.scopes && Array.isArray(message.scopes)) {
-        console.log(`Expanding ${message.scopes.length} collapsed subgraphs using new metadata`);
-        
-        // Add all collapsed scopes to whitelist
-        for (const scopeName of message.scopes) {
-          const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-          whitelistService.addToWhitelist(processedScopeName);
-        }
-      } else {
-        // Fallback to old method using collapsed_subgraphs
-        const collapsedSubgraphs = this.currentMetadata?.collapsed_subgraphs || {};
-        const allSubgraphs = Object.keys(collapsedSubgraphs);
-        
-        console.log(`Expanding ${allSubgraphs.length} subgraphs using legacy method`);
-        
-        // Add all subgraphs to the whitelist
-        for (const scopeName of allSubgraphs) {
-          const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-          whitelistService.addToWhitelist(processedScopeName);
-        }
+
+      // Add all subgraphs to the whitelist
+      for (const scopeName of allSubgraphs) {
+        const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
+        whitelistService.addToWhitelist(processedScopeName);
       }
 
       // Get the updated whitelist to pass to regeneration
@@ -274,7 +258,6 @@ export class WebviewMessageHandler {
       // Regenerate flowchart with updated lists
       await this.handleRegeneration(panel, currentWhitelist);
     } catch (error) {
-      console.error('Error expanding all subgraphs:', error);
       panel.webview.postMessage({
         command: 'expandAllError',
         error: error instanceof Error ? error.message : String(error)
@@ -294,36 +277,24 @@ export class WebviewMessageHandler {
       whitelistService.clearWhitelist();
       whitelistService.clearForceCollapseList();
 
-      // Use new metadata structure if available
-      if (message.scopes && Array.isArray(message.scopes)) {
-        console.log(`Collapsing ${message.scopes.length} expanded subgraphs using new metadata`);
-        
-        // Add all expanded scopes to force collapse list
-        for (const scopeName of message.scopes) {
+      // Get all available subgraphs from metadata
+      const allSubgraphs = this.currentMetadata?.all_subgraphs || [];
+      
+      if (allSubgraphs.length === 0) {
+        // Fallback: if all_subgraphs is not available, use the collapseAllSubgraphs method
+        console.warn('all_subgraphs not available in metadata, using fallback method');
+        whitelistService.collapseAllSubgraphs();
+      } else {
+        // Add all available subgraphs to the force collapse list
+        for (const scopeName of allSubgraphs) {
           const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
           whitelistService.addToForceCollapseList(processedScopeName);
-        }
-      } else {
-        // Fallback to old method using all_subgraphs
-        const allSubgraphs = this.currentMetadata?.all_subgraphs || [];
-        
-        if (allSubgraphs.length === 0) {
-          console.warn('No subgraph information available, using fallback method');
-          whitelistService.collapseAllSubgraphs();
-        } else {
-          console.log(`Collapsing all ${allSubgraphs.length} subgraphs using legacy method`);
-          // Add all available subgraphs to the force collapse list
-          for (const scopeName of allSubgraphs) {
-            const processedScopeName = scopeName.replace(/\(\)/g, '').replace(/\(.*\)/g, '').trim();
-            whitelistService.addToForceCollapseList(processedScopeName);
-          }
         }
       }
 
       // Regenerate flowchart with updated lists
       await this.handleRegeneration(panel);
     } catch (error) {
-      console.error('Error collapsing all subgraphs:', error);
       panel.webview.postMessage({
         command: 'collapseAllError',
         error: error instanceof Error ? error.message : String(error)
@@ -460,6 +431,7 @@ export class WebviewMessageHandler {
     showExceptions: boolean;
     showClasses: boolean;
     mergeCommonNodes: boolean;
+    sequentialFlow: boolean;
   } {
     const config = vscode.workspace.getConfiguration('flowchartMachine', vscode.workspace.workspaceFolders?.[0]);
     function getConfig(key: string, fallback: boolean) {
@@ -484,7 +456,8 @@ export class WebviewMessageHandler {
       showReturns: getConfig('nodes.processTypes.returns', true),
       showExceptions: getConfig('nodes.processTypes.exceptions', true),
       showClasses: getConfig('nodes.processTypes.classes', true),
-      mergeCommonNodes: getConfig('nodes.processTypes.mergeCommonNodes', true)
+      mergeCommonNodes: getConfig('nodes.processTypes.mergeCommonNodes', true),
+      sequentialFlow: getConfig('general.sequentialFlow', false)
     };
   }
 
@@ -544,6 +517,7 @@ export class WebviewMessageHandler {
         SHOW_EXCEPTIONS: checkboxStates.showExceptions ? '1' : '0',
         SHOW_CLASSES: checkboxStates.showClasses ? '1' : '0',
         MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0',
+        SEQUENTIAL_FLOW: checkboxStates.sequentialFlow ? '1' : '0',
         FILE_KEY: fileKey,
         FLOWCHART_VIEW: this.viewMode,
       } as Record<string, string>;
@@ -1132,6 +1106,9 @@ export class WebviewMessageHandler {
           break;
         case 'mergeCommonNodes':
           configKey = 'flowchartMachine.nodes.processTypes.mergeCommonNodes';
+          break;
+        case 'sequentialFlow':
+          configKey = 'flowchartMachine.general.sequentialFlow';
           break;
         default:
           configKey = `flowchartMachine.${key}`;

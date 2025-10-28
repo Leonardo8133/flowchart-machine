@@ -4,7 +4,7 @@ Tests the car production pipeline with subgraphs for design, mounting, building,
 """
 import unittest
 from unittest.mock import patch
-from .base import TestFlowchartMain
+from ..base import TestFlowchartMain
 
 
 class TestCarWorkflow(TestFlowchartMain):
@@ -12,7 +12,7 @@ class TestCarWorkflow(TestFlowchartMain):
     
     def test_car_production_subgraphs(self):
         """Test that all car production subgraphs are created."""
-        mermaid_output, metadata, stdout, stderr = self._run_main_with_file('car_production.py')
+        mermaid_output, metadata, stdout, stderr = self._run_main_with_file('example_car_production.py')
         
         # Verify output is valid
         self.assertIn('graph', mermaid_output)
@@ -41,7 +41,7 @@ class TestCarWorkflow(TestFlowchartMain):
         self.assertIn('mount_car', mermaid_output, "mount_car method should be called")
         
         # Verify connections are being made
-        self.assertIn('Call and Return', mermaid_output, 
+        self.assertTrue('<-->|Call and Return|' in mermaid_output or '-->|Call|' in mermaid_output,
                      "Method calls should create connections")
         
         # Count subgraphs to verify we're creating them

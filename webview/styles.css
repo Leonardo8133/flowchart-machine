@@ -791,6 +791,41 @@ body {
     gap: 12px;
 }
 
+/* Generic modal header layout (used by Options modal) */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border, #3c3c3c);
+}
+
+/* Close button styling */
+.modal-close {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    filter: brightness(1.2);
+}
+
+/* Options modal black theme */
+.options-modal-content {
+    background: #0d0d0d;
+    border-color: #2a2a2a;
+}
+
 .modal-content h3 {
     margin: 0 0 8px 0;
     font-size: 14px;

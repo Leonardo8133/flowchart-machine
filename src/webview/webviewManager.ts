@@ -24,7 +24,7 @@ export class WebviewManager {
     originalFilePath?: string,
     whitelistService?: any,
     processor?: any,
-    viewMode: 'calls' | 'simple' | 'advanced' = 'advanced'
+    viewMode: 'short' | 'compact' | 'detailed' = 'detailed'
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
     this.originalFilePath = originalFilePath || 
@@ -151,6 +151,7 @@ export class WebviewManager {
       '{{codeFileIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'code-file-svgrepo-com.svg')).toString(),
       '{{cursorIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'cursor-square-svgrepo-com.svg')).toString(),
       '{{filterIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'filter-svgrepo-com.svg')).toString(),
+      '{{settingsIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'pallete-2-svgrepo-com.svg')).toString(),
       '{{restartIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'refresh-square-svgrepo-com.svg')).toString(),
       '{{downloadIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'download-square-svgrepo-com.svg')).toString(),
       '{{starIcon}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'icons', 'star-svgrepo-com.svg')).toString(),

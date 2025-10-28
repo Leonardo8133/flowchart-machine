@@ -103,6 +103,7 @@ export class GenerateFlowchartCommand {
         const returns = config.get('nodes.processTypes.returns', true);
         const classes = config.get('nodes.processTypes.classes', true);
         const mergeCommonNodes = config.get('nodes.processTypes.mergeCommonNodes', true);
+        const sequentialFlow = config.get('general.sequentialFlow', false);
 
         // Set environment variables for Python script
         const env = {
@@ -118,7 +119,8 @@ export class GenerateFlowchartCommand {
           SHOW_RETURNS: returns ? '1' : '0',
           SHOW_CLASSES: classes ? '1' : '0',
           MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0',
-          FLOWCHART_VIEW: viewMode
+          FLOWCHART_VIEW: viewMode,
+          SEQUENTIAL_FLOW: sequentialFlow ? '1' : '0'
         } as Record<string, string>;
 
         if (workspaceRoot) {
@@ -299,14 +301,14 @@ export class GenerateFlowchartCommand {
     return `(${parentDir})/(${fileName})`;
   }
 
-  private getViewMode(): 'calls' | 'simple' | 'advanced' {
+  private getViewMode(): 'short' | 'compact' | 'detailed' {
     const stored = this.context.workspaceState.get<string>('flowchartMachine.viewMode');
-    if (stored === 'calls' || stored === 'simple' || stored === 'advanced') {
+    if (stored === 'short' || stored === 'compact' || stored === 'detailed') {
       return stored;
     }
     // Ensure default is persisted so other components stay in sync
-    void this.context.workspaceState.update('flowchartMachine.viewMode', 'advanced');
-    return 'advanced';
+    void this.context.workspaceState.update('flowchartMachine.viewMode', 'detailed');
+    return 'detailed';
   }
 
 }

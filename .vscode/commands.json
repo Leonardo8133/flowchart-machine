@@ -41,9 +41,10 @@
           "command": "cd python; python -m unittest discover flowchart.tests -v",
           "terminal": {
             "type": "vscode-new",
-            "name": "Python Tests."
+            "name": "Python Tests"
           },
-          "variables": []
+          "variables": [],
+          "pinned": true
         },
         {
           "id": "run-test-using-self-in-method",
@@ -55,7 +56,7 @@
             "name": "Self Method Test"
           },
           "variables": [],
-          "pinned": true
+          "pinned": false
         },
         {
           "id": "run-sequential-flow-tests",
@@ -96,7 +97,7 @@
             "name": "Subgraph Tests"
           },
           "variables": [],
-          "pinned": true
+          "pinned": false
         },
         {
           "id": "run-class-method-ui-test",
@@ -143,6 +144,6 @@
       "description": "Common deployment targets"
     }
   ],
-  "version": 13,
-  "lastModified": "2025-10-28T03:00:16.260Z"
+  "version": 18,
+  "lastModified": "2025-10-28T21:02:11.203Z"
 }

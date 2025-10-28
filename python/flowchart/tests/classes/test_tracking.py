@@ -4,13 +4,13 @@ Test cases for __init__ tracking and redundant call detection.
 
 import unittest
 import os
-from .base import TestFlowchartMain
+from ..base import TestFlowchartMain
 
 class TestInitTracking(TestFlowchartMain):
     def test_init_tracking_comparison(self):
         """Test that proper instantiation works and redundant __init__ calls show warnings."""
         mermaid_output, metadata, stdout, stderr = self._run_main_with_file(
-            'init_tracking_comparison.py'
+            'example_init_tracking_comparison.py'
         )
         
         # Verify output is valid
@@ -31,7 +31,7 @@ class TestInitTracking(TestFlowchartMain):
         self.assertIn('⚠️ Redundant __init__ call: TestClass2() already calls constructor', mermaid_output)
         
         # Verify that TestClass2's __init__ is actually called (showing the instantiation happened)
-        self.assertIn('Call and Return', mermaid_output)
+        self.assertTrue('<-->|Call and Return|' in mermaid_output or '-->|Call|' in mermaid_output)
         
         # Check that TestClass1 method call works
         self.assertIn('obj1.calculate_value()', mermaid_output)
@@ -55,7 +55,7 @@ class TestInitTracking(TestFlowchartMain):
     def test_init_tracking_with_entry_testclass2_init(self):
         """Test that when entry point is TestClass2.__init__, the correct constructor is called."""
         mermaid_output, metadata, stdout, stderr = self._run_main_with_file(
-            'init_tracking_comparison.py',
+            'example_init_tracking_comparison.py',
             entry_type='class',
             entry_class='TestClass2',
             entry_name='__init__'

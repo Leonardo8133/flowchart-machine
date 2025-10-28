@@ -21,7 +21,7 @@ class TestFlowchartMain(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.test_dir = Path(__file__).parent / "test_examples"
+        self.test_dir = Path(__file__).parent / "examples"
         self.temp_dir = Path(__file__).parent.parent / "temp"
         self.output_mmd = self.temp_dir / "flowchart.mmd"
         self.output_json = self.temp_dir / "metadata.json"

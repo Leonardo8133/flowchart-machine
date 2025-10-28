@@ -1,8 +1,8 @@
-from .base import TestFlowchartMain
+from ..base import TestFlowchartMain
 
 class TestFlowchartFunctions(TestFlowchartMain):
     def test_simple_function(self):
-        mermaid_output, metadata, stdout, stderr = self._run_main_with_file('simple_function.py')
+        mermaid_output, metadata, stdout, stderr = self._run_main_with_file('example_simple_function.py')
         
         # Verify output is valid Mermaid syntax
         self.assertIn('graph TD', mermaid_output)
@@ -44,7 +44,7 @@ class TestFlowchartFunctions(TestFlowchartMain):
     
     def test_function_with_entry_function(self):
         mermaid_output, metadata, stdout, stderr = self._run_main_with_file(
-            'simple_function.py',
+            'example_simple_function.py',
             entry_type='function',
             entry_name='calculate_sum'
         )
