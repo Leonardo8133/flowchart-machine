@@ -41,9 +41,21 @@
           "command": "cd python; python -m unittest discover flowchart.tests -v",
           "terminal": {
             "type": "vscode-new",
-            "name": "Python Tests"
+            "name": "Python Tests."
           },
           "variables": []
+        },
+        {
+          "id": "run-test-using-self-in-method",
+          "label": "Test: Using Self in Method",
+          "description": "Run test_using_self_in_method to verify self.method() calls",
+          "command": "cd python; python -m unittest flowchart.tests.test_classes.TestFlowchartClasses.test_using_self_in_method -v",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Self Method Test"
+          },
+          "variables": [],
+          "pinned": true
         }
       ]
     },
@@ -120,6 +132,6 @@
       "description": "Common deployment targets"
     }
   ],
-  "version": 9,
-  "lastModified": "2025-10-28T01:42:39.302Z"
+  "version": 13,
+  "lastModified": "2025-10-28T03:00:16.260Z"
 }

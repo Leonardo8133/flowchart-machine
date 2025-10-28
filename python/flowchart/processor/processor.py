@@ -53,6 +53,9 @@ class FlowchartProcessor:
         # Nesting depth tracking
         self.current_nesting_depth = 0  # Track current function call nesting depth
         
+        # Method exit tracking for sequential flow mode
+        self.method_exit_nodes = {}  # Maps method_scope to exit node IDs
+        
         # Configuration and display settings
         self.breakpoint_lines = set()
         self._first_import_rendered = False
@@ -74,11 +77,16 @@ class FlowchartProcessor:
             'show_exceptions': 'SHOW_EXCEPTIONS',
             'show_returns': 'SHOW_RETURNS',
             'show_classes': 'SHOW_CLASSES',
-            'merge_common_nodes': 'MERGE_COMMON_NODES'
+            'merge_common_nodes': 'MERGE_COMMON_NODES',
+            'sequential_flow': 'SEQUENTIAL_FLOW'
         }
         
         for attr, env_var in config_map.items():
-            setattr(self, attr, os.environ.get(env_var, '1') == '1')
+            # Sequential flow defaults to False (traditional Call and Return mode)
+            if attr == 'sequential_flow':
+                setattr(self, attr, os.environ.get(env_var, '0') == '1')
+            else:
+                setattr(self, attr, os.environ.get(env_var, '1') == '1')
 
     def _register_handlers(self):
         """Register all node handlers using Strategy Pattern."""
@@ -147,6 +155,10 @@ class FlowchartProcessor:
         # Handle node object fallback for max nodes exceeded
         if hasattr(from_id, 'lineno') and self.nodes:
             from_id = list(self.nodes.keys())[-1]
+        
+        # In sequential flow mode, force unidirectional arrows
+        if self.sequential_flow:
+            bidirectional = False
         
         if bidirectional:
             # Create bidirectional connection with arrows pointing both ways

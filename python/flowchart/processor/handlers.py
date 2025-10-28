@@ -166,17 +166,33 @@ class IfHandler(NodeHandler):
                 return None
             else:
                 # Simple if statement in method context - need to handle false path
-                # Create a merge node to handle both true and false paths
-                merge_id = self.processor._generate_id("merge")
-                self.processor._add_node(merge_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                # Check if true_path_end is actually a valid node or just the starting cond_id
                 
-                if true_path_end:
+                if true_path_end and true_path_end != cond_id:
+                    # True path has actual content - create merge for both paths
+                    merge_id = self.processor._generate_id("merge")
+                    self.processor._add_node(merge_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                    
+                    # Connect true path end to merge
                     self.processor._add_connection(true_path_end, merge_id)
-                
-                # Connect false path directly to merge node
-                self.processor._add_connection(cond_id, merge_id, label="False")
-                
-                return merge_id
+                    
+                    # Connect false path to merge
+                    self.processor._add_connection(cond_id, merge_id, label="False")
+                    
+                    return merge_id
+                elif true_path_end and true_path_end == cond_id:
+                    # True path ended immediately (e.g., with raise), but we still need to continue
+                    # Only create the False path connection
+                    merge_id = self.processor._generate_id("merge")
+                    self.processor._add_node(merge_id, " ", shape=FlowchartConfig.SHAPES['merge'])
+                    
+                    # Connect false path to merge
+                    self.processor._add_connection(cond_id, merge_id, label="False")
+                    
+                    return merge_id
+                else:
+                    # No true path content at all - just continue to next node
+                    return cond_id
     
     def _add_label_to_connection(self, from_id, to_id, label):
         """Add a label to an existing connection."""
@@ -517,20 +533,36 @@ class ExprHandler(NodeHandler):
                         return error_id
                 
                 # Method is either static or we're calling it on an instance
-                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, method_node, method_call_id)
+                method_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, method_name, method_node, method_call_id)
                 method_found = True
+                
+                # In sequential flow, return the method exit so it can connect to the next statement
+                if self.processor.sequential_flow and method_exit_id and method_exit_id != method_call_id:
+                    return method_exit_id
         
         # Try to resolve the object type if not already resolved
         if not method_found and isinstance(node.value, ast.Call) and hasattr(node.value.func, 'value'):
             call_obj = node.value.func.value
             resolved_class = self.processor.handlers[ast.Assign]._resolve_object_type(call_obj, scope)
             
+            # Special handling for 'self' calls within methods
+            if resolved_class is None and isinstance(call_obj, ast.Name) and call_obj.id == 'self':
+                # Extract class name from current scope (format: class_ClassName_methodName)
+                if scope and scope.startswith("class_"):
+                    parts = scope.split("_")
+                    if len(parts) >= 2:
+                        resolved_class = parts[1]
+            
             if resolved_class and resolved_class in self.processor.class_defs:
                 class_info = self.processor.class_defs[resolved_class]
                 if method_name in class_info["methods"]:
                     method_node = class_info["methods"][method_name]
-                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, method_call_id)
+                    method_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, method_call_id)
                     method_found = True
+                    
+                    # In sequential flow, return the method exit so it can connect to the next statement
+                    if self.processor.sequential_flow and method_exit_id and method_exit_id != method_call_id:
+                        return method_exit_id
         
         if not method_found:
             # Could not find the method or couldn't resolve the class
@@ -576,6 +608,7 @@ class ReturnHandler(NodeHandler):
     
     def handle(self, node, prev_id, scope):
         current_id = prev_id
+        skip_return_creation = False
         
         # Check if return value contains a method call - process it first
         if node.value and isinstance(node.value, ast.Call):
@@ -602,35 +635,54 @@ class ReturnHandler(NodeHandler):
             # Check if it's a method call (has attribute access)
             if hasattr(node.value.func, 'attr'):
                 attr_name = node.value.func.attr
-                # Process the method call first
-                method_call_node_id = self.processor._generate_id("method_call")
-                text = f"Call: {self.processor._get_node_text(node)}"
-                self.processor._add_node(method_call_node_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
-                self.processor._add_connection(current_id, method_call_node_id)
                 
-                # Try to resolve and create subgraph
+                # Create return node first (not a separate call node)
+                return_id = self.processor._generate_id("return")
+                text = self.processor._get_node_text(node) if node.value else "return"
+                self.processor._add_node(return_id, text, scope=scope)
+                self.processor._add_connection(current_id, return_id)
+                
+                # Try to resolve and create subgraph directly from return node
                 if hasattr(node.value.func, 'value'):
                     call_obj = node.value.func.value
                     resolved_class = self.processor.handlers[ast.Assign]._resolve_object_type(call_obj, scope)
+                    
+                    # Special handling for 'self' calls within methods
+                    if resolved_class is None and isinstance(call_obj, ast.Name) and call_obj.id == 'self':
+                        # Extract class name from current scope (format: class_ClassName_methodName)
+                        if scope and scope.startswith("class_"):
+                            parts = scope.split("_")
+                            if len(parts) >= 2:
+                                resolved_class = parts[1]
                     
                     if resolved_class and resolved_class in self.processor.class_defs:
                         class_info = self.processor.class_defs[resolved_class]
                         if attr_name in class_info["methods"]:
                             method_node = class_info["methods"][attr_name]
-                            self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, attr_name, method_node, method_call_node_id)
+                            # Connect return node directly to the method
+                            self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, attr_name, method_node, return_id)
                 
-                current_id = method_call_node_id
+                current_id = return_id
+                skip_return_creation = True
+            else:
+                skip_return_creation = False
         
-        # Create return node
-        return_id = self.processor._generate_id("return")
-        text = self.processor._get_node_text(node) if node.value else "return"
-        self.processor._add_node(return_id, text, scope=scope)
-        self.processor._add_connection(current_id, return_id)
+        # Create return node (if not already created above)
+        if not skip_return_creation:
+            return_id = self.processor._generate_id("return")
+            text = self.processor._get_node_text(node) if node.value else "return"
+            self.processor._add_node(return_id, text, scope=scope)
+            self.processor._add_connection(current_id, return_id)
         
         # Check if we're in a method scope (class_methodName)
         if scope and scope.startswith("class_") and "_" in scope[6:]:
-            # We're in a method - no need to connect back since we use bidirectional arrows
-            # Just end the method without connecting anywhere
+            # We're in a method
+            if self.processor.sequential_flow:
+                # Track this return as the method's exit point
+                if scope not in self.processor.method_exit_nodes:
+                    self.processor.method_exit_nodes[scope] = []
+                self.processor.method_exit_nodes[scope].append(return_id)
+            # No need to connect back - bidirectional arrows or sequential flow handles it
             pass
         elif self.processor.call_stack:
             # We're in a function call, connect back to the call stack
@@ -661,6 +713,14 @@ class AssignHandler(NodeHandler):
                         if scope not in self.processor.attribute_types:
                             self.processor.attribute_types[scope] = {}
                         self.processor.attribute_types[scope][attr_name] = param_type
+                # Also track when right-hand side is a class instantiation: self.attr = SomeClass(...)
+                elif isinstance(node.value, ast.Call) and hasattr(node.value.func, 'id'):
+                    class_name = node.value.func.id
+                    if class_name in self.processor.class_defs:
+                        # Track attribute type
+                        if scope not in self.processor.attribute_types:
+                            self.processor.attribute_types[scope] = {}
+                        self.processor.attribute_types[scope][attr_name] = class_name
         
         # Check if the right-hand side is a function call
         if len(node.targets) == 1 and isinstance(node.value, ast.Call):
@@ -787,6 +847,14 @@ class AssignHandler(NodeHandler):
             call_obj = node.value.func.value
             resolved_class = self._resolve_object_type(call_obj, scope)
             
+            # Special handling for 'self' calls within methods
+            if resolved_class is None and isinstance(call_obj, ast.Name) and call_obj.id == 'self':
+                # Extract class name from current scope (format: class_ClassName_methodName)
+                if scope and scope.startswith("class_"):
+                    parts = scope.split("_")
+                    if len(parts) >= 2:
+                        resolved_class = parts[1]
+            
             if resolved_class and resolved_class in self.processor.class_defs:
                 class_info = self.processor.class_defs[resolved_class]
                 if method_name in class_info["methods"]:
@@ -807,8 +875,13 @@ class AssignHandler(NodeHandler):
                                 self.processor._add_connection(assign_id, error_id)
                                 return error_id
                     
-                    self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, assign_id)
+                    method_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, assign_id)
                     method_found = True
+                    
+                    # In sequential flow, connect method exit to the assignment, then continue to next
+                    if self.processor.sequential_flow and method_exit_id and method_exit_id != assign_id:
+                        # The method exit should connect to the assignment node
+                        self.processor._add_connection(method_exit_id, assign_id)
         
         if not method_found:
             # Could not find the method or couldn't resolve the class
@@ -852,15 +925,20 @@ class AssignHandler(NodeHandler):
                 if scope in self.processor.attribute_types and attr_name in self.processor.attribute_types[scope]:
                     return self.processor.attribute_types[scope][attr_name]
                 
-                # If not found, look up in class scope (attributes are usually set in __init__)
-                # Scope format: class_ClassName_methodName -> class_ClassName___init__
+                # If not found, look up in class scope (attributes can be set in __init__ or other methods)
+                # Scope format: class_ClassName_methodName -> search all methods in class_ClassName
                 if scope and scope.startswith("class_"):
                     parts = scope.split("_")
                     if len(parts) >= 3:  # class_ClassName_methodName
                         class_name = parts[1]
+                        # First try __init__ scope
                         init_scope = f"class_{class_name}___init__"
                         if init_scope in self.processor.attribute_types and attr_name in self.processor.attribute_types[init_scope]:
                             return self.processor.attribute_types[init_scope][attr_name]
+                        # Then search all other methods in the class
+                        for method_scope in self.processor.attribute_types:
+                            if method_scope.startswith(f"class_{class_name}_") and attr_name in self.processor.attribute_types[method_scope]:
+                                return self.processor.attribute_types[method_scope][attr_name]
             # Otherwise, recursively resolve the object type
             else:
                 # For obj.attr, we'd need to track object attribute types
@@ -903,6 +981,11 @@ class AssignHandler(NodeHandler):
                         if isinstance(arg, ast.Name) and arg.id in self.processor.variable_types:
                             arg_type = self.processor.variable_types[arg.id]
                             self.processor.parameter_types[method_scope][param_name] = arg_type
+                        # Check if argument is an attribute (like self.design)
+                        elif isinstance(arg, ast.Attribute):
+                            arg_type = self.processor.handlers[ast.Assign]._resolve_object_type(arg, scope)
+                            if arg_type:
+                                self.processor.parameter_types[method_scope][param_name] = arg_type
         
         # Find the class and connect to its __init__ method
         if class_name in self.processor.class_defs:
@@ -1046,14 +1129,19 @@ class ClassHandler(NodeHandler):
             # Method subgraph already exists, reuse it
             existing_method_id = self.processor.method_subgraphs[method_key]
             
-            # Connect the call to the existing method with bidirectional arrow
-            label = "Call and Return"
-            self.processor._add_connection(call_node_id, existing_method_id, label=label, bidirectional=True)
-            
-            # Store the calling node for this method scope so returns can connect back
-            if not hasattr(self.processor, 'method_calling_nodes'):
-                self.processor.method_calling_nodes = {}
-            self.processor.method_calling_nodes[method_scope] = call_node_id
+            # Connect the call to the existing method
+            if self.processor.sequential_flow:
+                # Sequential mode: one-way arrow with label "Call"
+                self.processor._add_connection(call_node_id, existing_method_id, label="Call", bidirectional=False)
+            else:
+                # Traditional mode: bidirectional arrow with label "Call and Return"
+                label = "Call and Return"
+                self.processor._add_connection(call_node_id, existing_method_id, label=label, bidirectional=True)
+                
+                # Store the calling node for this method scope so returns can connect back
+                if not hasattr(self.processor, 'method_calling_nodes'):
+                    self.processor.method_calling_nodes = {}
+                self.processor.method_calling_nodes[method_scope] = call_node_id
             
             # Get the last node of the existing method
             if hasattr(self.processor, 'method_last_nodes') and existing_method_id in self.processor.method_last_nodes:
@@ -1065,6 +1153,12 @@ class ClassHandler(NodeHandler):
             if not hasattr(self.processor, 'method_last_nodes'):
                 self.processor.method_last_nodes = {}
             self.processor.method_last_nodes[call_node_id] = last_node_id
+            
+            # In sequential flow mode, if method has exit nodes (returns), use the last one
+            if self.processor.sequential_flow and method_scope in self.processor.method_exit_nodes:
+                exit_nodes = self.processor.method_exit_nodes[method_scope]
+                if exit_nodes:
+                    return exit_nodes[-1]
             
             return last_node_id
         
@@ -1081,9 +1175,14 @@ class ClassHandler(NodeHandler):
         # Store the method subgraph for future reuse
         self.processor.method_subgraphs[method_key] = method_id
         
-        # Connect the call to the method with bidirectional arrow
-        label = "Call and Return"
-        self.processor._add_connection(call_node_id, method_id, label=label, bidirectional=True)
+        # Connect the call to the method
+        if self.processor.sequential_flow:
+            # Sequential mode: one-way arrow with label "Call"
+            self.processor._add_connection(call_node_id, method_id, label="Call", bidirectional=False)
+        else:
+            # Traditional mode: bidirectional arrow with label "Call and Return"
+            label = "Call and Return"
+            self.processor._add_connection(call_node_id, method_id, label=label, bidirectional=True)
         
         # Store the calling node for this method scope so returns can connect back
         if not hasattr(self.processor, 'method_calling_nodes'):
@@ -1097,6 +1196,13 @@ class ClassHandler(NodeHandler):
         if not hasattr(self.processor, 'method_last_nodes'):
             self.processor.method_last_nodes = {}
         self.processor.method_last_nodes[call_node_id] = last_node_id if last_node_id else method_id
+        
+        # In sequential flow mode, if method has exit nodes (returns), use the first one
+        if self.processor.sequential_flow and method_scope in self.processor.method_exit_nodes:
+            exit_nodes = self.processor.method_exit_nodes[method_scope]
+            if exit_nodes:
+                # Return the last exit node to connect it to the next statement after the call
+                return exit_nodes[-1]
         
         return last_node_id
 
@@ -1142,6 +1248,14 @@ class MethodHandler(NodeHandler):
         # Try to resolve the class if not already known
         if not class_name and call_obj:
             class_name = self.processor.handlers[ast.Assign]._resolve_object_type(call_obj, scope)
+            
+            # Special handling for 'self' calls within methods
+            if class_name is None and isinstance(call_obj, ast.Name) and call_obj.id == 'self':
+                # Extract class name from current scope (format: class_ClassName_methodName)
+                if scope and scope.startswith("class_"):
+                    parts = scope.split("_")
+                    if len(parts) >= 2:
+                        class_name = parts[1]
         
         # Try to find and validate the method
         method_found = False

@@ -83,8 +83,15 @@ def main():
 def validate_args(args: list[str]):
     """Validate the arguments."""
     if len(args) < 2:
-        print("Usage: python main.py <python_file_path>", file=sys.stderr)
+        print("Usage: python main.py <python_file_path> [--sequential-flow]", file=sys.stderr)
+        print("  --sequential-flow: Use sequential flow mode (one-way arrows instead of Call and Return)", file=sys.stderr)
         sys.exit(1)
+    
+    # Check for --sequential-flow flag
+    if '--sequential-flow' in args:
+        os.environ['SEQUENTIAL_FLOW'] = '1'
+        # Remove flag from args for file path extraction
+        args = [a for a in args if a != '--sequential-flow']
     
     file_path = args[1] 
     if not os.path.exists(file_path):

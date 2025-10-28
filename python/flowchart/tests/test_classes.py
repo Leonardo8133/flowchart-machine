@@ -744,6 +744,43 @@ class TestFlowchartClasses(TestFlowchartMain):
         self.assertIn('class_TestClass___init__', collapsed_subgraphs,
                      "__init__ should be collapsed (force collapse pattern applies)")
 
+    def test_using_self_in_method(self):
+        """Test that self.method() calls within methods are properly tracked."""
+        with patch.dict(os.environ, {
+            'MAX_SUBGRAPH_NODES': '10'
+        }):
+            mermaid_output, metadata, stdout, stderr = self._run_main_with_file('self_method_calls.py')
+            
+        # Verify that test_method calls other_method
+        self.assertIn('Method: other_method()', mermaid_output,
+                     "other_method should be called by test_method")
+        
+        # Verify the connection exists
+        # Looking for "other_method" in a method call context
+        # The pattern should be: return self.other_method() --> Method: other_method()
+        
+        # Verify that chain_method calls helper_method
+        self.assertIn('Method: helper_method()', mermaid_output,
+                     "helper_method should be called by chain_method")
+
+        self.assertIn('self.print_value()', mermaid_output,
+                     "print_value should be called by other_method")
+        
+        # Verify return statements with self calls are tracked
+        self.assertIn('return self.other_method()', mermaid_output,
+                     "Return statement should show method call")
+        
+        self.assertIn('return self.helper_method()', mermaid_output,
+                     "Return statement should show helper call")
+        
+        # Verify the methods exist in the subgraph
+        self.assertIn('subgraph "Method: test_method"', mermaid_output,
+                     "test_method subgraph should exist")
+        
+        self.assertIn('subgraph "Method: other_method"', mermaid_output,
+                     "other_method subgraph should exist")
+        
+
 
 if __name__ == '__main__':
     unittest.main()

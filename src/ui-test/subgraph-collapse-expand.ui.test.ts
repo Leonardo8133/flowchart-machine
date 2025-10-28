@@ -33,6 +33,9 @@ describe('Subgraph Collapse/Expand UI Test', () => {
 
     const editorView = new EditorView();
     await editorView.openEditor('class_method_calls.py');
+    
+    // Wait for editor to be fully loaded before executing command
+    await driver.sleep(1_000);
 
     await workbench.executeCommand('Generate Python Flowchart');
 

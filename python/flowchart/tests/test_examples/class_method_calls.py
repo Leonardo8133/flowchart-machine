@@ -1,3 +1,4 @@
+# type: ignore
 """
 Class method call test case for debugging subgraph generation.
 """
@@ -9,7 +10,7 @@ class TestClass:
     
     def test_method(self):
         print("test method")
-        return self.value
+        return self.other_method()  # Call another method
     
     def other_method(self):
         print("other method")
