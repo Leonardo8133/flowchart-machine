@@ -184,7 +184,9 @@
     "test:watch": "vscode-test --extensionDevelopmentPath=. --extensionTestsPath=./out/test/suite/index --watch",
     "test:coverage": "npm run compile && npm run test:unit",
     "test:clean": "rimraf test-workspace*",
-    "test:all": "npm run pretest && npm run test:unit"
+    "test:all": "npm run pretest && npm run test:unit",
+    "test:ui": "npm run compile && extest run-tests \"out/ui-test/**/*.test.js\" --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error",
+    "test:ui:setup": "echo Setup not needed - VS Code already cached. Run 'npm run test:ui' to run tests offline."
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

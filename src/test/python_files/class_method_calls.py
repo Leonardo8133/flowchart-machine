@@ -53,3 +53,4 @@ result2 = obj2.calculate_value()
 result3 = TestClass3().call_another_class()
 
 print(f"Results: {result1}, {result2}, {result3}")
+

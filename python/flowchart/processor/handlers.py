@@ -791,6 +791,22 @@ class AssignHandler(NodeHandler):
                 class_info = self.processor.class_defs[resolved_class]
                 if method_name in class_info["methods"]:
                     method_node = class_info["methods"][method_name]
+                    
+                    # Check if this is calling an instance method on a class without instantiation
+                    # If call_obj is a class name (not an instance), we need to check
+                    if isinstance(call_obj, ast.Name) and call_obj.id in self.processor.class_defs:
+                        # This is a direct class call like TestClass2.calculate_value()
+                        # Check if method has 'self' parameter
+                        if method_node.args.args and len(method_node.args.args) > 0:
+                            first_param = method_node.args.args[0].arg
+                            if first_param == 'self':
+                                # This is an instance method being called on the class - show error
+                                error_id = self.processor._generate_id("error")
+                                error_text = f"❌ Instance method '{method_name}' called on class '{resolved_class}' without instantiation"
+                                self.processor._add_node(error_id, error_text, shape=FlowchartConfig.SHAPES['exception'], scope=scope)
+                                self.processor._add_connection(assign_id, error_id)
+                                return error_id
+                    
                     self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, assign_id)
                     method_found = True
         
@@ -818,6 +834,13 @@ class AssignHandler(NodeHandler):
             # Check if it's a direct class name (for static method calls like Calculator.add())
             if var_name in self.processor.class_defs:
                 return var_name
+        
+        # Class instantiation: TestClass().method()
+        if isinstance(obj_node, ast.Call):
+            if hasattr(obj_node.func, 'id'):
+                class_name = obj_node.func.id
+                if class_name in self.processor.class_defs:
+                    return class_name
         
         # Attribute access: self.attr.method() or obj.attr.method()
         if isinstance(obj_node, ast.Attribute):

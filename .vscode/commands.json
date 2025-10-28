@@ -46,6 +46,58 @@
           "variables": []
         }
       ]
+    },
+    {
+      "name": "UI Tests",
+      "icon": "$(circuit-board)",
+      "expanded": true,
+      "commands": [
+        {
+          "id": "run-all-ui-tests",
+          "label": "Run All UI Tests",
+          "description": "Run all UI tests for the extension",
+          "command": "npm run test:ui",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "UI Tests"
+          },
+          "variables": []
+        },
+        {
+          "id": "run-subgraph-ui-test",
+          "label": "Run Subgraph Collapse/Expand Test",
+          "description": "Run the subgraph collapse/expand UI test",
+          "command": "npm run compile; if ($?) { npx extest run-tests out/ui-test/subgraph-collapse-expand.ui.test.js --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error }",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Subgraph Tests"
+          },
+          "variables": [],
+          "pinned": true
+        },
+        {
+          "id": "run-class-method-ui-test",
+          "label": "Run Class Method Calls Test",
+          "description": "Run the class method calls UI test",
+          "command": "npm run compile; if ($?) { npx extest run-tests out/ui-test/class-method-calls.ui.test.js --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error }",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Class Method Test"
+          },
+          "variables": []
+        },
+        {
+          "id": "run-generate-flowchart-ui-test",
+          "label": "Run Generate Flowchart Test",
+          "description": "Run the generate flowchart UI test",
+          "command": "npm run compile; if ($?) { npx extest run-tests out/ui-test/generate-flowchart.ui.test.js --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error }",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Generate Flowchart Test"
+          },
+          "variables": []
+        }
+      ]
     }
   ],
   "sharedVariables": [
@@ -68,6 +120,6 @@
       "description": "Common deployment targets"
     }
   ],
-  "version": 7,
-  "lastModified": "2025-10-27T13:59:47.108Z"
+  "version": 9,
+  "lastModified": "2025-10-28T01:42:39.302Z"
 }

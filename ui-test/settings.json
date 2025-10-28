@@ -1,0 +1,13 @@
+{
+  "workbench.startupEditor": "none",
+  "workbench.editor.enablePreview": false,
+  "extensions.ignoreRecommendations": true,
+  "git.autoRepositoryDetection": false,
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "manual",
+  "security.workspace.trust.enabled": false,
+  "workbench.remoteIndicator.showExtensionRecommendations": false,
+  "window.commandCenter": false,
+  "editor.minimap.enabled": false,
+  "workbench.activityBar.visible": false
+}
