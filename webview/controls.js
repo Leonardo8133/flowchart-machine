@@ -27,6 +27,8 @@ let helpBtn;
 let bugReportBtn;
 let helpModal;
 let bugReportModal;
+let optionsBtn;
+let optionsModal;
 
 // Acquire VS Code API once
 let vscode;
@@ -66,6 +68,8 @@ function initializeControls() {
     bugReportBtn = document.getElementById('bugReportBtn');
     helpModal = document.getElementById('helpModal');
     bugReportModal = document.getElementById('bugReportModal');
+    optionsBtn = document.getElementById('optionsBtn');
+    optionsModal = document.getElementById('optionsModal');
 
     // Add event listeners
     if (unfoldAllBtn) {
@@ -160,6 +164,10 @@ function initializeControls() {
     if (mergeCommonNodesCheckbox) {
         mergeCommonNodesCheckbox.addEventListener('change', handleConfigChange);
     }
+    const sequentialFlowToggle = document.getElementById('sequentialFlow');
+    if (sequentialFlowToggle) {
+        sequentialFlowToggle.addEventListener('change', handleConfigChange);
+    }
     
     if (showCodeBtn) {
         showCodeBtn.addEventListener('click', handleShowCodeClick);
@@ -175,6 +183,20 @@ function initializeControls() {
 
     if (bugReportBtn) {
         bugReportBtn.addEventListener('click', handleBugReportClick);
+    }
+
+    if (optionsBtn) {
+        optionsBtn.addEventListener('click', handleOptionsClick);
+    }
+
+    // Options modal event listeners
+    const optionsModalClose = document.getElementById('optionsModalClose');
+    const optionsModalBackdrop = optionsModal ? optionsModal.querySelector('.modal-backdrop') : null;
+    if (optionsModalClose) {
+        optionsModalClose.addEventListener('click', closeOptionsModal);
+    }
+    if (optionsModalBackdrop) {
+        optionsModalBackdrop.addEventListener('click', closeOptionsModal);
     }
 
     // Close dropdown when clicking outside
@@ -204,34 +226,22 @@ function handleOutsideClick(event) {
 }
 
 function handleExpandAllClick() {
-    console.log('Expand All button clicked');
-    
-    // Use the new enhanced function if available
-    if (typeof window.expandAllSubgraphs === 'function') {
-        window.expandAllSubgraphs();
-    } else if (vscode) {
-        // Fallback to old method
+
+    if (vscode) {
         vscode.postMessage({
             command: 'expandAllSubgraphs'
         });
     } else {
-        console.error('Neither new expandAllSubgraphs function nor VS Code API available');
     }
 }
 
 function handleCollapseAllClick() {
-    console.log('Collapse All button clicked');
-    
-    // Use the new enhanced function if available
-    if (typeof window.collapseAllSubgraphs === 'function') {
-        window.collapseAllSubgraphs();
-    } else if (vscode) {
-        // Fallback to old method
+
+    if (vscode) {
         vscode.postMessage({
             command: 'collapseAllSubgraphs'
         });
     } else {
-        console.error('Neither new collapseAllSubgraphs function nor VS Code API available');
     }
 }
 
@@ -276,6 +286,20 @@ function closeHelpModal() {
 function closeBugReportModal() {
     if (bugReportModal) {
         bugReportModal.classList.add('hidden');
+    }
+}
+
+function handleOptionsClick() {
+    if (optionsModal) {
+        optionsModal.classList.remove('hidden');
+        // Sync current checkbox values on open
+        getCurrentCheckboxStatesValues();
+    }
+}
+
+function closeOptionsModal() {
+    if (optionsModal) {
+        optionsModal.classList.add('hidden');
     }
 }
 
@@ -404,5 +428,7 @@ function updateCheckboxStates(checkboxStates) {
     showExceptionsCheckbox.checked = checkboxStates.showExceptions;
     showClassesCheckbox.checked = checkboxStates.showClasses;
     mergeCommonNodesCheckbox.checked = checkboxStates.mergeCommonNodes;
+    const seqToggle = document.getElementById('sequentialFlow');
+    if (seqToggle) { seqToggle.checked = !!checkboxStates.sequentialFlow; }
     
 }

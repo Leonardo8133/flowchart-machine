@@ -135,8 +135,37 @@ class IfHandler(NodeHandler):
         # Process true path with "True" label
         true_path_end = self.processor._process_node_list(node.body, cond_id, scope, next_node_label="True")
         
+        # Check if both branches end with returns BEFORE processing false path
+        if node.orelse and self.processor.sequential_flow and self._both_branches_end_with_returns(node):
+            # Both branches end with returns, so no merge needed
+            # Set a flag to indicate that returns in this scope should connect to end
+            if not hasattr(self.processor, 'if_returns_to_end_scopes'):
+                self.processor.if_returns_to_end_scopes = set()
+            self.processor.if_returns_to_end_scopes.add(scope)
+            
+            # Connect any pending returns from this scope to the end node
+            if hasattr(self.processor, 'pending_returns_to_end') and scope in self.processor.pending_returns_to_end:
+                for return_id in self.processor.pending_returns_to_end[scope]:
+                    self.processor._add_connection(return_id, self.processor.end_id)
+            
+            # Process the else clause but don't create merge
+            false_path_end = self.processor._process_node_list(node.orelse, cond_id, scope, next_node_label="False")
+            return None
+        
         # Process false path (else clause)
         if node.orelse:
+            # Check if both branches end with returns BEFORE creating merge node
+            if self.processor.sequential_flow and self._both_branches_end_with_returns(node):
+                # Both branches end with returns, so no merge needed
+                # Set a flag to indicate that returns in this scope should connect to end
+                if not hasattr(self.processor, 'if_returns_to_end_scopes'):
+                    self.processor.if_returns_to_end_scopes = set()
+                self.processor.if_returns_to_end_scopes.add(scope)
+                
+                # Process the else clause but don't create merge
+                false_path_end = self.processor._process_node_list(node.orelse, cond_id, scope, next_node_label="False")
+                return None
+            
             # We have an else clause, so we need a merge node
             merge_id = self.processor._generate_id("merge")
             self.processor._add_node(merge_id, " ", shape=FlowchartConfig.SHAPES['merge'])
@@ -202,6 +231,24 @@ class IfHandler(NodeHandler):
                 # Update the connection with the label
                 self.processor.connections[i] = (from_id, to_id, label)
                 break
+    
+    def _both_branches_end_with_returns(self, node):
+        """Check if both branches of an if statement end with return statements."""
+        # Check if true branch ends with return
+        true_ends_with_return = False
+        if node.body:
+            last_stmt = node.body[-1]
+            if isinstance(last_stmt, ast.Return):
+                true_ends_with_return = True
+        
+        # Check if false branch (else) ends with return
+        false_ends_with_return = False
+        if node.orelse:
+            last_stmt = node.orelse[-1]
+            if isinstance(last_stmt, ast.Return):
+                false_ends_with_return = True
+        
+        return true_ends_with_return and false_ends_with_return
 
 class ForHandler(NodeHandler):
     """Handle for loops."""
@@ -592,7 +639,10 @@ class ExprHandler(NodeHandler):
             if '__init__' in class_info["methods"]:
                 method_node = class_info["methods"]['__init__']
                 # Create __init__ method subgraph and connect instantiation to it
-                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', method_node, instantiation_id)
+                init_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', method_node, instantiation_id)
+                # In sequential flow, return the constructor's exit so the next statement connects after constructor
+                if self.processor.sequential_flow and init_exit_id and init_exit_id != instantiation_id:
+                    return init_exit_id
             else:
                 # If no __init__ method found, connect to class node as fallback
                 class_scope = f"class_{class_name}"
@@ -659,8 +709,12 @@ class ReturnHandler(NodeHandler):
                         class_info = self.processor.class_defs[resolved_class]
                         if attr_name in class_info["methods"]:
                             method_node = class_info["methods"][attr_name]
-                            # Connect return node directly to the method
-                            self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, attr_name, method_node, return_id)
+                            # Connect return node directly to the method and get its exit node
+                            method_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, attr_name, method_node, return_id)
+                            
+                            # In sequential flow, return the method's exit so it can connect to the next statement
+                            if self.processor.sequential_flow and method_exit_id and method_exit_id != return_id:
+                                return method_exit_id
                 
                 current_id = return_id
                 skip_return_creation = True
@@ -682,6 +736,22 @@ class ReturnHandler(NodeHandler):
                 if scope not in self.processor.method_exit_nodes:
                     self.processor.method_exit_nodes[scope] = []
                 self.processor.method_exit_nodes[scope].append(return_id)
+                
+                # Store returns that might need to be connected to end later
+                if not hasattr(self.processor, 'pending_returns_to_end'):
+                    self.processor.pending_returns_to_end = {}
+                if scope not in self.processor.pending_returns_to_end:
+                    self.processor.pending_returns_to_end[scope] = []
+                self.processor.pending_returns_to_end[scope].append(return_id)
+                
+                # Only connect to end if this scope was marked as having if-else with returns
+                # But don't connect if this return is already in the pending list (will be connected later)
+                if (hasattr(self.processor, 'if_returns_to_end_scopes') and 
+                    scope in self.processor.if_returns_to_end_scopes and
+                    not (hasattr(self.processor, 'pending_returns_to_end') and 
+                         scope in self.processor.pending_returns_to_end and 
+                         return_id in self.processor.pending_returns_to_end[scope])):
+                    self.processor._add_connection(return_id, self.processor.end_id)
             # No need to connect back - bidirectional arrows or sequential flow handles it
             pass
         elif self.processor.call_stack:
@@ -878,10 +948,9 @@ class AssignHandler(NodeHandler):
                     method_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(resolved_class, method_name, method_node, assign_id)
                     method_found = True
                     
-                    # In sequential flow, connect method exit to the assignment, then continue to next
+                    # In sequential flow, continue from the method's exit (do not return to assignment)
                     if self.processor.sequential_flow and method_exit_id and method_exit_id != assign_id:
-                        # The method exit should connect to the assignment node
-                        self.processor._add_connection(method_exit_id, assign_id)
+                        return method_exit_id
         
         if not method_found:
             # Could not find the method or couldn't resolve the class
@@ -995,7 +1064,10 @@ class AssignHandler(NodeHandler):
             if '__init__' in class_info["methods"]:
                 method_node = class_info["methods"]['__init__']
                 # Create __init__ method subgraph and connect assignment to it
-                self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', method_node, assign_id)
+                init_exit_id = self.processor.handlers[ast.ClassDef]._create_method_subgraph(class_name, '__init__', method_node, assign_id)
+                # In sequential flow, continue from constructor exit (do not return to assignment)
+                if self.processor.sequential_flow and init_exit_id and init_exit_id != assign_id:
+                    return init_exit_id
         
         return assign_id
 

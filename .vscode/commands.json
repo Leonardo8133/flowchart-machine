@@ -43,7 +43,8 @@
             "type": "vscode-new",
             "name": "Python Tests."
           },
-          "variables": []
+          "variables": [],
+          "pinned": true
         },
         {
           "id": "run-test-using-self-in-method",
@@ -55,7 +56,7 @@
             "name": "Self Method Test"
           },
           "variables": [],
-          "pinned": true
+          "pinned": false
         },
         {
           "id": "run-sequential-flow-tests",
@@ -96,7 +97,7 @@
             "name": "Subgraph Tests"
           },
           "variables": [],
-          "pinned": true
+          "pinned": false
         },
         {
           "id": "run-class-method-ui-test",
@@ -143,6 +144,6 @@
       "description": "Common deployment targets"
     }
   ],
-  "version": 13,
-  "lastModified": "2025-10-28T03:00:16.260Z"
+  "version": 16,
+  "lastModified": "2025-10-28T15:02:34.011Z"
 }

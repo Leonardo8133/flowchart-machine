@@ -100,6 +100,7 @@ export class GenerateFlowchartCommand {
         const returns = config.get('nodes.processTypes.returns', true);
         const classes = config.get('nodes.processTypes.classes', true);
         const mergeCommonNodes = config.get('nodes.processTypes.mergeCommonNodes', true);
+        const sequentialFlow = config.get('general.sequentialFlow', false);
 
         // Set environment variables for Python script
         const env = {
@@ -114,7 +115,8 @@ export class GenerateFlowchartCommand {
           SHOW_EXCEPTIONS: exceptions ? '1' : '0',
           SHOW_RETURNS: returns ? '1' : '0',
           SHOW_CLASSES: classes ? '1' : '0',
-          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0'
+          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0',
+          SEQUENTIAL_FLOW: sequentialFlow ? '1' : '0'
         } as Record<string, string>;
 
         // Pass entry selection to Python

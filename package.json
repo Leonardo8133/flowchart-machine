@@ -81,6 +81,11 @@
           "default": true,
           "description": "Automatically save flowcharts after generation"
         },
+        "flowchartMachine.general.sequentialFlow": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use sequential flow (one-way arrows) instead of Call/Return"
+        },
         "flowchartMachine.nodes.processTypes.prints": {
           "type": "boolean",
           "default": true,
