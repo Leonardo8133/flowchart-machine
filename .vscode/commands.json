@@ -56,6 +56,17 @@
           },
           "variables": [],
           "pinned": true
+        },
+        {
+          "id": "run-sequential-flow-tests",
+          "label": "Test: Sequential Flow Mode",
+          "description": "Run sequential flow mode tests",
+          "command": "cd python; python -m unittest flowchart.tests.test_sequential_flow -v",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Sequential Flow Test"
+          },
+          "variables": []
         }
       ]
     },
