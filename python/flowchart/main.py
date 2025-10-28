@@ -26,7 +26,10 @@ class FlowchartGenerator:
         self.processor.file_path = context['file_path']
         self.processor.entry_line_mapping = context['definitions_line_mapping']
         self.processor.context = context
-        
+        if context.get('workspace_root'):
+            self.processor.workspace_root = context['workspace_root']
+        self.processor.view_mode = context.get('view_mode', self.processor.view_mode)
+
         try:
             # Set breakpoints AFTER processor is created
             self.processor.set_breakpoints(context.get('breakpoint_lines', []))
@@ -111,6 +114,8 @@ def collect_context(file_path: str) -> dict:
         'entry_type': os.environ.get('ENTRY_TYPE') or None,
         'entry_name': os.environ.get('ENTRY_NAME') or None,
         'entry_class': os.environ.get('ENTRY_CLASS') or None,
+        'workspace_root': os.environ.get('WORKSPACE_ROOT') or None,
+        'view_mode': (os.environ.get('FLOWCHART_VIEW') or 'advanced').lower(),
     }
 
 def save_output(mermaid_output: str, metadata: dict):

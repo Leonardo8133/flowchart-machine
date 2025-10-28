@@ -384,7 +384,11 @@ class ExprHandler(NodeHandler):
         if isinstance(node.value, ast.Call):
             call = node.value
             func_name = getattr(call.func, 'id', None)
-            
+
+            external_target = self.processor.resolve_external_call(call)
+            if external_target:
+                return self._handle_external_call(node, prev_id, scope, external_target)
+
             # Check for attribute calls like sys.exit() or method calls like obj.method() or self.attr.method()
             if hasattr(call.func, 'attr'):
                 attr_name = call.func.attr
@@ -497,7 +501,22 @@ class ExprHandler(NodeHandler):
             return False
         self.processor._add_connection(prev_id, expr_id)
         return expr_id
-    
+
+    def _handle_external_call(self, node, prev_id, scope, target_info):
+        call_id = self.processor._generate_id("external_call")
+        text = f"Call: {self.processor._get_node_text(node)}"
+        if self.processor._should_highlight_breakpoint(node):
+            text = f"🔴 {text}" if text else ""
+        self.processor._add_node(call_id, text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+        self.processor._add_connection(prev_id, call_id)
+
+        info_id = self.processor._generate_id("external_target")
+        info_text = self.processor.format_external_call_label(target_info)
+        self.processor._add_node(info_id, info_text, shape=FlowchartConfig.SHAPES['function_call'], scope=scope)
+        self.processor._add_connection(call_id, info_id)
+
+        return info_id
+
     def _handle_method_call(self, node, prev_id, scope, method_name, class_name=None):
         """Handle method calls on objects."""
         method_call_id = self.processor._generate_id("method_call")
@@ -1020,6 +1039,9 @@ class ImportHandler(NodeHandler):
     """Handle import statements like 'import os'"""
     
     def handle(self, node, prev_id, scope):
+        for alias in node.names:
+            self.processor.register_module_import(alias)
+
         # If we've already added an import, skip further imports
         if not self.processor.show_imports:
             return prev_id
@@ -1042,6 +1064,9 @@ class ImportFromHandler(NodeHandler):
     """Handle from imports like 'from os import path'"""
     
     def handle(self, node, prev_id, scope):
+        for alias in node.names:
+            self.processor.register_symbol_import(node.module, alias)
+
         # If we've already added an import, skip further imports
         if not self.processor.show_imports:
             return prev_id

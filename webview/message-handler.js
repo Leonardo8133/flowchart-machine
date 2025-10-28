@@ -59,6 +59,12 @@ function handleExtensionMessage(event) {
             }
             break;
 
+        case 'setViewMode':
+            if (typeof window.updateActiveViewTab === 'function') {
+                window.updateActiveViewTab(message.viewMode);
+            }
+            break;
+
         case 'storeCollapsedSubgraphs':
             // Deprecated: metadata no longer used
             if (typeof window.createExpandFunctions === 'function') {

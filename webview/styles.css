@@ -47,6 +47,34 @@ body {
     gap: 20px;
 }
 
+/* View Tabs */
+.view-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.view-tab {
+    background-color: var(--vscode-button-secondaryBackground, #3c3c3c);
+    color: var(--vscode-button-secondaryForeground, #ffffff);
+    border: 1px solid var(--vscode-button-border, #444444);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    font-family: var(--vscode-font-family);
+}
+
+.view-tab.active {
+    background-color: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+}
+
+.view-tab:not(.active):hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, #4c4c4c);
+}
+
 /* Controls Layout */
 .controls-row {
     display: flex;

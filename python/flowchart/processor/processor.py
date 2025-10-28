@@ -45,17 +45,24 @@ class FlowchartProcessor:
         # Attribute type tracking for resolving self.attribute access
         # Format: {scope: {attr_name: class_name}}
         self.attribute_types = {}
-        
+
         # Recursion tracking
         self.recursive_calls = {}  # Track recursive function calls
         self.function_start_nodes = {}  # Track function start nodes for recursion loops
-        
+
         # Nesting depth tracking
         self.current_nesting_depth = 0  # Track current function call nesting depth
-        
+
         # Method exit tracking for sequential flow mode
         self.method_exit_nodes = {}  # Maps method_scope to exit node IDs
-        
+
+        # Workspace context and import tracking
+        self.workspace_root = os.environ.get('WORKSPACE_ROOT') or None
+        self.imported_modules = {}
+        self.imported_symbols = {}
+        self.external_definitions_cache = {}
+        self.view_mode = 'advanced'
+
         # Configuration and display settings
         self.breakpoint_lines = set()
         self._first_import_rendered = False
@@ -87,6 +94,15 @@ class FlowchartProcessor:
                 setattr(self, attr, os.environ.get(env_var, '0') == '1')
             else:
                 setattr(self, attr, os.environ.get(env_var, '1') == '1')
+
+        view_mode = (os.environ.get('FLOWCHART_VIEW') or self.view_mode or 'advanced').lower()
+        if view_mode not in {'calls', 'simple', 'advanced'}:
+            view_mode = 'advanced'
+        self.view_mode = view_mode
+
+        env_root = os.environ.get('WORKSPACE_ROOT')
+        if env_root:
+            self.workspace_root = env_root
 
     def _register_handlers(self):
         """Register all node handlers using Strategy Pattern."""
@@ -147,7 +163,7 @@ class FlowchartProcessor:
         """Add connection between nodes with fallback handling."""
         if from_id is None or to_id is None:
             return
-        
+
         if not label and self.next_node_label:
             label = self.next_node_label
             self.next_node_label = None
@@ -166,6 +182,162 @@ class FlowchartProcessor:
         else:
             connection = f'    {from_id} -->|{label}| {to_id}' if label else f'    {from_id} --> {to_id}'
         self.connections.append(connection)
+
+    # ===== IMPORT AND EXTERNAL CALL HELPERS =====
+
+    def register_module_import(self, alias):
+        module_name = alias.name
+        alias_name = alias.asname or module_name.split('.')[0]
+        module_path = self._resolve_module_path(module_name)
+        if alias_name:
+            self.imported_modules[alias_name] = {
+                'module': module_name,
+                'path': module_path
+            }
+        # Store full module reference for prefix matching
+        self.imported_modules[module_name] = {
+            'module': module_name,
+            'path': module_path
+        }
+
+    def register_symbol_import(self, module_name, alias):
+        if not module_name:
+            return
+        symbol_name = alias.asname or alias.name
+        module_path = self._resolve_module_path(module_name)
+        self.imported_symbols[symbol_name] = {
+            'module': module_name,
+            'original': alias.name,
+            'path': module_path
+        }
+
+    def _resolve_module_path(self, module_name):
+        if not module_name or not self.workspace_root:
+            return None
+
+        parts = module_name.split('.')
+        file_candidate = os.path.join(self.workspace_root, *parts) + '.py'
+        if os.path.exists(file_candidate):
+            return file_candidate
+
+        package_init = os.path.join(self.workspace_root, *parts, '__init__.py')
+        if os.path.exists(package_init):
+            return package_init
+
+        return None
+
+    def _ensure_external_definitions_loaded(self, file_path):
+        if not file_path:
+            return
+
+        if file_path in self.external_definitions_cache:
+            return
+
+        names = set()
+        try:
+            with open(file_path, 'r', encoding='utf-8') as handle:
+                tree = ast.parse(handle.read())
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    names.add(node.name)
+                elif isinstance(node, ast.ClassDef):
+                    names.add(node.name)
+        except Exception as exc:
+            logger.debug("Failed to parse external module %s: %s", file_path, exc)
+        self.external_definitions_cache[file_path] = names
+
+    def _external_symbol_exists(self, file_path, symbol_name):
+        if not file_path or not symbol_name:
+            return False
+        self._ensure_external_definitions_loaded(file_path)
+        names = self.external_definitions_cache.get(file_path, set())
+        return symbol_name in names
+
+    def _get_full_attribute_name(self, func_node):
+        parts = []
+        current = func_node
+        while isinstance(current, ast.Attribute):
+            parts.append(current.attr)
+            current = current.value
+        if isinstance(current, ast.Name):
+            parts.append(current.id)
+        else:
+            return None
+        parts.reverse()
+        return '.'.join(parts)
+
+    def resolve_external_call(self, call_node):
+        if not isinstance(call_node, ast.Call):
+            return None
+
+        func = call_node.func
+
+        if isinstance(func, ast.Name):
+            symbol = func.id
+            info = self.imported_symbols.get(symbol)
+            if info and info.get('path') and self._external_symbol_exists(info['path'], info['original']):
+                return {
+                    'file_path': info['path'],
+                    'function': info['original'],
+                    'module': info['module'],
+                    'alias': symbol
+                }
+
+        full_attr = self._get_full_attribute_name(func) if isinstance(func, ast.Attribute) else None
+        if not full_attr:
+            return None
+
+        parts = full_attr.split('.')
+        alias = parts[0]
+        remainder = parts[1:]
+
+        module_info = self.imported_modules.get(alias)
+        if module_info and remainder:
+            module_name = module_info['module']
+            module_path = module_info.get('path') or self._resolve_module_path(module_name)
+            function_name = remainder[-1]
+            if module_path and self._external_symbol_exists(module_path, function_name):
+                return {
+                    'file_path': module_path,
+                    'function': function_name,
+                    'module': module_name,
+                    'alias': alias
+                }
+
+        for alias_key, info in self.imported_modules.items():
+            module_name = info['module']
+            if full_attr.startswith(module_name + '.'):
+                module_path = info.get('path') or self._resolve_module_path(module_name)
+                function_name = full_attr[len(module_name) + 1:].split('.')[-1]
+                if module_path and self._external_symbol_exists(module_path, function_name):
+                    return {
+                        'file_path': module_path,
+                        'function': function_name,
+                        'module': module_name,
+                        'alias': alias_key
+                    }
+
+        return None
+
+    def format_external_call_label(self, target_info):
+        file_path = target_info.get('file_path')
+        function_name = target_info.get('function')
+        module_name = target_info.get('module')
+
+        display_path = file_path
+        if self.workspace_root and file_path:
+            try:
+                display_path = os.path.relpath(file_path, self.workspace_root)
+            except ValueError:
+                display_path = file_path
+
+        if display_path and function_name:
+            return f"External: {display_path}::{function_name}"
+        if function_name:
+            return f"External: {function_name}"
+        if display_path:
+            return f"External: {display_path}"
+        return f"External: {module_name or 'unknown'}"
 
     # ===== TEXT PROCESSING METHODS =====
     

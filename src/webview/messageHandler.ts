@@ -16,6 +16,7 @@ export class WebviewMessageHandler {
   private whitelistService: WhitelistService | null = null;
   private processor: any = null;
   private currentMetadata: any = null;
+  private viewMode: 'calls' | 'simple' | 'advanced' = 'advanced';
 
   constructor() {
     // Initialize storage service when needed
@@ -27,15 +28,28 @@ export class WebviewMessageHandler {
   /**
    * Set up message handling for a webview panel
    */
-  setupMessageHandling(panel: vscode.WebviewPanel, originalFilePath?: string, extensionContext?: vscode.ExtensionContext, whitelistService?: WhitelistService, processor?: any): void {
+  setupMessageHandling(
+    panel: vscode.WebviewPanel,
+    originalFilePath?: string,
+    extensionContext?: vscode.ExtensionContext,
+    whitelistService?: WhitelistService,
+    processor?: any,
+    viewMode?: 'calls' | 'simple' | 'advanced'
+  ): void {
     this.originalFilePath = originalFilePath;
     this.processor = processor;
     if (extensionContext) {
       this.extensionContext = extensionContext;
       this.fileService = new FileService(extensionContext);
+      const stored = extensionContext.workspaceState.get<string>('flowchartMachine.viewMode');
+      this.viewMode = this.normalizeViewMode(stored);
     }
     if (whitelistService) {
       this.whitelistService = whitelistService;
+    }
+
+    if (viewMode) {
+      this.viewMode = this.normalizeViewMode(viewMode);
     }
 
     
@@ -59,7 +73,7 @@ export class WebviewMessageHandler {
   /**
    * Handle incoming messages from the webview
    */
-  private async handleMessage(message: any, panel: vscode.WebviewPanel, originalFilePath?: string): Promise<void> {    
+  private async handleMessage(message: any, panel: vscode.WebviewPanel, originalFilePath?: string): Promise<void> {
     switch (message.command) {
       case 'updateFlowchart':
         await this.handleRegeneration(panel);
@@ -97,6 +111,10 @@ export class WebviewMessageHandler {
         await this.handleGetCurrentCheckboxStatesValues(message, panel);
         break;
 
+      case 'changeViewMode':
+        await this.handleChangeViewMode(message, panel);
+        break;
+
       case 'expandSubgraph':
         await this.handleExpandSubgraph(message, panel);
         break;
@@ -127,6 +145,13 @@ export class WebviewMessageHandler {
     }
   }
 
+  private normalizeViewMode(mode?: string | null): 'calls' | 'simple' | 'advanced' {
+    if (mode === 'calls' || mode === 'simple' || mode === 'advanced') {
+      return mode;
+    }
+    return 'advanced';
+  }
+
   /**
    * Public wrapper to trigger regeneration from extension code or tests.
    */
@@ -140,6 +165,22 @@ export class WebviewMessageHandler {
       command: 'updateCheckboxStates',
       checkboxStates: checkboxStates
     });
+  }
+
+  private async handleChangeViewMode(message: any, panel: vscode.WebviewPanel): Promise<void> {
+    const requested = this.normalizeViewMode(message?.viewMode);
+    if (requested === this.viewMode) {
+      panel.webview.postMessage({ command: 'setViewMode', viewMode: this.viewMode });
+      return;
+    }
+
+    this.viewMode = requested;
+    if (this.extensionContext) {
+      await this.extensionContext.workspaceState.update('flowchartMachine.viewMode', this.viewMode);
+    }
+
+    panel.webview.postMessage({ command: 'setViewMode', viewMode: this.viewMode });
+    await this.handleRegeneration(panel);
   }
 
   /**
@@ -464,12 +505,14 @@ export class WebviewMessageHandler {
 
       // Check if the original file still exists
       if (!FileService.fileExists(this.originalFilePath)) {
-        panel.webview.postMessage({ 
-          command: 'regenerationError', 
-          error: 'Original Python file not found. It may have been moved or deleted.' 
+        panel.webview.postMessage({
+          command: 'regenerationError',
+          error: 'Original Python file not found. It may have been moved or deleted.'
         });
         return;
       }
+
+      panel.webview.postMessage({ command: 'setViewMode', viewMode: this.viewMode });
 
       const scriptPath = this.fileService.getMainScriptPath();
 
@@ -502,7 +545,13 @@ export class WebviewMessageHandler {
         SHOW_CLASSES: checkboxStates.showClasses ? '1' : '0',
         MERGE_COMMON_NODES: checkboxStates.mergeCommonNodes ? '1' : '0',
         FILE_KEY: fileKey,
+        FLOWCHART_VIEW: this.viewMode,
       } as Record<string, string>;
+
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (workspaceRoot) {
+        env.WORKSPACE_ROOT = workspaceRoot;
+      }
 
       const breakpoints = vscode.debug.breakpoints.filter(bp => 
         (bp as any).location?.uri?.fsPath === this.originalFilePath

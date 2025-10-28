@@ -304,6 +304,70 @@ class FlowchartPostProcessor:
 		
 		self.processor.connections = new_connections
 
+	def _apply_view_mode_filters(self):
+		view_mode = getattr(self.processor, 'view_mode', 'advanced')
+		if view_mode not in {'calls', 'simple'}:
+			return
+
+		if view_mode == 'calls':
+			nodes_to_hide = [
+				node_id for node_id, node_def in self.processor.nodes.items()
+				if not self._is_call_view_node(node_id, node_def)
+			]
+			self._convert_nodes_to_bypass(nodes_to_hide)
+			self._optimize_graph()
+
+		elif view_mode == 'simple':
+			nodes_to_hide = []
+			for node_id, node_def in self.processor.nodes.items():
+				scope = self.processor.node_scopes.get(node_id, '')
+				if self._is_simple_view_noise(node_id, node_def, scope):
+					nodes_to_hide.append(node_id)
+			self._convert_nodes_to_bypass(nodes_to_hide)
+			self._optimize_graph()
+
+	def _convert_nodes_to_bypass(self, node_ids):
+		essential = {getattr(self.processor, 'end_id', None)}
+		for node_id in node_ids:
+			if not node_id or node_id not in self.processor.nodes:
+				continue
+			if node_id in essential or node_id.startswith('start'):
+				continue
+			self.processor.nodes[node_id] = f"{node_id}{{{{}}}}"
+
+	def _is_call_view_node(self, node_id, node_def):
+		if not node_def:
+			return False
+		lower_def = node_def.lower()
+		if 'call:' in lower_def or 'external:' in lower_def:
+			return True
+		if 'return' in lower_def:
+			return True
+		if node_id.startswith(('start', 'end', 'merge', 'call_', 'method_call', 'external_call', 'external_target', 'end_call', 'return')):
+			return True
+		return False
+
+	def _is_simple_view_noise(self, node_id, node_def, scope):
+		if not node_def:
+			return False
+		lower = node_def.lower()
+		stripped = lower.strip()
+		if 'print' in lower:
+			return True
+		if stripped.startswith('import') or ' import ' in lower:
+			return True
+		if 'raise' in lower or 'except' in lower or 'assert' in lower or ' error' in lower:
+			return True
+		if stripped.startswith('try') or ' try ' in lower:
+			return True
+		if stripped.startswith('pass'):
+			return True
+		if node_id.startswith(('import', 'raise', 'assert')):
+			return True
+		if scope and '__init__' in scope:
+			return True
+		return False
+
 	def _preprocess_collapsed_subgraphs(self):
 		"""Preprocess and identify subgraphs that should be collapsed."""
 		# Find all scopes that should be collapsed
@@ -503,19 +567,22 @@ class FlowchartPostProcessor:
 	def post_process(self):
 		"""Run all post-processing steps."""
 		print("=== Starting post-processing ===")
-		
+
 		# Step 1: Preprocess collapsed subgraphs (remove large subgraph nodes)
 		self._preprocess_collapsed_subgraphs()
-		
+
 		# Step 2: Optimize graph (remove bypass nodes)
 		self._optimize_graph()
-		
+
 		# Step 3: Redirect connections to collapsed subgraphs
 		self._redirect_connections_to_subgraphs()
 
-		# Step 4: Prune unreferenced nodes (functions and classes)
+		# Step 4: Apply view-specific filters before pruning
+		self._apply_view_mode_filters()
+
+		# Step 5: Prune unreferenced nodes (functions and classes)
 		self._prune_unreferenced_nodes()
-		
+
 		print("=== Post-processing completed ===")
 
 	def generate_mermaid(self):

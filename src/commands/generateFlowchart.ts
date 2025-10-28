@@ -78,6 +78,9 @@ export class GenerateFlowchartCommand {
       return;
     }
 
+    const viewMode = this.getViewMode();
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
     // Show progress
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
@@ -114,8 +117,13 @@ export class GenerateFlowchartCommand {
           SHOW_EXCEPTIONS: exceptions ? '1' : '0',
           SHOW_RETURNS: returns ? '1' : '0',
           SHOW_CLASSES: classes ? '1' : '0',
-          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0'
+          MERGE_COMMON_NODES: mergeCommonNodes ? '1' : '0',
+          FLOWCHART_VIEW: viewMode
         } as Record<string, string>;
+
+        if (workspaceRoot) {
+          env.WORKSPACE_ROOT = workspaceRoot;
+        }
 
         // Pass entry selection to Python
         env.ENTRY_TYPE = entryType || 'file';
@@ -175,7 +183,8 @@ export class GenerateFlowchartCommand {
             FileService.getBaseName(filePath),
             filePath,
             whitelistService,
-            null // processor is not available in TypeScript
+            null, // processor is not available in TypeScript
+            viewMode
           );
           resolve();
         } catch (error) {
@@ -288,6 +297,16 @@ export class GenerateFlowchartCommand {
     const parentDir = path.basename(path.dirname(filePath));
     const fileName = path.basename(filePath, path.extname(filePath));
     return `(${parentDir})/(${fileName})`;
+  }
+
+  private getViewMode(): 'calls' | 'simple' | 'advanced' {
+    const stored = this.context.workspaceState.get<string>('flowchartMachine.viewMode');
+    if (stored === 'calls' || stored === 'simple' || stored === 'advanced') {
+      return stored;
+    }
+    // Ensure default is persisted so other components stay in sync
+    void this.context.workspaceState.update('flowchartMachine.viewMode', 'advanced');
+    return 'advanced';
   }
 
 }

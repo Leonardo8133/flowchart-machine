@@ -27,6 +27,8 @@ let helpBtn;
 let bugReportBtn;
 let helpModal;
 let bugReportModal;
+let viewTabButtons;
+let currentViewMode = 'advanced';
 
 // Acquire VS Code API once
 let vscode;
@@ -66,6 +68,7 @@ function initializeControls() {
     bugReportBtn = document.getElementById('bugReportBtn');
     helpModal = document.getElementById('helpModal');
     bugReportModal = document.getElementById('bugReportModal');
+    viewTabButtons = document.querySelectorAll('.view-tab');
 
     // Add event listeners
     if (unfoldAllBtn) {
@@ -182,6 +185,8 @@ function initializeControls() {
 
     // Handle Retrieve Initial Values for Checkboxes
     getCurrentCheckboxStatesValues();
+
+    setupViewTabs();
 
 }
 
@@ -341,6 +346,64 @@ function handleBugReportClick() {
     }
 }
 
+function setupViewTabs() {
+    if (!viewTabButtons || viewTabButtons.length === 0) {
+        viewTabButtons = document.querySelectorAll('.view-tab');
+    }
+
+    if (!viewTabButtons) {
+        return;
+    }
+
+    viewTabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const viewMode = button.dataset.view;
+            if (viewMode) {
+                changeViewMode(viewMode);
+            }
+        });
+    });
+}
+
+function changeViewMode(viewMode) {
+    if (!viewMode || viewMode === currentViewMode) {
+        return;
+    }
+
+    updateActiveViewTab(viewMode);
+
+    if (vscode) {
+        vscode.postMessage({
+            command: 'changeViewMode',
+            viewMode
+        });
+    }
+}
+
+function updateActiveViewTab(viewMode) {
+    if (!viewMode) {
+        return;
+    }
+
+    currentViewMode = viewMode;
+
+    if (!viewTabButtons || viewTabButtons.length === 0) {
+        viewTabButtons = document.querySelectorAll('.view-tab');
+    }
+
+    if (!viewTabButtons) {
+        return;
+    }
+
+    viewTabButtons.forEach(button => {
+        if (button.dataset.view === viewMode) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+}
+
 function handleConfigChange(event) {
     // Checkboxes IDS need to match the configuration keys
     const value = event.target.checked;
@@ -404,5 +467,9 @@ function updateCheckboxStates(checkboxStates) {
     showExceptionsCheckbox.checked = checkboxStates.showExceptions;
     showClassesCheckbox.checked = checkboxStates.showClasses;
     mergeCommonNodesCheckbox.checked = checkboxStates.mergeCommonNodes;
-    
+
+}
+
+if (typeof window !== 'undefined') {
+    window.updateActiveViewTab = updateActiveViewTab;
 }
