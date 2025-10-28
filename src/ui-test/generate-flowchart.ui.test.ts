@@ -4,7 +4,7 @@ import { EditorView, VSBrowser, WebView, Workbench } from 'vscode-extension-test
 import { strict as assert } from 'assert';
 
 describe('Generate Python Flowchart command (UI)', () => {
-  const workbench = new Workbench();
+  let workbench: Workbench;
   const workspaceFolder = path.join('src', 'test', 'python_files');
   const pythonFile = path.join(workspaceFolder, 'test_basic.py');
 
@@ -15,9 +15,12 @@ describe('Generate Python Flowchart command (UI)', () => {
       // Give VS Code time to load the workspace contents
       await VSBrowser.instance.driver.sleep(3_000);
     });
+
+    workbench = new Workbench();
   });
 
-  afterEach(async () => {
+  afterEach(async function () {
+    this.timeout(10_000);
     await new EditorView().closeAllEditors();
   });
 
@@ -26,7 +29,7 @@ describe('Generate Python Flowchart command (UI)', () => {
     const driver = VSBrowser.instance.driver;
 
     await VSBrowser.instance.openResources(pythonFile, async () => {
-      await driver.sleep(2_000);
+      await driver.sleep(200);
     });
 
     // Make sure the Python file is focused in the editor
@@ -43,7 +46,15 @@ describe('Generate Python Flowchart command (UI)', () => {
 
     assert.notStrictEqual(flowchartTitle, undefined, 'Expected a flowchart tab to open');
 
-    await editorView.openEditor(flowchartTitle!);
+    // Find which group has the flowchart tab and open it
+    const groups = await editorView.getEditorGroups();
+    for (const group of groups) {
+      const titles = await group.getOpenEditorTitles();
+      if (titles.some(t => t.includes('Flowchart:'))) {
+        await group.openEditor(flowchartTitle!);
+        break;
+      }
+    }
 
     const webview = new WebView();
     await webview.switchToFrame();

@@ -142,7 +142,8 @@ class TestFlowchartClasses(TestFlowchartMain):
         # Check that direct class method calls show error nodes
         # TestClass.test_method() and TestClass.other_method() are instance methods
         # called directly on the class without instantiation - this should show errors
-        self.assertIn('❌', mermaid_output, "Should show error nodes for uninstanciated class method calls")
+        self.assertIn('❌ Instance method \'other_method\' called on class \'TestClass\' without instantiation', mermaid_output, "Should show error nodes for uninstanciated class method calls")
+        self.assertIn('❌ Instance method \'test_method\' called on class \'TestClass\' without instantiation', mermaid_output, "Should show error nodes for uninstanciated class method calls")
         self.assertIn('Method', mermaid_output)
         
         # Check return connections for correct instance method calls with assignments
@@ -152,6 +153,19 @@ class TestFlowchartClasses(TestFlowchartMain):
         # Verify bidirectional arrows exist for valid method calls
         # (Valid method calls should get bidirectional arrows)
         self.assertIn('<-->|Call and Return|', mermaid_output)
+
+        self.assertIn('TestClass3().call_another_class', mermaid_output)
+
+        self.assertIn('Class: TestClass3', mermaid_output)
+
+        self.assertIn('Method: calculate_value()', mermaid_output)
+        
+        self.assertNotIn('❌ Could not resolve class for method \'call_another_class\'', mermaid_output)
+        
+        # Check for error when calling instance method on class without instantiation inside a method
+        self.assertIn('❌ Instance method \'calculate_value\' called on class \'TestClass2\' without instantiation', mermaid_output, "Should show error for TestClass2.calculate_value() called directly on class")
+
+
     
     def test_complex_scenario(self):
         """Test flowchart generation with complex_scenario.py."""

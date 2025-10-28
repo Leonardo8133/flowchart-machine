@@ -8,5 +8,6 @@
   "security.workspace.trust.enabled": false,
   "workbench.remoteIndicator.showExtensionRecommendations": false,
   "window.commandCenter": false,
-  "editor.minimap.enabled": false
+  "editor.minimap.enabled": false,
+  "workbench.activityBar.visible": false
 }
