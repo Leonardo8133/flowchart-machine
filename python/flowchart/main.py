@@ -2,10 +2,12 @@ import sys
 import os
 import json
 import ast
+import logging
 from flowchart.processor.processor import FlowchartProcessor   
 from flowchart.post_processor import FlowchartPostProcessor
 from flowchart.entry_processor import EntryProcessor
 
+logger = logging.getLogger(__name__)    
 
 class FlowchartGenerator:
     """
@@ -35,7 +37,7 @@ class FlowchartGenerator:
             self.processor.set_breakpoints(context.get('breakpoint_lines', []))
 
             # Step 1: Process the code and create initial structure
-            if not self.processor.process_code(python_code):
+            if not self.processor.process_code(python_code, context):
                 return f"graph TD\n    error[\"Error processing code\"]", {}
 
             # Step 2: Post-process the graph (optimize and redirect connections)

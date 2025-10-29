@@ -179,6 +179,10 @@ export class ConfigService {
           exceptions: config.get('nodes.processTypes.exceptions', DEFAULT_CONFIG.nodes.processTypes.exceptions),
         },
       },
+      connectionView: {
+        maxIncomingDepth: config.get('connectionView.maxIncomingDepth', DEFAULT_CONFIG.connectionView.maxIncomingDepth),
+        maxOutgoingDepth: config.get('connectionView.maxOutgoingDepth', DEFAULT_CONFIG.connectionView.maxOutgoingDepth),
+      },
       storage: {
         saveFlowcharts: true, // Default value, not configurable
         maxSavedFlowcharts: config.get('storage.maxSavedFlowcharts', DEFAULT_CONFIG.storage.maxSavedFlowcharts),

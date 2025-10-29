@@ -1160,6 +1160,7 @@ class ClassHandler(NodeHandler):
         if not self.processor.show_classes:
             return prev_id
         
+        logging.debug(f"Class definition: {node.name} at line {node.lineno}")
         # Store class info for method calls and context (always needed)
         # Only store if not already populated by main processor
         if node.name not in self.processor.class_defs:

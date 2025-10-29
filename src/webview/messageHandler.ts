@@ -7,6 +7,7 @@ import { FileService } from '../services/fileService';
 import { ConfigService } from '../services/configService';
 import { StorageService } from '../services/storageService';
 import { WhitelistService } from '../services/whitelistService';
+import { ConnectionViewService, ConnectionViewResult } from '../services/connectionViewService';
 
 export class WebviewMessageHandler {
   private originalFilePath?: string;
@@ -17,12 +18,14 @@ export class WebviewMessageHandler {
   private processor: any = null;
   private currentMetadata: any = null;
   private viewMode: 'compact' | 'detailed' = 'detailed';
+  private connectionService: ConnectionViewService;
 
   constructor() {
     // Initialize storage service when needed
     this.storageService = null as any;
     this.extensionContext = null as any;
     this.fileService = null as any;
+    this.connectionService = new ConnectionViewService();
   }
 
   /**
@@ -600,6 +603,14 @@ export class WebviewMessageHandler {
         // Read the updated files
         const output = this.fileService.readFlowchartOutput(this.originalFilePath);
         const cleanDiagram = FileService.cleanMermaidCode(output.mermaidCode);
+
+        const connectionView = await this.buildConnectionView(output.metadata);
+        if (connectionView) {
+          output.metadata = {
+            ...output.metadata,
+            connectionView: connectionView.metadata
+          };
+        }
         // Store the metadata for use in other methods
         this.currentMetadata = output.metadata;
 
@@ -609,7 +620,9 @@ export class WebviewMessageHandler {
           diagram: cleanDiagram,
           metadata: output.metadata,
           whitelist: currentWhitelist,
-          forceCollapse: forceCollapseList
+          forceCollapse: forceCollapseList,
+          connectionDiagram: connectionView?.diagram,
+          connectionMetadata: connectionView?.metadata
         });
 
         // Update the global metadata in the webview
@@ -634,6 +647,19 @@ export class WebviewMessageHandler {
         command: 'regenerationError', 
         error: `Regeneration failed: ${error}` 
       });
+    }
+  }
+
+  private async buildConnectionView(metadata: any): Promise<ConnectionViewResult | null> {
+    if (!this.originalFilePath) {
+      return null;
+    }
+
+    try {
+      return await this.connectionService.createFromMetadata(this.originalFilePath, metadata);
+    } catch (error) {
+      console.warn('Connection view generation failed during regeneration.', error);
+      return null;
     }
   }
 

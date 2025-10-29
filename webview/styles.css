@@ -269,6 +269,20 @@ body {
     max-height: 80vh; /* Limit to 80% of viewport height */
 }
 
+/* Connection View specific spacing */
+.mermaid .cluster {
+    margin: 40px 20px !important;
+}
+
+.mermaid .cluster + .cluster {
+    margin-left: 100px !important;
+}
+
+/* Ensure proper spacing in Connection View diagrams */
+.mermaid svg .cluster rect {
+    margin: 20px !important;
+}
+
 .mermaid:active {
     cursor: grabbing;
 }
@@ -320,6 +334,56 @@ body {
     gap: 5px;
     z-index: 200;
     pointer-events: auto;
+}
+
+.view-toggle-wrapper {
+    position: absolute;
+    top: 30px;
+    left: 150px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background-color: rgba(30, 30, 30, 0.7);
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    z-index: 200;
+    pointer-events: auto;
+}
+
+.view-tab {
+    background: transparent;
+    color: var(--vscode-editor-foreground, #ffffff);
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.view-tab:hover {
+    background-color: var(--vscode-button-hoverBackground, #005a9e);
+}
+
+.view-tab.active {
+    background-color: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+}
+
+.view-tab.disabled {
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+.view-status-message {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground, #cccccc);
+    white-space: nowrap;
+}
+
+.view-status-message.hidden {
+    display: none;
 }
 
 .unfold-collapse-button {

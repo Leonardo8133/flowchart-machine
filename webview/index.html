@@ -208,7 +208,7 @@
         </div>
         <div class="mermaid-container-wrapper">
             <div id="mermaidContainer"><!-- DIAGRAM_PLACEHOLDER --></div>
-            
+
             <!-- Unfold/Collapse Controls -->
             <div class="unfold-collapse-controls">
                 <button class="unfold-collapse-button" id="unfoldAllBtn" title="Expand All Subgraphs">
@@ -220,7 +220,13 @@
                     <span class="button-text">Collapse All</span>
                 </button>
             </div>
-            
+
+            <div class="view-toggle-wrapper">
+                <button id="flowchartViewTab" class="view-tab active">Flowchart View</button>
+                <button id="connectionViewTab" class="view-tab">Connection View</button>
+                <span id="viewStatusMessage" class="view-status-message hidden"></span>
+            </div>
+
             <!-- Loading Message Container -->
             <div id="loadingContainer" class="loading-container">
                 <div class="loading-content">
@@ -270,6 +276,7 @@
     <script src="{{mermaidInitUri}}"></script>
     <script src="{{zoomPanUri}}"></script>
     <script src="{{controlsUri}}"></script>
+    <script src="{{viewToggleUri}}"></script>
     <script src="{{expandUri}}"></script>
     <script src="{{exportUri}}"></script>
     <script src="{{messageHandlerUri}}"></script>

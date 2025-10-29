@@ -3,16 +3,19 @@ import { PythonService } from '../services/pythonService';
 import { FileService } from '../services/fileService';
 import { WebviewManager } from '../webview/webviewManager';
 import { WhitelistService } from '../services/whitelistService';
+import { ConnectionViewService } from '../services/connectionViewService';
 
 export class GenerateFlowchartCommand {
   private context: vscode.ExtensionContext;
   private webviewManager: WebviewManager;
   private fileService: FileService;
+  private connectionService: ConnectionViewService;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
     this.webviewManager = new WebviewManager(context);
     this.fileService = new FileService(context);
+    this.connectionService = new ConnectionViewService();
   }
 
   /**
@@ -179,6 +182,14 @@ export class GenerateFlowchartCommand {
           whitelistService.startSession();
 
           // Create the webview panel
+          const connectionView = await this.connectionService.createFromMetadata(filePath, output.metadata);
+          if (connectionView) {
+            output.metadata = {
+              ...output.metadata,
+              connectionView: connectionView.metadata
+            };
+          }
+
           this.webviewManager.createFlowchartWebview(
             output.mermaidCode,
             output.metadata,
@@ -186,7 +197,8 @@ export class GenerateFlowchartCommand {
             filePath,
             whitelistService,
             null, // processor is not available in TypeScript
-            viewMode
+            viewMode,
+            connectionView || undefined
           );
           resolve();
         } catch (error) {

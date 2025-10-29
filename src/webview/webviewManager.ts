@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { WebviewMessageHandler } from './messageHandler';
+import { ConnectionViewResult } from '../services/connectionViewService';
 
 export class WebviewManager {
   private context: vscode.ExtensionContext;
@@ -24,7 +25,8 @@ export class WebviewManager {
     originalFilePath?: string,
     whitelistService?: any,
     processor?: any,
-    viewMode: 'compact' | 'detailed' = 'detailed'
+    viewMode: 'compact' | 'detailed' = 'detailed',
+    connectionView?: ConnectionViewResult
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
     this.originalFilePath = originalFilePath || 
@@ -92,7 +94,9 @@ export class WebviewManager {
         diagram: mermaidCode,
         metadata: metadata,
         whitelist: currentWhitelist,
-        forceCollapse: forceCollapseList
+        forceCollapse: forceCollapseList,
+        connectionDiagram: connectionView?.diagram,
+        connectionMetadata: connectionView?.metadata
       });
     }
 
@@ -143,6 +147,7 @@ export class WebviewManager {
       '{{mermaidInitUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'mermaid-init.js')).toString(),
       '{{zoomPanUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'zoom-pan.js')).toString(),
       '{{controlsUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'controls.js')).toString(),
+      '{{viewToggleUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'view-toggle.js')).toString(),
       '{{expandUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'expand.js')).toString(),
       '{{exportUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'export.js')).toString(),
       '{{messageHandlerUri}}': webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'message-handler.js')).toString(),

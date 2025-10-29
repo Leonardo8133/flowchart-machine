@@ -20,6 +20,10 @@ export const DEFAULT_CONFIG: FlowchartConfig = {
       exceptions: true,
     },
   },
+  connectionView: {
+    maxIncomingDepth: 3,
+    maxOutgoingDepth: 4,
+  },
   storage: {
     saveFlowcharts: true,
     maxSavedFlowcharts: 50,
@@ -96,6 +100,20 @@ export const CONFIG_SCHEMA = {
     type: 'boolean',
     default: DEFAULT_CONFIG.nodes.processTypes.exceptions,
     description: 'Show exception handling in the flowchart',
+  },
+  'flowchartMachine.connectionView.maxIncomingDepth': {
+    type: 'number',
+    minimum: 0,
+    maximum: 8,
+    default: DEFAULT_CONFIG.connectionView.maxIncomingDepth,
+    description: 'Maximum depth for traversing callers of the selected function in connection view',
+  },
+  'flowchartMachine.connectionView.maxOutgoingDepth': {
+    type: 'number',
+    minimum: 0,
+    maximum: 8,
+    default: DEFAULT_CONFIG.connectionView.maxOutgoingDepth,
+    description: 'Maximum depth for traversing callees of the selected function in connection view',
   },
   'flowchartMachine.storage.saveFlowcharts': {
     type: 'boolean',

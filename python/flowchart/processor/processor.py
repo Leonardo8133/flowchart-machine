@@ -35,6 +35,10 @@ class FlowchartProcessor:
         self.class_defs = {} # Added for class definitions - format: {class_name: {"node": class_node, "methods": {method_name: method_node}}}
         self.context_data = {}
         
+        # Entry context for focused processing
+        self.entry_type = None
+        self.entry_name = None
+        self.entry_class = None
         # Variable type tracking for method resolution
         self.variable_types = {} # Track variable types: {var_name: class_name}
         
@@ -581,10 +585,16 @@ class FlowchartProcessor:
 
     # ===== MAIN PROCESSING METHOD =====
     
-    def process_code(self, python_code):
+    def process_code(self, python_code, context=None):
         """Main method to process Python code and generate flowchart."""
         try:
             print("=== Starting flowchart processing ===")
+            
+            # Set entry context if provided
+            if context:
+                self.entry_type = context.get('entry_type')
+                self.entry_name = context.get('entry_name')
+                self.entry_class = context.get('entry_class')
             
             # Parse and setup
             tree = ast.parse(python_code)
