@@ -45,7 +45,7 @@ class MermaidBuilder:
             scope_nodes = [nid for nid, sc in self._processor.node_scopes.items() if sc == scope]
 
             if (
-                view_mode in {"short", "compact"}
+                view_mode in {"compact"}
                 and scope
                 and scope.startswith("class_")
                 and scope.endswith("__init__")
@@ -84,7 +84,7 @@ class MermaidBuilder:
                 )
                 for method_scope in method_scopes:
                     if (
-                        view_mode in {"short", "compact"}
+                        view_mode in {"compact"}
                         and method_scope.endswith("__init__")
                     ):
                         method_nodes = [

@@ -24,7 +24,7 @@ export class WebviewManager {
     originalFilePath?: string,
     whitelistService?: any,
     processor?: any,
-    viewMode: 'short' | 'compact' | 'detailed' = 'detailed'
+    viewMode: 'compact' | 'detailed' = 'detailed'
   ): vscode.WebviewPanel {
     // Store the original file path for regeneration
     this.originalFilePath = originalFilePath || 

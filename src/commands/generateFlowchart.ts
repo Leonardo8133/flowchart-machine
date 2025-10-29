@@ -301,9 +301,9 @@ export class GenerateFlowchartCommand {
     return `(${parentDir})/(${fileName})`;
   }
 
-  private getViewMode(): 'short' | 'compact' | 'detailed' {
+  private getViewMode(): 'compact' | 'detailed' {
     const stored = this.context.workspaceState.get<string>('flowchartMachine.viewMode');
-    if (stored === 'short' || stored === 'compact' || stored === 'detailed') {
+    if (stored === 'compact' || stored === 'detailed') {
       return stored;
     }
     // Ensure default is persisted so other components stay in sync

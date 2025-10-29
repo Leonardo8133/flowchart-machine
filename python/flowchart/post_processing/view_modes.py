@@ -15,20 +15,12 @@ class ViewModeFilter:
 
     def apply(self) -> None:
         view_mode = getattr(self._processor, "view_mode", "detailed")
-        if view_mode not in {"short", "compact"}:
+        if view_mode not in {"compact"}:
             return
 
         self._remove_empty_init_subgraphs()
 
-        if view_mode == "short":
-            nodes_to_hide = [
-                node_id
-                for node_id, node_def in self._processor.nodes.items()
-                if not self._is_call_view_node(node_id, node_def)
-            ]
-            self._optimizer.convert_nodes_to_bypass(nodes_to_hide)
-            self._optimizer.optimize_graph()
-        elif view_mode == "compact":
+        if view_mode == "compact":
             nodes_to_hide = []
             for node_id, node_def in self._processor.nodes.items():
                 scope = self._processor.node_scopes.get(node_id, "")

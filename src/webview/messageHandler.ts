@@ -16,7 +16,7 @@ export class WebviewMessageHandler {
   private whitelistService: WhitelistService | null = null;
   private processor: any = null;
   private currentMetadata: any = null;
-  private viewMode: 'short' | 'compact' | 'detailed' = 'detailed';
+  private viewMode: 'compact' | 'detailed' = 'detailed';
 
   constructor() {
     // Initialize storage service when needed
@@ -34,7 +34,7 @@ export class WebviewMessageHandler {
     extensionContext?: vscode.ExtensionContext,
     whitelistService?: WhitelistService,
     processor?: any,
-    viewMode?: 'short' | 'compact' | 'detailed'
+    viewMode?: 'compact' | 'detailed'
   ): void {
     this.originalFilePath = originalFilePath;
     this.processor = processor;
@@ -145,8 +145,8 @@ export class WebviewMessageHandler {
     }
   }
 
-  private normalizeViewMode(mode?: string | null): 'short' | 'compact' | 'detailed' {
-    if (mode === 'short' || mode === 'compact' || mode === 'detailed') {
+  private normalizeViewMode(mode?: string | null): 'compact' | 'detailed' {
+    if (mode === 'compact' || mode === 'detailed') {
       return mode;
     }
     return 'detailed';

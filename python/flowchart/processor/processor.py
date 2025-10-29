@@ -96,7 +96,7 @@ class FlowchartProcessor:
                 setattr(self, attr, os.environ.get(env_var, '1') == '1')
 
         view_mode = (os.environ.get('FLOWCHART_VIEW') or self.view_mode or 'detailed').lower()
-        if view_mode not in {'short', 'compact', 'detailed'}:
+        if view_mode not in {'compact', 'detailed'}:
             view_mode = 'detailed'
         self.view_mode = view_mode
 

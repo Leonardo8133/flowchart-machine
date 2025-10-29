@@ -1,5 +1,5 @@
 """
-Test cases for different view modes: short, compact, and detailed.
+Test cases for different view modes: compact and detailed.
 """
 
 import unittest
@@ -17,7 +17,7 @@ from flowchart.main import FlowchartGenerator
 
 
 class TestViewModes(unittest.TestCase):
-    """Test different view modes: short, compact, and detailed."""
+    """Test different view modes: compact and detailed."""
 
     def setUp(self):
         """Set up test environment."""
@@ -29,40 +29,6 @@ class TestViewModes(unittest.TestCase):
         file_path = self.examples_dir / filename
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()
-
-    def test_short_view_mode(self):
-        """Test that short view mode shows only call-related nodes."""
-        # Use a simple function example
-        test_code = self._read_example_file('example_simple_function.py')
-        
-        with patch.dict(os.environ, {
-            'FLOWCHART_VIEW': 'short',
-            'ENTRY_TYPE': 'file'
-        }):
-            context = {
-                'file_path': 'example_simple_function.py',
-                'entry_type': 'file',
-                'entry_name': None,
-                'entry_class': None,
-                'workspace_root': None,
-                'view_mode': 'short',
-                'definitions_line_mapping': {},
-            }
-            mermaid_output, metadata = self.generator.generate(test_code, context)
-            
-            # Short view should show only call-related nodes
-            # Should include: function calls, method calls, returns
-            self.assertIn('Call:', mermaid_output)
-            self.assertIn('return', mermaid_output)
-            
-            # Should NOT include: print statements, variable assignments, if statements
-            # Note: The post-processor converts non-call nodes to bypass nodes
-            # So we check that the output is significantly shorter than detailed view
-            lines = mermaid_output.split('\n')
-            node_lines = [line for line in lines if '[' in line and ']' in line]
-            
-            # Short view should have fewer nodes than detailed view
-            self.assertLess(len(node_lines), 20, "Short view should have fewer nodes")
 
     def test_compact_view_mode(self):
         """Test that compact view mode hides verbose elements."""
@@ -126,8 +92,8 @@ class TestViewModes(unittest.TestCase):
         # Use a complex scenario example
         test_code = self._read_example_file('example_complex_scenario.py')
         
-        # Test all three view modes
-        view_modes = ['short', 'compact', 'detailed']
+        # Test both view modes
+        view_modes = ['compact', 'detailed']
         outputs = {}
         
         for view_mode in view_modes:
@@ -150,32 +116,27 @@ class TestViewModes(unittest.TestCase):
         # Detailed should be the longest
         detailed_lines = len(outputs['detailed'].split('\n'))
         compact_lines = len(outputs['compact'].split('\n'))
-        short_lines = len(outputs['short'].split('\n'))
         
         self.assertGreater(detailed_lines, compact_lines, "Detailed view should be longer than compact")
-        self.assertGreater(compact_lines, short_lines, "Compact view should be longer than short")
         
         # Check specific content differences
         # Note: All view modes hide print statements in the post-processor
         # So we check for other differences instead
         detailed_content = outputs['detailed'].lower()
         compact_content = outputs['compact'].lower()
-        short_content = outputs['short'].lower()
         
         # All should have calls and returns
         self.assertIn('call:', detailed_content)
         self.assertIn('call:', compact_content)
-        self.assertIn('call:', short_content)
         self.assertIn('return', detailed_content)
         self.assertIn('return', compact_content)
-        self.assertIn('return', short_content)
 
     def test_view_mode_with_classes(self):
         """Test view modes with class-based code."""
         # Use a class method calls example
         test_code = self._read_example_file('example_class_method_calls.py')
         
-        view_modes = ['short', 'compact', 'detailed']
+        view_modes = ['compact', 'detailed']
         
         for view_mode in view_modes:
             with patch.dict(os.environ, {
@@ -206,7 +167,7 @@ class TestViewModes(unittest.TestCase):
         # Use the car production example
         test_code = self._read_example_file('example_car_production.py')
         
-        view_modes = ['short', 'compact', 'detailed']
+        view_modes = ['compact', 'detailed']
         
         for view_mode in view_modes:
             with patch.dict(os.environ, {
