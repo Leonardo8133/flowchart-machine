@@ -38,6 +38,7 @@ function updateStatusMessage() {
 function updateTabState() {
     const flowTab = document.getElementById('flowchartViewTab');
     const connectionTab = document.getElementById('connectionViewTab');
+    const detailViewTabs = document.getElementById('detailViewTabs');
 
     if (flowTab) {
         flowTab.classList.toggle('active', currentView === 'flowchart');
@@ -46,6 +47,11 @@ function updateTabState() {
         connectionTab.classList.toggle('active', currentView === 'connection');
         connectionTab.classList.toggle('disabled', !connectionInfo.hasData);
         connectionTab.title = connectionInfo.hasData ? 'Show connection view' : 'Connection data is limited for this selection';
+    }
+    
+    // Show/hide detail view tabs based on current view
+    if (detailViewTabs) {
+        detailViewTabs.classList.toggle('hidden', currentView !== 'flowchart');
     }
 }
 
@@ -68,6 +74,8 @@ window.initializeViewToggle = function initializeViewToggle() {
         connectionTab.addEventListener('click', () => setActiveView('connection'));
     }
 
+    // Ensure flowchart view is initially selected
+    currentView = 'flowchart';
     updateTabState();
 };
 

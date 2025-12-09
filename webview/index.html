@@ -30,10 +30,6 @@
                     <span class="cursor-value" id="cursorValue">Entire File</span>
                 </div>
             </div>
-            <div class="view-tabs" id="viewTabs">
-                <button class="view-tab" data-view="compact" title="Compact View: Hides verbose elements like prints, imports, exceptions - cleaner overview">Compact</button>
-                <button class="view-tab active" data-view="detailed" title="Detailed View: Shows everything - complete flowchart with all node types and details">Detailed</button>
-            </div>
             <div class="header-actions">
                 <div class="top-buttons">
                     <button id="helpBtn" class="control-button">?</button>
@@ -222,8 +218,14 @@
             </div>
 
             <div class="view-toggle-wrapper">
-                <button id="flowchartViewTab" class="view-tab active">Flowchart View</button>
-                <button id="connectionViewTab" class="view-tab">Connection View</button>
+                <div class="main-view-tabs">
+                    <button id="flowchartViewTab" class="view-tab active">Flowchart View</button>
+                    <button id="connectionViewTab" class="view-tab">Connection View</button>
+                </div>
+                <div class="detail-view-tabs hidden" id="detailViewTabs">
+                    <button class="view-tab" data-view="compact" title="Compact View: Hides verbose elements like prints, imports, exceptions - cleaner overview">Compact</button>
+                    <button class="view-tab active" data-view="detailed" title="Detailed View: Shows everything - complete flowchart with all node types and details">Detailed</button>
+                </div>
                 <span id="viewStatusMessage" class="view-status-message hidden"></span>
             </div>
 

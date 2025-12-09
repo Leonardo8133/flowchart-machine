@@ -31,6 +31,9 @@ class FlowchartGenerator:
         if context.get('workspace_root'):
             self.processor.workspace_root = context['workspace_root']
         self.processor.view_mode = context.get('view_mode', self.processor.view_mode)
+        
+        # Reload display config after setting view mode to apply compact mode settings
+        self.processor._load_display_config()
 
         try:
             # Set breakpoints AFTER processor is created

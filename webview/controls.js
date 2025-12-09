@@ -372,7 +372,8 @@ function handleBugReportClick() {
 
 function setupViewTabs() {
     if (!viewTabButtons || viewTabButtons.length === 0) {
-        viewTabButtons = document.querySelectorAll('.view-tab');
+        // Only select view tabs that have data-view attribute (Compact/Detailed)
+        viewTabButtons = document.querySelectorAll('.view-tab[data-view]');
     }
 
     if (!viewTabButtons) {
@@ -412,7 +413,8 @@ function updateActiveViewTab(viewMode) {
     currentViewMode = viewMode;
 
     if (!viewTabButtons || viewTabButtons.length === 0) {
-        viewTabButtons = document.querySelectorAll('.view-tab');
+        // Only select view tabs that have data-view attribute (Compact/Detailed)
+        viewTabButtons = document.querySelectorAll('.view-tab[data-view]');
     }
 
     if (!viewTabButtons) {

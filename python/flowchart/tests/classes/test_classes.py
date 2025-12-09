@@ -13,6 +13,13 @@ from pathlib import Path
 
 from ..base import TestFlowchartMain
 
+class TestCase(unittest.TestCase):
+    def test_assertIn(self, item, container):
+        if item not in container:
+            self.fail(f"{item} not found in {container}")
+    def assertNotIn(self, item, container):
+        if item in container:
+            self.fail(f"{item} found in {container}")
 
 class TestFlowchartClasses(TestFlowchartMain):        
     def test_class_basic(self):

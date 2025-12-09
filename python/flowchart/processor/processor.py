@@ -103,6 +103,13 @@ class FlowchartProcessor:
         if view_mode not in {'compact', 'detailed'}:
             view_mode = 'detailed'
         self.view_mode = view_mode
+        
+        # Apply compact mode settings
+        if view_mode == 'compact':
+            # Hide verbose elements in compact mode
+            self.show_prints = False
+            self.show_imports = False
+            self.show_exceptions = False
 
         env_root = os.environ.get('WORKSPACE_ROOT')
         if env_root:

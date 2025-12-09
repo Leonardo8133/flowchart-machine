@@ -1,0 +1,230 @@
+[
+  {
+    "version": 19,
+    "timestamp": "2025-10-29T03:48:28.627Z",
+    "config": {
+      "folders": [
+        {
+          "name": "Development",
+          "icon": "$(tools)",
+          "expanded": true,
+          "commands": [
+            {
+              "id": "compile-typescript",
+              "label": "Compile",
+              "description": "Compile TypeScript source code to JavaScript",
+              "command": "npm run compile",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Build"
+              },
+              "variables": [],
+              "pinned": true
+            },
+            {
+              "id": "watch-typescript",
+              "label": "Watch",
+              "description": "Watch TypeScript files for changes",
+              "command": "npm run watch",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Watch"
+              },
+              "variables": [],
+              "pinned": false
+            }
+          ]
+        },
+        {
+          "name": "Testing",
+          "icon": "$(beaker)",
+          "expanded": true,
+          "commands": [
+            {
+              "id": "run-npm-tests",
+              "label": "Run JS tests",
+              "description": "Run JavaScript/TypeScript tests",
+              "command": "npm test",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "JS Tests"
+              },
+              "variables": [],
+              "pinned": true
+            },
+            {
+              "id": "run-python-tests",
+              "label": "Run Python tests",
+              "description": "Run Python flowchart generation tests",
+              "command": "cd python; python -m unittest discover flowchart.tests -v",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Python Tests"
+              },
+              "variables": [],
+              "pinned": true
+            },
+            {
+              "id": "run-test-using-self-in-method",
+              "label": "Test: Using Self in Method",
+              "description": "Run test_using_self_in_method to verify self.method() calls",
+              "command": "cd python; python -m unittest flowchart.tests.test_classes.TestFlowchartClasses.test_using_self_in_method -v",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Self Method Test"
+              },
+              "variables": [],
+              "pinned": false
+            },
+            {
+              "id": "run-sequential-flow-tests",
+              "label": "Test: Sequential Flow Mode",
+              "description": "Run sequential flow mode tests",
+              "command": "cd python; python -m unittest flowchart.tests.test_sequential_flow -v",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Sequential Flow Test"
+              },
+              "variables": []
+            }
+          ]
+        },
+        {
+          "name": "UI Tests",
+          "icon": "$(circuit-board)",
+          "expanded": true,
+          "commands": [
+            {
+              "id": "run-all-ui-tests",
+              "label": "Run UI tests",
+              "description": "Run all UI tests for the extension",
+              "command": "npm run test:ui",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "UI Tests"
+              },
+              "variables": [],
+              "pinned": true
+            },
+            {
+              "id": "run-subgraph-ui-test",
+              "label": "Run Subgraph Collapse/Expand Test",
+              "description": "Run the subgraph collapse/expand UI test",
+              "command": "npm run compile; if ($?) { npx extest run-tests out/ui-test/subgraph-collapse-expand.ui.test.js --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error }",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Subgraph Tests"
+              },
+              "variables": [],
+              "pinned": false
+            },
+            {
+              "id": "run-class-method-ui-test",
+              "label": "Run Class Method Calls Test",
+              "description": "Run the class method calls UI test",
+              "command": "npm run compile; if ($?) { npx extest run-tests out/ui-test/class-method-calls.ui.test.js --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error }",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Class Method Test"
+              },
+              "variables": []
+            },
+            {
+              "id": "run-generate-flowchart-ui-test",
+              "label": "Run Generate Flowchart Test",
+              "description": "Run the generate flowchart UI test",
+              "command": "npm run compile; if ($?) { npx extest run-tests out/ui-test/generate-flowchart.ui.test.js --code_version 1.105.1 --code_settings ui-test/settings.json --storage .vscode-test --offline --log_level Error }",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Generate Flowchart Test"
+              },
+              "variables": []
+            }
+          ]
+        },
+        {
+          "name": "Python Folder",
+          "icon": "$(python)",
+          "expanded": true,
+          "commands": [
+            {
+              "id": "run-python-tests-folder",
+              "label": "Run Python Tests",
+              "description": "Run Python unit tests",
+              "command": "cd python; python -m unittest discover -v",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Python Tests"
+              },
+              "variables": [],
+              "pinned": true
+            },
+            {
+              "id": "run-python-server",
+              "label": "Run Server",
+              "description": "Start Python development server",
+              "command": "cd python; python -m http.server 8000",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Python Server"
+              },
+              "variables": [],
+              "pinned": false
+            },
+            {
+              "id": "load-snapshot",
+              "label": "Load Snapshot",
+              "description": "Load a saved snapshot state",
+              "command": "cd python; python -c \"print('Loading snapshot...')\"",
+              "terminal": {
+                "type": "vscode-new",
+                "name": "Snapshot"
+              },
+              "variables": [],
+              "pinned": false
+            }
+          ]
+        }
+      ],
+      "sharedVariables": [
+        {
+          "key": "PROJECT_ROOT",
+          "label": "Project root",
+          "value": "${workspaceFolder}",
+          "description": "Path to the current workspace folder"
+        }
+      ],
+      "sharedLists": [
+        {
+          "key": "ENVIRONMENT_NAME",
+          "label": "Environment",
+          "options": [
+            "local",
+            "staging",
+            "production"
+          ],
+          "description": "Common deployment targets"
+        }
+      ],
+      "version": 19,
+      "lastModified": "2025-10-29T03:48:28.627Z",
+      "testRunners": [
+        {
+          "id": "test-runner-default",
+          "activated": true,
+          "title": "JavaScript Tests",
+          "fileType": "javascript",
+          "workingDirectory": "",
+          "fileNamePattern": "test_*\n*test*\n*.spec.*",
+          "testNamePattern": "*",
+          "ignoreList": "",
+          "runTestCommand": "npm test -- $test_name",
+          "terminalName": "Test Runner",
+          "allowNonTest": false,
+          "autoFind": true,
+          "inlineButton": true
+        }
+      ]
+    }
+  }
+]

@@ -188,7 +188,7 @@ class TestViewModes(unittest.TestCase):
                 # All views should show class definitions and method calls
                 self.assertIn('Class:', mermaid_output)
                 self.assertIn('Method:', mermaid_output)
-                self.assertIn('Call:', mermaid_output)
+                self.assertIn('Call and Return', mermaid_output)
                 
                 # Note: All view modes hide print statements in the post-processor
                 # So we just verify the basic structure is present

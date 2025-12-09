@@ -7,14 +7,27 @@
       "commands": [
         {
           "id": "compile-typescript",
-          "label": "Compile TypeScript",
+          "label": "Compile",
           "description": "Compile TypeScript source code to JavaScript",
           "command": "npm run compile",
           "terminal": {
             "type": "vscode-new",
-            "name": "Build a"
+            "name": "Build"
           },
-          "variables": []
+          "variables": [],
+          "pinned": true
+        },
+        {
+          "id": "watch-typescript",
+          "label": "Watch",
+          "description": "Watch TypeScript files for changes",
+          "command": "npm run watch",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Watch"
+          },
+          "variables": [],
+          "pinned": false
         }
       ]
     },
@@ -25,14 +38,15 @@
       "commands": [
         {
           "id": "run-npm-tests",
-          "label": "Run npm tests",
-          "description": "Run VS Code extension tests (npm test)",
+          "label": "Run JS tests",
+          "description": "Run JavaScript/TypeScript tests",
           "command": "npm test",
           "terminal": {
             "type": "vscode-new",
-            "name": "Tests"
+            "name": "JS Tests"
           },
-          "variables": []
+          "variables": [],
+          "pinned": true
         },
         {
           "id": "run-python-tests",
@@ -78,14 +92,15 @@
       "commands": [
         {
           "id": "run-all-ui-tests",
-          "label": "Run All UI Tests",
+          "label": "Run UI tests",
           "description": "Run all UI tests for the extension",
           "command": "npm run test:ui",
           "terminal": {
             "type": "vscode-new",
             "name": "UI Tests"
           },
-          "variables": []
+          "variables": [],
+          "pinned": true
         },
         {
           "id": "run-subgraph-ui-test",
@@ -122,6 +137,49 @@
           "variables": []
         }
       ]
+    },
+    {
+      "name": "Python Folder",
+      "icon": "$(python)",
+      "expanded": true,
+      "commands": [
+        {
+          "id": "run-python-tests-folder",
+          "label": "Run Python Tests",
+          "description": "Run Python unit tests",
+          "command": "cd python; python -m unittest discover -v",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Python Tests"
+          },
+          "variables": [],
+          "pinned": true
+        },
+        {
+          "id": "run-python-server",
+          "label": "Run Server",
+          "description": "Start Python development server",
+          "command": "cd python; python -m http.server 8000",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Python Server"
+          },
+          "variables": [],
+          "pinned": false
+        },
+        {
+          "id": "load-snapshot",
+          "label": "Load Snapshot",
+          "description": "Load a saved snapshot state",
+          "command": "cd python; python -c \"print('Loading snapshot...')\"",
+          "terminal": {
+            "type": "vscode-new",
+            "name": "Snapshot"
+          },
+          "variables": [],
+          "pinned": false
+        }
+      ]
     }
   ],
   "sharedVariables": [
@@ -144,6 +202,24 @@
       "description": "Common deployment targets"
     }
   ],
-  "version": 18,
-  "lastModified": "2025-10-28T21:02:11.203Z"
+  "version": 21,
+  "lastModified": "2025-12-09T20:12:10.014Z",
+  "testRunners": [
+    {
+      "id": "test-runner-1761934039460",
+      "activated": true,
+      "title": "Python tests",
+      "fileType": "python",
+      "workingDirectory": "",
+      "fileNamePattern": "test_*.py\n*_test.py",
+      "testNamePattern": "test*",
+      "ignoreList": "burlap",
+      "runTestCommand": "python -m unittest $executable_test_path",
+      "terminalName": "Untitled Test Runner",
+      "allowNonTest": false,
+      "autoFind": false,
+      "inlineButton": true
+    }
+  ],
+  "pinnedCommands": []
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import re
 from flowchart.post_processing import FlowchartPostProcessor
+from flowchart.processor.config import FlowchartConfig
 
 class FlowchartPostProcessor:
 	def __init__(self, processor):
@@ -200,6 +201,26 @@ class FlowchartPostProcessor:
 		"""Get the number of nodes in a subgraph scope."""
 		scope_nodes = [nid for nid, sc in self.processor.node_scopes.items() if sc == scope]
 		return len(scope_nodes)
+	
+	def _get_subgraph_name(self, scope, node_count):
+		"""Get the display name for a subgraph scope."""
+		if scope and scope.startswith("class_"):
+			if "_" in scope[6:]:  # Has method name
+				class_name, method_name = scope[6:].split("_", 1)
+				return f"Method: {method_name}"
+			else:
+				class_name = scope[6:]  # Remove "class_" prefix
+				return f"Class: {class_name}"
+		elif scope and "_call_" in scope:
+			# Function call instance subgraph
+			func_name, call_instance = scope.split("_call_", 1)
+			return f"Function: {func_name}() - Call {call_instance}"
+		elif scope:
+			# Function subgraph
+			return f"Function: {scope}()"
+		else:
+			# Fallback for empty scope
+			return "Main Flow"
 
 	def _build_collapsed_subgraph(self, scope, indent, lines):
 		"""Build a collapsed subgraph for large scopes."""
@@ -344,7 +365,8 @@ class FlowchartPostProcessor:
 				"original_scope": scope,
 				"subgraph_name": subgraph_name,
 				"collapsed_node_id": collapsed_node_id,
-				"scope_nodes": list(all_nodes_to_remove)
+				"scope_nodes": list(all_nodes_to_remove),
+				"status": "collapsed"
 			}
 			
 			# Remove all nodes (including nested ones) from main flow
@@ -533,10 +555,32 @@ class FlowchartPostProcessor:
 		# Filter out None, empty strings, and main scope
 		all_subgraphs = [scope for scope in all_subgraphs if scope and scope != "main"]
 		
+		# Calculate expanded subgraphs (all_subgraphs - collapsed_subgraphs)
+		expanded_subgraphs = {}
+		for scope in all_subgraphs:
+			if scope not in FlowchartPostProcessor.collapsed_subgraphs:
+				node_count = self._get_subgraph_node_count(scope)
+				expanded_subgraphs[scope] = {
+					"node_count": node_count,
+					"original_scope": scope,
+					"subgraph_name": self._get_subgraph_name(scope, node_count),
+					"status": "expanded"
+				}
+		
+		# Create subgraph status map
+		subgraph_status_map = {}
+		for scope in all_subgraphs:
+			if scope in FlowchartPostProcessor.collapsed_subgraphs:
+				subgraph_status_map[scope] = "collapsed"
+			else:
+				subgraph_status_map[scope] = "expanded"
+		
 		# Return collapsed subgraphs metadata and configuration data
 		# Convert sets to lists for JSON serialization
 		metadata = {
 			"collapsed_subgraphs": FlowchartPostProcessor.collapsed_subgraphs,
+			"expanded_subgraphs": expanded_subgraphs,
+			"subgraph_status_map": subgraph_status_map,
 			"subgraph_whitelist": list(FlowchartPostProcessor.subgraph_whitelist),
 			"force_collapse_list": list(FlowchartPostProcessor.force_collapse_list),
 			"all_subgraphs": all_subgraphs,  # Add all available subgraphs
